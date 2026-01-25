@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 /// Generates a preview of the content in `panes` with a maximum height of `preview_height`.
 ///
 /// `preview_width` is used for rendering separators and omitted-pane notes. Pane content lines are
@@ -9,12 +11,16 @@
 ///
 /// If panes have been omitted, a note will be added at the end of the preview indicating how many
 /// panes were not shown.
-pub(crate) fn preview<'p>(
+pub(crate) fn preview<I, P>(
     preview_width: usize,
     preview_height: usize,
     min_pane_height: usize,
-    mut panes: impl ExactSizeIterator<Item = &'p Vec<String>>,
-) -> String {
+    mut panes: I,
+) -> String
+where
+    I: ExactSizeIterator<Item = P>,
+    P: Deref<Target = Vec<String>>,
+{
     // Too small, or no data to show.
     if preview_height < 2 || min_pane_height < 2 || panes.len() == 0 {
         return "".to_owned();
