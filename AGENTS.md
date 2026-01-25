@@ -1,3 +1,7 @@
+## Testing
+
+Run tests using `cargo nextest run`.
+
 ## Code Style
 
 ### Imports
@@ -8,9 +12,13 @@ empty line between each:
 - external crate imports
 - internal crate imports
 
+`tokio`, `tokio_util`, are examples of external imports.
+
 In each section, there is one import per-line (no nested imports, or wildcard
 imports), and the imports are sorted alphabetically. Internal crate imports all
 start with `crate::`, (never `super::` or `self::`).
+
+If traits are imported for use (rather than definition), import them `as _`.
 
 Re-exported items (i.e., `pub use ...`) are grouped separately at the bottom of
 the import list (with an empty line separating them from the rest of the
@@ -18,3 +26,37 @@ imports). Items should only be re-exported from module `A` in another module
 `B`, if other modules with access to `B` do not also have access to `A`
 (to prevent introducing opportunities for the same item to be imported through
 different paths in different places).
+
+### Comments
+
+Hard wrap comments at column 100.
+
+### Turbofish
+
+Avoid turbofish operators where possible:
+```rust
+let x = (..1).collect::<..2>(); -> let x: ..2 = (..1).collect();
+```
+
+### Strings
+
+Prefer using `.to_owned` instead of `.to_string` when converting from `&str` to
+`String` (use of `.to_string` is fine in other circumstances).
+
+### Errors
+
+Use `anyhow` to construct internal errors, and `thiserror` to define structured
+error types for public APIs.
+
+- Do not import `anyhow::Result`; write `anyhow::Result` explicitly in type
+  signatures.
+- Make use of `bail!`, `ensure!`, when appropriate:
+```rust
+return Err(anyhow!(...)) -> bail!(...)
+if !cond { bail!(...) }  -> ensure!(cond, ...)
+```
+- Make use of `anyhow`'s `Context`:
+```rust
+.map_err(|e| anyhow!("...: {e}")
+  -> .context("...") OR .with_context(|| format!("..."))
+```
