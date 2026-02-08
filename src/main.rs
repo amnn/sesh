@@ -1,6 +1,10 @@
+use std::collections::BTreeSet;
+
 use clap::Parser;
 use clap::Subcommand;
 
+use sesh::jj;
+use sesh::session::Session;
 use sesh::skim;
 use sesh::tmux;
 
@@ -34,10 +38,14 @@ enum Command {
     },
 
     /// Run `sesh` in the current terminal.
-    Cli,
+    Cli {
+        #[arg(short = 'r', long = "repo", value_name = "GLOB", action = clap::ArgAction::Append)]
+        repos: Vec<String>,
+    },
 }
 
-fn main() -> anyhow::Result<()> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     match Args::parse().command {
         Command::Popup {
             width,
@@ -46,11 +54,31 @@ fn main() -> anyhow::Result<()> {
             args,
         } => tmux::popup(&width, &height, &title, &args),
 
-        Command::Cli => {
+        Command::Cli { repos } => {
             tmux::ensure()?;
 
-            let sessions = tmux::sessions()?;
-            skim::run(sessions);
+            let mut sessions = vec![];
+            let mut seen = BTreeSet::new();
+
+            for (name, meta) in tmux::sessions().await? {
+                if let Some(repo) = &meta.repo {
+                    seen.insert(repo.clone());
+                }
+
+                sessions.push(Session::from_tmux(name, meta.panes, meta.repo))
+            }
+
+            for repo in jj::repos(&repos)? {
+                let inserted = seen.insert(repo.clone());
+                if inserted {
+                    sessions.push(Session::from_repo(repo)?);
+                }
+            }
+
+            tokio::task::spawn_blocking(move || skim::run(sessions))
+                .await
+                .unwrap();
+
             Ok(())
         }
     }

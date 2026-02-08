@@ -1,6 +1,8 @@
 use std::borrow::Cow;
+use std::path::PathBuf;
 
 use anyhow::Context as _;
+use futures::future;
 use skim::prelude::ItemPreview;
 use skim::prelude::PreviewContext;
 use skim::prelude::SkimItem;
@@ -15,19 +17,34 @@ const PANE_HEIGHT: usize = 10;
 #[derive(Clone, Debug)]
 pub struct Session {
     name: String,
-    pane_ids: Vec<String>,
+    panes: Vec<String>,
+    repo: Option<PathBuf>,
 }
 
 impl Session {
-    pub(crate) fn new(name: String) -> Self {
-        Self {
-            name,
-            pane_ids: Vec::new(),
-        }
+    /// Construct a potential session from information extracted from `tmux`.
+    ///
+    /// `name` is a tmux session name, `panes` is a list of tmux pane IDs, and `repo` is an
+    /// optional path to a jj repository, that is attached as a user-option on the tmux session.
+    pub fn from_tmux(name: String, panes: Vec<String>, repo: Option<PathBuf>) -> Self {
+        Self { name, panes, repo }
     }
 
-    pub(crate) fn add_pane_id(&mut self, pane_id: String) {
-        self.pane_ids.push(pane_id);
+    /// Construct a potential session from a repository path.
+    ///
+    /// The session's name is derived from the repository's root directory name.
+    pub fn from_repo(path: PathBuf) -> anyhow::Result<Self> {
+        let name = path
+            .file_name()
+            .context("invalid repo: no directory name")?
+            .to_string_lossy()
+            .into_owned();
+
+        Ok(Self {
+            name,
+            panes: vec![],
+            repo: Some(path),
+        })
     }
 
     /// Return the session name.
@@ -37,16 +54,18 @@ impl Session {
 
     /// Render a stacked pane preview for this session using current pane contents from `tmux`.
     pub fn preview(&self, width: usize) -> anyhow::Result<String> {
-        let mut panes = Vec::with_capacity(self.pane_ids.len());
+        let rt = tokio::runtime::Handle::current();
+        let ids = self.panes.clone();
 
-        for pane_id in &self.pane_ids {
-            panes.push(tmux::pane(pane_id).with_context(|| {
-                format!(
-                    "failed to capture pane '{pane_id}' for session '{}'",
-                    self.name()
-                )
-            })?);
-        }
+        // Fetch pane contents concurrently, re-using the running tokio runtime. This function is
+        // not async but runs in the context of a tokio runtime.
+        let panes = tokio::task::block_in_place(|| {
+            rt.block_on(future::try_join_all(ids.into_iter().map(|id| async move {
+                tmux::pane(&id)
+                    .await
+                    .with_context(|| format!("failed to capture pane '{id}'"))
+            })))
+        })?;
 
         Ok(preview(width, PANE_HEIGHT, panes.iter()))
     }
@@ -54,7 +73,11 @@ impl Session {
 
 impl SkimItem for Session {
     fn text(&self) -> Cow<'_, str> {
-        Cow::Borrowed(self.name())
+        if let Some(repo) = &self.repo {
+            format!("{:<40} {}", self.name(), repo.display()).into()
+        } else {
+            self.name().into()
+        }
     }
 
     fn preview(&self, context: PreviewContext) -> ItemPreview {
