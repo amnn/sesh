@@ -11,7 +11,7 @@ use skim::prelude::SkimOptionsBuilder;
 use skim::prelude::unbounded;
 use skim::tui::options::PreviewLayout;
 
-use crate::tmux;
+use crate::session::Session;
 
 #[derive(Clone, Default)]
 struct Cache {
@@ -98,7 +98,7 @@ impl<T: SkimItem> SkimItem for CachedItem<T> {
     }
 }
 
-pub fn run(sessions: Vec<tmux::Session>) {
+pub fn run(sessions: Vec<Session>) {
     let options = SkimOptionsBuilder::default()
         .reverse(true)
         .preview(Some("".to_owned()))

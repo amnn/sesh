@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::env;
 use std::os::unix::process::CommandExt as _;
@@ -7,70 +6,33 @@ use std::process::Command;
 use anyhow::Context as _;
 use anyhow::ensure;
 use shlex::Quoter;
-use skim::prelude::ItemPreview;
-use skim::prelude::PreviewContext;
-use skim::prelude::SkimItem;
 use which::which;
 
-use crate::preview::preview;
-
-/// TODO: Replace with config
-const PANE_HEIGHT: usize = 10;
-
-/// A tmux session and its pane IDs.
-#[derive(Clone, Debug)]
-pub struct Session {
-    name: String,
-    pane_ids: Vec<String>,
-}
-
-impl Session {
-    fn new(name: String) -> Self {
-        Self {
-            name,
-            pane_ids: Vec::new(),
-        }
-    }
-
-    /// Return the session name.
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    /// Render a stacked pane preview for this session using current pane contents from `tmux`.
-    pub fn preview(&self, width: usize) -> anyhow::Result<String> {
-        let mut panes = Vec::with_capacity(self.pane_ids.len());
-
-        for pane_id in &self.pane_ids {
-            panes.push(pane_content(pane_id).with_context(|| {
-                format!(
-                    "failed to capture pane '{pane_id}' for session '{}'",
-                    self.name()
-                )
-            })?);
-        }
-
-        Ok(preview(width, PANE_HEIGHT, panes.iter()))
-    }
-}
-
-impl SkimItem for Session {
-    fn text(&self) -> Cow<'_, str> {
-        Cow::Borrowed(self.name())
-    }
-
-    fn preview(&self, context: PreviewContext) -> ItemPreview {
-        match self.preview(context.width) {
-            Ok(preview) => ItemPreview::AnsiText(preview),
-            Err(error) => ItemPreview::Text(format!("Failed to render preview: {error:?}")),
-        }
-    }
-}
+use crate::session::Session;
 
 /// Validate that `tmux` is available on `$PATH`.
 pub fn ensure() -> anyhow::Result<()> {
     ensure!(which("tmux").is_ok(), "'tmux' not found in PATH");
     Ok(())
+}
+
+/// Return the visible contents of a tmux pane, by its ID.
+pub(crate) fn pane(pane_id: &str) -> anyhow::Result<Vec<String>> {
+    let output = Command::new("tmux")
+        .args(["capture-pane", "-ep", "-t", pane_id])
+        .output()
+        .with_context(|| format!("failed to run 'tmux capture-pane' for pane '{pane_id}'"))?;
+
+    ensure!(
+        output.status.success(),
+        "error running 'tmux capture-pane' for pane '{pane_id}': {}",
+        String::from_utf8_lossy(&output.stderr),
+    );
+
+    Ok(String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .map(str::to_owned)
+        .collect())
 }
 
 /// Open sesh in a tmux popup and forward arguments to the `cli` command.
@@ -136,27 +98,8 @@ pub fn sessions() -> anyhow::Result<Vec<Session>> {
         sessions
             .entry(session.to_owned())
             .or_insert_with(|| Session::new(session.to_owned()))
-            .pane_ids
-            .push(pane.to_owned());
+            .add_pane_id(pane.to_owned());
     }
 
     Ok(sessions.into_values().collect())
-}
-
-fn pane_content(pane_id: &str) -> anyhow::Result<Vec<String>> {
-    let output = std::process::Command::new("tmux")
-        .args(["capture-pane", "-ep", "-t", pane_id])
-        .output()
-        .with_context(|| format!("failed to run 'tmux capture-pane' for pane '{pane_id}'"))?;
-
-    ensure!(
-        output.status.success(),
-        "error running 'tmux capture-pane' for pane '{pane_id}': {}",
-        String::from_utf8_lossy(&output.stderr),
-    );
-
-    Ok(String::from_utf8_lossy(&output.stdout)
-        .lines()
-        .map(str::to_owned)
-        .collect())
 }
