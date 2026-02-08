@@ -1,5 +1,7 @@
 use std::ops::Deref;
 
+const ANSI_RESET: &str = "\x1b[0m";
+
 /// Generates a preview of the content in `panes` with a maximum height of `preview_height`.
 ///
 /// `preview_width` is used for rendering separators and omitted-pane notes. Pane content lines are
@@ -45,7 +47,7 @@ where
     }
 
     let mut preview = Vec::with_capacity(preview_height);
-    let separator = format!("{:─^preview_width$}", "");
+    let separator = format!("{ANSI_RESET}{:─^preview_width$}", "");
     let mut needs_separator = false;
     let mut to_render = max_panes.min(panes.len());
     let to_omit = panes.len() - to_render;
@@ -77,7 +79,7 @@ where
 
     debug_assert!(needs_separator, "a pane should have been rendered");
     if to_omit > 0 {
-        preview.push(separator);
+        preview.push(separator.clone());
         let s = if to_omit == 1 { "" } else { "s" };
         let msg = format!("+{} pane{s}", to_omit);
         preview.push(format!("{msg:^preview_width$}"));
@@ -136,28 +138,32 @@ mod tests {
     fn allocates_height_evenly_and_uses_last_lines() {
         let panes = vec![pane(&["a1", "a2", "a3"]), pane(&["b1", "b2", "b3", "b4"])];
         let rendered = preview(6, 6, 2, panes.iter());
-        insta::assert_snapshot!(rendered, @r###"
-        a1
-        a2
-        a3
-        ──────
-        b3
-        b4
-        "###);
+        insta::with_settings!({filters => vec![(r"\x1b\[0m", "<RESET>")]}, {
+            insta::assert_snapshot!(rendered, @r###"
+            a1
+            a2
+            a3
+            <RESET>──────
+            b3
+            b4
+            "###);
+        });
     }
 
     #[test]
     fn pads_with_empty_lines_when_pane_has_less_content() {
         let panes = vec![pane(&["a"]), pane(&["b", "c", "d"])];
         let rendered = preview(5, 6, 2, panes.iter());
-        insta::assert_snapshot!(rendered, @r###"
-        a
+        insta::with_settings!({filters => vec![(r"\x1b\[0m", "<RESET>")]}, {
+            insta::assert_snapshot!(rendered, @r###"
+            a
 
 
-        ─────
-        c
-        d
-        "###);
+            <RESET>─────
+            c
+            d
+            "###);
+        });
     }
 
     #[test]
@@ -168,27 +174,31 @@ mod tests {
             pane(&["c1", "c2"]),
         ];
         let rendered = preview(8, 5, 2, panes.iter());
-        insta::assert_snapshot!(rendered, @r###"
-        a1
-        a2
+        insta::with_settings!({filters => vec![(r"\x1b\[0m", "<RESET>")]}, {
+            insta::assert_snapshot!(rendered, @r###"
+            a1
+            a2
 
-        ────────
-        +2 panes
-        "###);
+            <RESET>────────
+            +2 panes
+            "###);
+        });
     }
 
     #[test]
     fn uses_plural_for_multiple_omitted_panes() {
         let panes = vec![pane(&["a"]), pane(&["b"]), pane(&["c"]), pane(&["d"])];
         let rendered = preview(10, 7, 2, panes.iter());
-        insta::assert_snapshot!(rendered, @r###"
-        a
+        insta::with_settings!({filters => vec![(r"\x1b\[0m", "<RESET>")]}, {
+            insta::assert_snapshot!(rendered, @r###"
+            a
 
-        ──────────
-        b
+            <RESET>──────────
+            b
 
-        ──────────
-         +2 panes
-        "###);
+            <RESET>──────────
+             +2 panes
+            "###);
+        });
     }
 }

@@ -14,4 +14,4 @@ tracing = "0.1"
 which = "8.0.0"
 
 [dev-dependencies]
-insta = "1.43"
+insta = { version = "1.43", features = ["filters"] }
