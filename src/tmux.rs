@@ -11,7 +11,7 @@ use which::which;
 use crate::preview::preview;
 
 /// TODO: Replace with config
-const MIN_PANE_HEIGHT: usize = 5;
+const PANE_HEIGHT: usize = 10;
 
 /// A tmux session and its pane IDs.
 #[derive(Clone, Debug)]
@@ -34,7 +34,7 @@ impl Session {
     }
 
     /// Render a stacked pane preview for this session using current pane contents from `tmux`.
-    pub fn preview(&self, width: usize, height: usize) -> anyhow::Result<String> {
+    pub fn preview(&self, width: usize) -> anyhow::Result<String> {
         let mut panes = Vec::with_capacity(self.pane_ids.len());
 
         for pane_id in &self.pane_ids {
@@ -46,7 +46,7 @@ impl Session {
             })?);
         }
 
-        Ok(preview(width, height, MIN_PANE_HEIGHT, panes.iter()))
+        Ok(preview(width, PANE_HEIGHT, panes.iter()))
     }
 }
 
@@ -56,7 +56,7 @@ impl SkimItem for Session {
     }
 
     fn preview(&self, context: PreviewContext) -> ItemPreview {
-        match self.preview(context.width, context.height) {
+        match self.preview(context.width) {
             Ok(preview) => ItemPreview::AnsiText(preview),
             Err(error) => ItemPreview::Text(format!("Failed to render preview: {error:?}")),
         }
