@@ -1,28 +1,104 @@
 use std::borrow::Cow;
 use std::sync::Arc;
 
-use skim::prelude::*;
+use dashmap::DashMap;
+use skim::PreviewPosition;
+use skim::prelude::ItemPreview;
+use skim::prelude::PreviewContext;
+use skim::prelude::Skim;
+use skim::prelude::SkimItem;
+use skim::prelude::SkimOptionsBuilder;
+use skim::prelude::unbounded;
 use skim::tui::options::PreviewLayout;
 
-use crate::tmux::Tmux;
+use crate::tmux;
 
-struct Item {
-    name: String,
-    tmux: Tmux,
+#[derive(Clone, Default)]
+struct Cache {
+    entries: Arc<DashMap<String, CacheEntry>>,
 }
 
-impl SkimItem for Item {
+struct CacheEntry {
+    width: usize,
+    height: usize,
+    kind: CacheKind,
+}
+
+struct CachedItem<T> {
+    cache: Cache,
+    inner: T,
+}
+
+enum CacheKind {
+    Command(String, Option<PreviewPosition>),
+    Text(String, Option<PreviewPosition>),
+    AnsiText(String, Option<PreviewPosition>),
+    Global,
+}
+
+impl<T: SkimItem> CachedItem<T> {
+    fn new(cache: Cache, inner: T) -> Self {
+        Self { cache, inner }
+    }
+}
+
+impl CacheKind {
+    fn cache(preview: &ItemPreview) -> Self {
+        match preview {
+            ItemPreview::Command(cmd) => CacheKind::Command(cmd.to_owned(), None),
+            ItemPreview::CommandWithPos(cmd, pos) => CacheKind::Command(cmd.to_owned(), Some(*pos)),
+            ItemPreview::Text(text) => CacheKind::Text(text.to_owned(), None),
+            ItemPreview::TextWithPos(text, pos) => CacheKind::Text(text.to_owned(), Some(*pos)),
+            ItemPreview::AnsiText(text) => CacheKind::AnsiText(text.to_owned(), None),
+            ItemPreview::AnsiWithPos(text, pos) => CacheKind::AnsiText(text.to_owned(), Some(*pos)),
+            ItemPreview::Global => CacheKind::Global,
+        }
+    }
+
+    fn preview(&self) -> ItemPreview {
+        match self {
+            CacheKind::Command(cmd, None) => ItemPreview::Command(cmd.to_owned()),
+            CacheKind::Command(cmd, Some(pos)) => ItemPreview::CommandWithPos(cmd.to_owned(), *pos),
+            CacheKind::Text(text, None) => ItemPreview::Text(text.to_owned()),
+            CacheKind::Text(text, Some(pos)) => ItemPreview::TextWithPos(text.to_owned(), *pos),
+            CacheKind::AnsiText(text, None) => ItemPreview::AnsiText(text.to_owned()),
+            CacheKind::AnsiText(text, Some(pos)) => ItemPreview::AnsiWithPos(text.to_owned(), *pos),
+            CacheKind::Global => ItemPreview::Global,
+        }
+    }
+}
+
+impl<T: SkimItem> SkimItem for CachedItem<T> {
     fn text(&self) -> Cow<'_, str> {
-        Cow::Borrowed(&self.name)
+        self.inner.text()
     }
 
     fn preview(&self, context: PreviewContext) -> ItemPreview {
-        self.tmux.focus_session(Some(self.name.clone()));
-        ItemPreview::AnsiText(self.tmux.preview(&self.name, context.width, context.height))
+        let width = context.width;
+        let height = context.height;
+
+        if let Some(c) = self.cache.entries.get(self.inner.text().as_ref())
+            && c.width == width
+            && c.height == height
+        {
+            return c.kind.preview();
+        }
+
+        let preview = self.inner.preview(context);
+        self.cache.entries.insert(
+            self.inner.text().into_owned(),
+            CacheEntry {
+                width,
+                height,
+                kind: CacheKind::cache(&preview),
+            },
+        );
+
+        preview
     }
 }
 
-pub fn run(tmux: Tmux, sessions: Vec<String>) {
+pub fn run(sessions: Vec<tmux::Session>) {
     let options = SkimOptionsBuilder::default()
         .height("90%".to_owned())
         .reverse(true)
@@ -32,13 +108,11 @@ pub fn run(tmux: Tmux, sessions: Vec<String>) {
         .build()
         .unwrap();
 
-    let (tx, rx) = unbounded();
-    for name in sessions {
-        let item = Item {
-            name,
-            tmux: tmux.clone(),
-        };
+    let cache = Cache::default();
 
+    let (tx, rx) = unbounded();
+    for session in sessions {
+        let item = CachedItem::new(cache.clone(), session);
         tx.send(Arc::new(item) as Arc<dyn SkimItem>).ok();
     }
 
