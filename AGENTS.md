@@ -1,8 +1,35 @@
-## Testing
+## Validation
 
-Run tests using `cargo nextest run`.
+Perform all these steps once you are happy with a solution.
+
+- Formatting: `cargo fmt`
+- Lints: `cargo clippy -- -D warnings`
+- Tests: `cargo nextest run`.
 
 ## Code Style
+
+### File Order
+
+Each Rust module should follow the following order:
+
+- Copyright notice
+- Module doc comment
+- Child modules
+- Imports
+- Re-exports
+- Constants
+- Type definitions and aliases
+- `impl` blocks
+- Trait `impl` blocks
+- Module-level functions
+- Test module
+
+Entries in each section are in decreasing order of visibility, and then
+sorted lexicographically.
+
+If you find that a module is getting too large, and elements pertaining to,
+e.g. the same type are spread out too far, that is a sign that this module
+needs to be split up.
 
 ### Imports
 Imports at the top of the file are broken up into three sections, with an
@@ -26,6 +53,14 @@ imports). Items should only be re-exported from module `A` in another module
 `B`, if other modules with access to `B` do not also have access to `A`
 (to prevent introducing opportunities for the same item to be imported through
 different paths in different places).
+
+### Associated Functions
+
+Member functions that don't accept `self` are called associated functions. Only
+use these for constructors (functions that return some variant of `Self`).
+
+Other functions that support the `impl` of a type should be kept as
+module-level functions.
 
 ### Comments
 
