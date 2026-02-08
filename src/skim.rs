@@ -100,7 +100,6 @@ impl<T: SkimItem> SkimItem for CachedItem<T> {
 
 pub fn run(sessions: Vec<tmux::Session>) {
     let options = SkimOptionsBuilder::default()
-        .height("90%".to_owned())
         .reverse(true)
         .preview(Some("".to_owned()))
         .preview_window(PreviewLayout::from("down:60%"))

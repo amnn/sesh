@@ -1,8 +1,12 @@
 use std::borrow::Cow;
 use std::collections::BTreeMap;
+use std::env;
+use std::os::unix::process::CommandExt as _;
+use std::process::Command;
 
 use anyhow::Context as _;
 use anyhow::ensure;
+use shlex::Quoter;
 use skim::prelude::ItemPreview;
 use skim::prelude::PreviewContext;
 use skim::prelude::SkimItem;
@@ -67,6 +71,41 @@ impl SkimItem for Session {
 pub fn ensure() -> anyhow::Result<()> {
     ensure!(which("tmux").is_ok(), "'tmux' not found in PATH");
     Ok(())
+}
+
+/// Open sesh in a tmux popup and forward arguments to the `cli` command.
+pub fn popup(width: &str, height: &str, title: &str, args: &[String]) -> anyhow::Result<()> {
+    ensure!(env::var_os("TMUX").is_some(), "popups must run inside tmux");
+    let exe = env::current_exe().context("failed to resolve current executable")?;
+
+    let quoter = Quoter::new();
+    let mut popup_cmd = format!(
+        "{} cli",
+        quoter
+            .quote(exe.to_string_lossy().as_ref())
+            .context("failed to quote executable path")?
+    );
+
+    for arg in args {
+        popup_cmd.push(' ');
+        popup_cmd.push_str(&quoter.quote(arg).context("failed to quote CLI argument")?);
+    }
+
+    let error = Command::new("tmux")
+        .args([
+            "display-popup",
+            "-E",
+            "-w",
+            width,
+            "-h",
+            height,
+            "-T",
+            title,
+            &popup_cmd,
+        ])
+        .exec();
+
+    Err(error).context("failed to display popup")
 }
 
 /// Query `tmux` for the current sessions and their pane IDs.
