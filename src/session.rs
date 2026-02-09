@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::env;
 use std::path::PathBuf;
 
 use anyhow::Context as _;
@@ -73,10 +74,16 @@ impl Session {
 
 impl SkimItem for Session {
     fn text(&self) -> Cow<'_, str> {
-        if let Some(repo) = &self.repo {
-            format!("{:<40} {}", self.name(), repo.display()).into()
+        let Some(repo) = &self.repo else {
+            return self.name().into();
+        };
+
+        if let Some(home) = env::home_dir()
+            && let Ok(repo) = repo.strip_prefix(&home)
+        {
+            format!("{:<40} ~/{}", self.name(), repo.display()).into()
         } else {
-            self.name().into()
+            format!("{:<40} {}", self.name(), repo.display()).into()
         }
     }
 
