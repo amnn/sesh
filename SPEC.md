@@ -7,7 +7,6 @@ supports opening new sessions:
 - based on a jj repository
   - ...and existing workspace
   - ...and base revision (to create a new workspace)
-  - ...and PR number (to pull that PR).
   - ...on its own.
 - based on a custom name (and no repository), to create a simple tmux session.
 
@@ -21,10 +20,6 @@ The switcher is configured via a configuration file at
   and `{name}` placeholders. `{repo}` is the repo basename, and `{name}`
   must not contain `/`.
   - **Default**: `../{repo}.{name}`
-- `pr.template`: A template for naming new PR workspaces. This can be a
-  relative path that ends in a directory name that contains the `{repo}` and
-  `{pr}` placeholders.
-  - **Default**: `../{repo}#{pr}`
 - `session.template`: A template for configuring how to set up a new tmux
   session.
 - `session.name`: A template for configuring the name of the tmux session.
@@ -40,7 +35,7 @@ The session switcher maintains the following state:
   Defaults to `trunk()`, and resets if the selected repository changes. The
   base picker lists bookmarks (including `origin/*`) and a `trunk()` entry.
 - On each open session, tmux metadata is added to indicate whether the session
-  corresponds to a repository/workspace/PR, or is plain.
+  corresponds to a repository/workspace, or is plain.
   - This is used by the session switcher to advertise metadata about
     existing sessions.
 
@@ -67,11 +62,6 @@ sources, in the following order:
 - Existing tmux sessions.
 - Repositories and workspaces found under `repository.globs`, in
   alphabetical order.
-- If a repository is selected, and `gh` is available, open PRs are fetched
-  asynchronously and also treated as candidates. Candidate PRs are ordered to
-  preference open PRs where `@me` is requested for review, and further by
-  whether the PR is accepted or not (not accepted takes precedence). Closed PRs
-  that exist locally appear after all other candidates.
 
 When reconciling existing sessions with candidate sessions, a name is generated
 for each candidate session. If it matches the name of an existing session, the
@@ -82,12 +72,9 @@ The switcher represents sessions by their name and metadata.
 
 - For a session without an associate repository, the name is simply the
   supplied session name, and there is no extra metadata.
-- For a session with an associated repository, workspace or PR, the name is
-  the name of the directory containing the workspace root for that
-  repository/workspace or PR (derived from `workspace.template`, or
-  `pr.template` indirectly).
-- If the session corresponds to a PR, the metadata includes the PR title,
-  and its status (TBD).
+- For a session with an associated repository or workspace, the name is the
+  name of the directory containing the workspace root for that
+  repository/workspace (derived from `workspace.template`).
 
 ### Preview Pane
 The preview pane shows a live preview of the selected session, in a similar
@@ -97,8 +84,6 @@ style to tmux's `C-b s` session switcher, assuming the session already exists.
 When picking a session from the fuzzy finder, all its parts are ensured to exist:
 
 - If there is a workspace, it is set-up -- it is the CWD for the session.
-- If there is a PR, it is fetched and the repo for its head ref is added as
-  a remote.
 - The session is created and added to tmux.
 
 Then the pop-over switches to the session and closes itself.
@@ -123,11 +108,4 @@ Then the pop-over switches to the session and closes itself.
 
 ## Tech recommendations
 This tool will be built using Rust, taking advantage of `skim` for fuzzy
-finding, and shelling out to `jj`, `tmux`, and `gh` for everything else.
-
-## Future Work
-
-- [ ] PR Notifications, Read/Done states + updates.
-- [ ] PRs authored by me, associated with local bookmarks.
-- [ ] PR Preview: show discussion, and changes since last
-  review/acknowledgement.
+finding, and shelling out to `jj` and `tmux` for everything else.
