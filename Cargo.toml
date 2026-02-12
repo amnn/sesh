@@ -15,6 +15,7 @@ skim = { version = "1.7", default-features = false }
 tokio = { version = "1.49", features = ["rt-multi-thread", "time", "process"] }
 tokio-util = { version = "0.7", features = ["rt"] }
 tracing = "0.1"
+vt100 = "0.16"
 which = "8.0.0"
 
 [dev-dependencies]

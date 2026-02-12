@@ -21,10 +21,10 @@ pub fn ensure() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Return the visible contents of a tmux pane, by its ID.
-pub(crate) async fn pane(pane_id: &str) -> anyhow::Result<Vec<String>> {
+/// Return plain-text contents of a tmux pane, trimmed to `height` non-empty rows.
+pub(crate) async fn pane(pane_id: &str, height: usize) -> anyhow::Result<String> {
     let output = Command::new("tmux")
-        .args(["capture-pane", "-ep", "-t", pane_id])
+        .args(["capture-pane", "-p", "-t", pane_id])
         .output()
         .await
         .with_context(|| format!("failed to run 'tmux capture-pane' for pane '{pane_id}'"))?;
@@ -38,7 +38,14 @@ pub(crate) async fn pane(pane_id: &str) -> anyhow::Result<Vec<String>> {
     Ok(String::from_utf8_lossy(&output.stdout)
         .lines()
         .map(str::to_owned)
-        .collect())
+        .filter(|line| !line.trim().is_empty())
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .take(height)
+        .rev()
+        .collect::<Vec<_>>()
+        .join("\n"))
 }
 
 /// Open sesh in a tmux popup and forward arguments to the `cli` command.

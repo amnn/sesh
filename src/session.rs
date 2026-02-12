@@ -8,7 +8,6 @@ use skim::prelude::ItemPreview;
 use skim::prelude::PreviewContext;
 use skim::prelude::SkimItem;
 
-use crate::preview::preview;
 use crate::tmux;
 
 /// TODO: Replace with config
@@ -62,13 +61,24 @@ impl Session {
         // not async but runs in the context of a tokio runtime.
         let panes = tokio::task::block_in_place(|| {
             rt.block_on(future::try_join_all(ids.into_iter().map(|id| async move {
-                tmux::pane(&id)
+                tmux::pane(&id, PANE_HEIGHT)
                     .await
                     .with_context(|| format!("failed to capture pane '{id}'"))
             })))
         })?;
 
-        Ok(preview(width, PANE_HEIGHT, panes.iter()))
+        let mut prefix = "";
+        let mut preview = String::new();
+        for pane in panes {
+            preview.push_str(prefix);
+            prefix = "\n";
+
+            preview.push_str(&pane);
+            preview.push_str(prefix);
+            preview.push_str(&"─".repeat(width));
+        }
+
+        Ok(preview)
     }
 }
 
@@ -89,7 +99,7 @@ impl SkimItem for Session {
 
     fn preview(&self, context: PreviewContext) -> ItemPreview {
         match self.preview(context.width) {
-            Ok(preview) => ItemPreview::AnsiText(preview),
+            Ok(preview) => ItemPreview::Text(preview),
             Err(error) => ItemPreview::Text(format!("Failed to render preview: {error:?}")),
         }
     }
