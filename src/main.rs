@@ -21,11 +21,11 @@ enum Command {
     /// Run `sesh` in a tmux pop-up.
     Popup {
         /// Width of the popup, passed to tmux as-is.
-        #[arg(short = 'w', long = "width", default_value = "60%")]
+        #[arg(short = 'w', long = "width", default_value = "80%")]
         width: String,
 
         /// Height of the popup, passed to tmux as-is.
-        #[arg(short = 'h', long = "height", default_value = "60%")]
+        #[arg(short = 'h', long = "height", default_value = "80%")]
         height: String,
 
         /// Title of the popup, passed to tmux as-is.

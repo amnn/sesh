@@ -102,7 +102,7 @@ pub fn run(sessions: Vec<Session>) {
     let options = SkimOptionsBuilder::default()
         .reverse(true)
         .preview(Some("".to_owned()))
-        .preview_window(PreviewLayout::from("down:60%"))
+        .preview_window(PreviewLayout::from("right:60%"))
         .prompt("Session: ".to_owned())
         .build()
         .unwrap();
