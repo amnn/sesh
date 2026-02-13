@@ -11,7 +11,11 @@ use sesh::tmux;
 #[derive(Debug, Parser)]
 #[command(name = "sesh", version, about)]
 #[command(arg_required_else_help = true)]
+#[command(disable_help_flag = true)]
 struct Args {
+    #[arg(short = '?', long = "help", action = clap::ArgAction::Help, global = true)]
+    help: Option<bool>,
+
     #[command(subcommand)]
     command: Command,
 }
@@ -21,11 +25,11 @@ enum Command {
     /// Run `sesh` in a tmux pop-up.
     Popup {
         /// Width of the popup, passed to tmux as-is.
-        #[arg(short = 'w', long = "width", default_value = "80%")]
+        #[arg(long = "width", default_value = "80%")]
         width: String,
 
         /// Height of the popup, passed to tmux as-is.
-        #[arg(short = 'h', long = "height", default_value = "80%")]
+        #[arg(long = "height", default_value = "80%")]
         height: String,
 
         /// Title of the popup, passed to tmux as-is.
@@ -33,7 +37,7 @@ enum Command {
         title: String,
 
         /// Remaining arguments are forwarded to the underlying invocation of `sesh cli`.
-        #[arg(last = true, trailing_var_arg = true, allow_hyphen_values = true)]
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
 
