@@ -3,31 +3,26 @@ use std::env;
 use std::path::PathBuf;
 
 use anyhow::Context as _;
-use futures::future;
 use skim::prelude::ItemPreview;
 use skim::prelude::PreviewContext;
 use skim::prelude::SkimItem;
 
-use crate::tmux;
+use crate::jj;
 
-/// TODO: Replace with config
-const PANE_HEIGHT: usize = 10;
-
-/// A tmux session and its pane IDs.
+/// A tmux session and optional repo metadata.
 #[derive(Clone, Debug)]
 pub struct Session {
     name: String,
-    panes: Vec<String>,
     repo: Option<PathBuf>,
 }
 
 impl Session {
     /// Construct a potential session from information extracted from `tmux`.
     ///
-    /// `name` is a tmux session name, `panes` is a list of tmux pane IDs, and `repo` is an
+    /// `name` is a tmux session name and `repo` is an
     /// optional path to a jj repository, that is attached as a user-option on the tmux session.
-    pub fn from_tmux(name: String, panes: Vec<String>, repo: Option<PathBuf>) -> Self {
-        Self { name, panes, repo }
+    pub fn from_tmux(name: String, repo: Option<PathBuf>) -> Self {
+        Self { name, repo }
     }
 
     /// Construct a potential session from a repository path.
@@ -42,7 +37,6 @@ impl Session {
 
         Ok(Self {
             name,
-            panes: vec![],
             repo: Some(path),
         })
     }
@@ -52,33 +46,14 @@ impl Session {
         &self.name
     }
 
-    /// Render a stacked pane preview for this session using current pane contents from `tmux`.
-    pub fn preview(&self, width: usize) -> anyhow::Result<String> {
-        let rt = tokio::runtime::Handle::current();
-        let ids = self.panes.clone();
+    /// Render a `jj log` preview for this session's attached repository.
+    pub fn preview(&self, _width: usize) -> anyhow::Result<String> {
+        let Some(repo) = &self.repo else {
+            return Ok(String::new());
+        };
 
-        // Fetch pane contents concurrently, re-using the running tokio runtime. This function is
-        // not async but runs in the context of a tokio runtime.
-        let panes = tokio::task::block_in_place(|| {
-            rt.block_on(future::try_join_all(ids.into_iter().map(|id| async move {
-                tmux::pane(&id, PANE_HEIGHT)
-                    .await
-                    .with_context(|| format!("failed to capture pane '{id}'"))
-            })))
-        })?;
-
-        let mut prefix = "";
-        let mut preview = String::new();
-        for pane in panes {
-            preview.push_str(prefix);
-            prefix = "\n";
-
-            preview.push_str(&pane);
-            preview.push_str(prefix);
-            preview.push_str(&"─".repeat(width));
-        }
-
-        Ok(preview)
+        jj::log(repo)
+            .with_context(|| format!("failed to build preview for repo '{}'", repo.display()))
     }
 }
 

@@ -9,43 +9,10 @@ use shlex::Quoter;
 use tokio::process::Command;
 use which::which;
 
-#[derive(Default)]
-pub struct Meta {
-    pub panes: Vec<String>,
-    pub repo: Option<PathBuf>,
-}
-
 /// Validate that `tmux` is available on `$PATH`.
 pub fn ensure() -> anyhow::Result<()> {
     ensure!(which("tmux").is_ok(), "'tmux' not found in PATH");
     Ok(())
-}
-
-/// Return plain-text contents of a tmux pane, trimmed to `height` non-empty rows.
-pub(crate) async fn pane(pane_id: &str, height: usize) -> anyhow::Result<String> {
-    let output = Command::new("tmux")
-        .args(["capture-pane", "-p", "-t", pane_id])
-        .output()
-        .await
-        .with_context(|| format!("failed to run 'tmux capture-pane' for pane '{pane_id}'"))?;
-
-    ensure!(
-        output.status.success(),
-        "error running 'tmux capture-pane' for pane '{pane_id}': {}",
-        String::from_utf8_lossy(&output.stderr),
-    );
-
-    Ok(String::from_utf8_lossy(&output.stdout)
-        .lines()
-        .map(str::to_owned)
-        .filter(|line| !line.trim().is_empty())
-        .collect::<Vec<_>>()
-        .into_iter()
-        .rev()
-        .take(height)
-        .rev()
-        .collect::<Vec<_>>()
-        .join("\n"))
 }
 
 /// Open sesh in a tmux popup and forward arguments to the `cli` command.
@@ -83,32 +50,22 @@ pub fn popup(width: &str, height: &str, title: &str, args: &[String]) -> anyhow:
     Err(error).context("failed to display popup")
 }
 
-/// Query tmux for current sessions, their panes, and attached sesh repo metadata.
-pub async fn sessions() -> anyhow::Result<BTreeMap<String, Meta>> {
-    let metadata = Command::new("tmux")
+/// Query tmux for current sessions and attached sesh repo metadata.
+pub async fn sessions() -> anyhow::Result<BTreeMap<String, Option<PathBuf>>> {
+    let output = Command::new("tmux")
         .args(["list-sessions", "-F", "#{session_name}\t#{@sesh.repo}"])
-        .output();
-    let panes = Command::new("tmux")
-        .args(["list-panes", "-a", "-F", "#{session_name}\t#{pane_id}"])
-        .output();
-
-    let (metadata, panes) = tokio::try_join!(metadata, panes)
+        .output()
+        .await
         .context("failed to discover information on tmux sessions")?;
 
     ensure!(
-        metadata.status.success(),
+        output.status.success(),
         "error running 'tmux list-sessions': {}",
-        String::from_utf8_lossy(&metadata.stderr),
-    );
-
-    ensure!(
-        panes.status.success(),
-        "error running 'tmux list-panes': {}",
-        String::from_utf8_lossy(&panes.stderr),
+        String::from_utf8_lossy(&output.stderr),
     );
 
     let mut sessions = BTreeMap::new();
-    for line in String::from_utf8_lossy(&metadata.stdout).lines() {
+    for line in String::from_utf8_lossy(&output.stdout).lines() {
         let Some((session, repo)) = line.split_once('\t') else {
             continue;
         };
@@ -125,31 +82,7 @@ pub async fn sessions() -> anyhow::Result<BTreeMap<String, Meta>> {
             Some(PathBuf::from(repo))
         };
 
-        sessions.insert(
-            session.to_owned(),
-            Meta {
-                panes: Vec::new(),
-                repo,
-            },
-        );
-    }
-
-    for line in String::from_utf8_lossy(&panes.stdout).lines() {
-        let Some((session, pane)) = line.split_once('\t') else {
-            continue;
-        };
-
-        let session = session.trim();
-        let pane = pane.trim();
-        if session.is_empty() || pane.is_empty() {
-            continue;
-        }
-
-        sessions
-            .entry(session.to_owned())
-            .or_default()
-            .panes
-            .push(pane.to_owned());
+        sessions.insert(session.to_owned(), repo);
     }
 
     Ok(sessions)

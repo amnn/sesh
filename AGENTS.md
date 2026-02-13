@@ -32,6 +32,7 @@ e.g. the same type are spread out too far, that is a sign that this module
 needs to be split up.
 
 ### Imports
+
 Imports at the top of the file are broken up into three sections, with an
 empty line between each:
 
@@ -63,6 +64,10 @@ Other functions that support the `impl` of a type should be kept as
 module-level functions.
 
 ### Comments
+
+Non-trivial function should have a doc comment, explaining what the function
+does (but not how it does it), details about its parameters and return value,
+and any relevant invariants, pre-, post-, panic or error conditions.
 
 Hard wrap comments at column 100.
 

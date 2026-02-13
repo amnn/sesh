@@ -1,7 +1,17 @@
 use std::collections::BTreeSet;
+use std::path::Path;
 use std::path::PathBuf;
+use std::process::Command;
 
 use anyhow::Context as _;
+use anyhow::ensure;
+use which::which;
+
+/// Validate that `jj` is available on `$PATH`.
+pub fn ensure() -> anyhow::Result<()> {
+    ensure!(which("jj").is_ok(), "'jj' not found in PATH");
+    Ok(())
+}
 
 /// Discover valid jj repositories from directories matching `globs`.
 pub fn repos(globs: &[String]) -> anyhow::Result<BTreeSet<PathBuf>> {
@@ -17,4 +27,22 @@ pub fn repos(globs: &[String]) -> anyhow::Result<BTreeSet<PathBuf>> {
     }
 
     Ok(repos)
+}
+
+/// Fetch log output from the repository at path `repo`.
+pub fn log(repo: &Path) -> anyhow::Result<String> {
+    let output = Command::new("jj")
+        .arg("log")
+        .arg("-R")
+        .arg(repo)
+        .arg("--color")
+        .arg("always")
+        .output()
+        .with_context(|| format!("failed to run 'jj log' for repo '{}'", repo.display()))?;
+
+    Ok(if output.status.success() {
+        String::from_utf8_lossy(&output.stdout).into_owned()
+    } else {
+        String::from_utf8_lossy(&output.stderr).into_owned()
+    })
 }

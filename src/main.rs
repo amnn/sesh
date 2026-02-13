@@ -59,17 +59,18 @@ async fn main() -> anyhow::Result<()> {
         } => tmux::popup(&width, &height, &title, &args),
 
         Command::Cli { repos } => {
+            jj::ensure()?;
             tmux::ensure()?;
 
             let mut sessions = vec![];
             let mut seen = BTreeSet::new();
 
-            for (name, meta) in tmux::sessions().await? {
-                if let Some(repo) = &meta.repo {
+            for (name, repo) in tmux::sessions().await? {
+                if let Some(repo) = &repo {
                     seen.insert(repo.clone());
                 }
 
-                sessions.push(Session::from_tmux(name, meta.panes, meta.repo))
+                sessions.push(Session::from_tmux(name, repo))
             }
 
             for repo in jj::repos(&repos)? {
