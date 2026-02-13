@@ -44,11 +44,13 @@
 
 ## Preview and Workflow Enhancements
 
-- [ ] Add `jj log` preview for repos and for sessions associated with a repo.
-  - Non-jj sessions just show their tmux session panes, as they do now.
+- [ ] Make the preview window show a summary of the `jj log` for the workspace
+  that would be visited, e.g. `jj log --color always --limit 10`.
+  - This preview should be optional (toggleable/configurable).
+  - Applies to repo entries and sessions associated with a repo/workspace.
+  - If a selected tmux session has no repo/workspace context, show no preview.
 
 - [ ] Add a tmux shortcut/entry point to launch this tool.
-  - Prefer a discoverable, documented binding and command alias.
 
 - [ ] Investigate and improve debug-build performance.
   - Profile hot paths (preview generation, matching, tmux I/O) and document findings.
