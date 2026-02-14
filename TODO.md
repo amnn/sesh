@@ -44,11 +44,14 @@
 
 ## Preview and Workflow Enhancements
 
-- [ ] Make the preview window show a summary of the `jj log` for the workspace
-  that would be visited, e.g. `jj log --color always --limit 10`.
-  - This preview should be optional (toggleable/configurable).
-  - Applies to repo entries and sessions associated with a repo/workspace.
-  - If a selected tmux session has no repo/workspace context, show no preview.
+- [x] Remove tmux pane-capture preview path that caused Skim rendering artifacts.
+  - Preview now uses `jj log` text output instead of terminal pane re-rendering.
+
+- [x] Make the preview window show a summary of the `jj log` for the workspace
+  that would be visited, e.g. `jj log --color always`.
+  - [ ] This preview should be optional (toggleable/configurable).
+  - [x] Applies to repo entries and sessions associated with a repo/workspace.
+  - [x] If a selected tmux session has no repo/workspace context, show no preview.
 
 - [ ] Add a tmux shortcut/entry point to launch this tool.
 
@@ -60,9 +63,3 @@
 - [ ] Add a TOML-based config system.
   - Define config file location(s), defaults, and merge/override precedence.
   - Move hard-coded UI/runtime values (for example preview sizing) into config.
-
-## Longer-Term UI Direction
-
-- [ ] Replace Skim with an in-project ratatui-based renderer.
-  - Goal: deterministic preview rendering without ANSI/parser artifacts.
-  - Keep fuzzy finding quality and keyboard UX at parity during migration.
