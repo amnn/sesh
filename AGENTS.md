@@ -63,11 +63,27 @@ use these for constructors (functions that return some variant of `Self`).
 Other functions that support the `impl` of a type should be kept as
 module-level functions.
 
+### Constants and Literals
+
+Factor literals out into constants if they are used in multiple places and the
+constant would have a clear name that conveys the meaning of the literal, and
+not the contents.
+
+Conversely, DO NOT factor literals out into constants if the name of the
+constant would change any time the literal's value changes.
+
 ### Comments
 
-Non-trivial function should have a doc comment, explaining what the function
-does (but not how it does it), details about its parameters and return value,
-and any relevant invariants, pre-, post-, panic or error conditions.
+Non-trivial modules, structs, enums, type aliases, and functions should have
+doc comments, with detail appropriate to the item kind:
+
+- Modules: what grouping of logic the module represents, scope boundaries, and
+  representative examples where helpful.
+- Structs/enums/type aliases: what data is modeled, key invariants, and field
+  doc comments where field-level intent is non-obvious.
+- Functions/methods: what they do (not how), relevant parameters/returns, and
+  any meaningful invariants, preconditions, postconditions, panic conditions,
+  or error conditions.
 
 Hard wrap comments at column 100.
 
