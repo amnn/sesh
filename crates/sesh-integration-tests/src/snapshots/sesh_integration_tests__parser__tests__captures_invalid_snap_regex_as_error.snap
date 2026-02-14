@@ -1,0 +1,14 @@
+---
+source: crates/sesh-integration-tests/src/parser.rs
+expression: "Script::parse(&[\":snap /(unterminated/repl/\", \"\",].join(\"\\n\"))"
+---
+Script {
+    lines: [
+        Line {
+            kind: Error {
+                message: "error parsing filters: /(unterminated/repl/\n^\n",
+            },
+            raw: ":snap /(unterminated/repl/",
+        },
+    ],
+}

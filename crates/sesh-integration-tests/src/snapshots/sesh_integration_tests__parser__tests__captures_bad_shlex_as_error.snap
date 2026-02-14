@@ -1,0 +1,14 @@
+---
+source: crates/sesh-integration-tests/src/parser.rs
+expression: "Script::parse(&[\":sh \\\"unterminated\", \"\"].join(\"\\n\"))"
+---
+Script {
+    lines: [
+        Line {
+            kind: Error {
+                message: "bad shell arguments",
+            },
+            raw: ":sh \"unterminated",
+        },
+    ],
+}

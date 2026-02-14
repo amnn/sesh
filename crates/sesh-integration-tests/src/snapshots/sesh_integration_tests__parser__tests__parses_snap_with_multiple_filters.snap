@@ -1,0 +1,27 @@
+---
+source: crates/sesh-integration-tests/src/parser.rs
+expression: "Script::parse(&[\":snap /foo/bar/  #baz#qux#\", \"\",].join(\"\\n\"))"
+---
+Script {
+    lines: [
+        Line {
+            kind: Snap {
+                filters: [
+                    Filter {
+                        patt: Regex(
+                            "foo",
+                        ),
+                        repl: "bar",
+                    },
+                    Filter {
+                        patt: Regex(
+                            "baz",
+                        ),
+                        repl: "qux",
+                    },
+                ],
+            },
+            raw: ":snap /foo/bar/  #baz#qux#",
+        },
+    ],
+}

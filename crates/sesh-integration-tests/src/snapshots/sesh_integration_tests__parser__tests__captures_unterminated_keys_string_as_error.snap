@@ -1,0 +1,14 @@
+---
+source: crates/sesh-integration-tests/src/parser.rs
+expression: "Script::parse(&[r#\":k \"unterminated\"#, r#\"\"#].join(\"\\n\"))"
+---
+Script {
+    lines: [
+        Line {
+            kind: Error {
+                message: "error parsing keys: \"unterminated\n^\n",
+            },
+            raw: ":k \"unterminated",
+        },
+    ],
+}

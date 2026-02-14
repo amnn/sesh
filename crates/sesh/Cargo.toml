@@ -1,0 +1,19 @@
+[package]
+name = "sesh"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow.workspace = true
+clap.workspace = true
+dashmap.workspace = true
+futures.workspace = true
+glob.workspace = true
+once_cell.workspace = true
+shlex.workspace = true
+skim.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+tracing.workspace = true
+vt100.workspace = true
+which.workspace = true

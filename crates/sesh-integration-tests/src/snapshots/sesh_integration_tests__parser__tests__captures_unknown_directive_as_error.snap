@@ -1,0 +1,14 @@
+---
+source: crates/sesh-integration-tests/src/parser.rs
+expression: "Script::parse(&[\":unknown abc\", \"\"].join(\"\\n\"))"
+---
+Script {
+    lines: [
+        Line {
+            kind: Error {
+                message: "unknown directive ':unknown'",
+            },
+            raw: ":unknown abc",
+        },
+    ],
+}

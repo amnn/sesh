@@ -1,0 +1,75 @@
+---
+source: crates/sesh-integration-tests/src/parser.rs
+expression: "Script::parse(&[\"# Scenario\", \"\", \":s cargo --version\",\n\":t new-session -d -s fixture \\\"sleep 3600\\\"\", \":p runner:0.0\",\n\":k down \\\"abc\\\"\", \":snap /foo/bar/\", \"\", \"Notes.\", \"\",].join(\"\\n\"))"
+---
+Script {
+    lines: [
+        Line {
+            kind: Text,
+            raw: "# Scenario",
+        },
+        Line {
+            kind: Text,
+            raw: "",
+        },
+        Line {
+            kind: Sh {
+                args: [
+                    "cargo",
+                    "--version",
+                ],
+            },
+            raw: ":s cargo --version",
+        },
+        Line {
+            kind: Tmux {
+                args: [
+                    "new-session",
+                    "-d",
+                    "-s",
+                    "fixture",
+                    "sleep 3600",
+                ],
+            },
+            raw: ":t new-session -d -s fixture \"sleep 3600\"",
+        },
+        Line {
+            kind: Pane {
+                target: "runner:0.0",
+            },
+            raw: ":p runner:0.0",
+        },
+        Line {
+            kind: Keys {
+                keys: [
+                    Down,
+                    Text(
+                        "abc",
+                    ),
+                ],
+            },
+            raw: ":k down \"abc\"",
+        },
+        Line {
+            kind: Snap {
+                filters: [
+                    Filter {
+                        patt: Regex(
+                            "foo",
+                        ),
+                        repl: "bar",
+                    },
+                ],
+            },
+            raw: ":snap /foo/bar/",
+        },
+        Line {
+            kind: Text,
+            raw: "",
+        },
+        Line {
+            kind: Text,
+            raw: "Notes.",
+        },
+    ],
+}

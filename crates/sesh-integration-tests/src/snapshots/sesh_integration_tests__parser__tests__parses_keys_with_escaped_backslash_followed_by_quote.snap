@@ -1,0 +1,18 @@
+---
+source: crates/sesh-integration-tests/src/parser.rs
+expression: "Script::parse(&[r#\":k \"a\\\\\"\"#, r#\"\"#].join(\"\\n\"))"
+---
+Script {
+    lines: [
+        Line {
+            kind: Keys {
+                keys: [
+                    Text(
+                        "a\\",
+                    ),
+                ],
+            },
+            raw: ":k \"a\\\\\"",
+        },
+    ],
+}
