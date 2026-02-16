@@ -1,15 +1,20 @@
 ---
 source: crates/sesh-integration-tests/src/parser.rs
-expression: "Script::parse(&[\":k \\\"a\\\\\\\"b\\\"\", \"\"].join(\"\\n\"))"
+expression: "Script::parse(&[r#\":k \"a\\\"b\"\"#, r#\"\"#].join(\"\\n\"))"
 ---
 Script {
     lines: [
         Line {
             kind: Keys {
                 keys: [
-                    Text(
-                        "a\"b",
-                    ),
+                    Key {
+                        kind: Text(
+                            "a\"b",
+                        ),
+                        ctrl: false,
+                        meta: false,
+                        shft: false,
+                    },
                 ],
             },
             raw: ":k \"a\\\"b\"",

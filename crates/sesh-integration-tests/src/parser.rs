@@ -46,9 +46,18 @@ pub(crate) enum LineKind {
     Error { message: String },
 }
 
+/// A key accompanied by optional modifiers.
+#[derive(Debug, Clone)]
+pub(crate) struct Key {
+    pub(crate) kind: KeyKind,
+    pub(crate) ctrl: bool,
+    pub(crate) meta: bool,
+    pub(crate) shft: bool,
+}
+
 /// One key token parsed from `:keys`.
 #[derive(Debug, Clone)]
-pub(crate) enum Key {
+pub(crate) enum KeyKind {
     Backspace,
     Ctrl,
     Down,
@@ -126,7 +135,10 @@ impl LineKind {
             },
 
             "k" | "keys" => LineKind::Keys {
-                keys: args.into_iter().map(parse_key).collect(),
+                keys: args
+                    .into_iter()
+                    .map(parse_key)
+                    .collect::<anyhow::Result<_>>()?,
             },
 
             "snap" => LineKind::Snap {
@@ -141,23 +153,63 @@ impl LineKind {
     }
 }
 
-/// Parse keys to send. Recognises a set of named keys, otherwise treats the input as literal text
-/// to send.
-fn parse_key(input: String) -> Key {
-    match input.as_str() {
-        "backspace" => Key::Backspace,
-        "ctrl" => Key::Ctrl,
-        "down" => Key::Down,
-        "enter" => Key::Enter,
-        "esc" => Key::Esc,
-        "left" => Key::Left,
-        "opt" => Key::Opt,
-        "right" => Key::Right,
-        "shift" => Key::Shift,
-        "space" => Key::Space,
-        "tab" => Key::Tab,
-        "up" => Key::Up,
-        _ => Key::Text(input),
+/// Parse a key to send (modifiers and the key code).
+fn parse_key(input: String) -> anyhow::Result<Key> {
+    let mut input = input.as_str();
+    let mut ctrl = false;
+    let mut meta = false;
+    let mut shft = false;
+
+    loop {
+        if let Some(rest) = input.strip_prefix("C-") {
+            ctrl = true;
+            input = rest;
+        } else if let Some(rest) = input.strip_prefix("M-") {
+            meta = true;
+            input = rest;
+        } else if let Some(rest) = input.strip_prefix("S-") {
+            shft = true;
+            input = rest;
+        } else {
+            break;
+        }
+    }
+
+    let kind = parse_key_kind(input);
+    if let KeyKind::Text(t) = &kind
+        && (ctrl || meta || shft)
+    {
+        ensure!(
+            t.len() == 1 && t.is_ascii(),
+            "modifiers only apply to single key codes"
+        );
+    }
+
+    Ok(Key {
+        kind,
+        ctrl,
+        meta,
+        shft,
+    })
+}
+
+/// Parse a key kind. Recognises a set of named keys, otherwise treats the input as literal text to
+/// send.
+fn parse_key_kind(input: &str) -> KeyKind {
+    match input {
+        "backspace" => KeyKind::Backspace,
+        "ctrl" => KeyKind::Ctrl,
+        "down" => KeyKind::Down,
+        "enter" => KeyKind::Enter,
+        "esc" => KeyKind::Esc,
+        "left" => KeyKind::Left,
+        "opt" => KeyKind::Opt,
+        "right" => KeyKind::Right,
+        "shift" => KeyKind::Shift,
+        "space" => KeyKind::Space,
+        "tab" => KeyKind::Tab,
+        "up" => KeyKind::Up,
+        _ => KeyKind::Text(input.to_owned()),
     }
 }
 
@@ -275,5 +327,22 @@ mod tests {
     #[test]
     fn parses_keys_with_escaped_backslash_followed_by_quote() {
         insta::assert_debug_snapshot!(Script::parse(&[r#":k "a\\""#, r#""#].join("\n")));
+    }
+
+    #[test]
+    fn parses_keys_with_single_modifier() {
+        insta::assert_debug_snapshot!(Script::parse(&[r#":k C-a"#, r#""#].join("\n")));
+    }
+
+    #[test]
+    fn parses_keys_with_stacked_modifiers() {
+        insta::assert_debug_snapshot!(Script::parse(&[r#":k C-M-S-enter"#, r#""#].join("\n")));
+    }
+
+    #[test]
+    fn captures_invalid_modified_text_keys_as_error() {
+        insta::assert_debug_snapshot!(Script::parse(
+            &[r#":k C-ab"#, r#":k M-é"#, r#":k S-"""#, r#""#,].join("\n")
+        ));
     }
 }

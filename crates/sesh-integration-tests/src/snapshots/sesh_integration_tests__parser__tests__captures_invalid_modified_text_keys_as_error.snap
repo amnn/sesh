@@ -1,0 +1,26 @@
+---
+source: crates/sesh-integration-tests/src/parser.rs
+expression: "Script::parse(&[r#\":k C-ab\"#, r#\":k M-é\"#, r#\":k S-\"\"\"#, r#\"\"#,].join(\"\\n\"))"
+---
+Script {
+    lines: [
+        Line {
+            kind: Error {
+                message: "modifiers only apply to single key codes",
+            },
+            raw: ":k C-ab",
+        },
+        Line {
+            kind: Error {
+                message: "modifiers only apply to single key codes",
+            },
+            raw: ":k M-é",
+        },
+        Line {
+            kind: Error {
+                message: "modifiers only apply to single key codes",
+            },
+            raw: ":k S-\"\"",
+        },
+    ],
+}

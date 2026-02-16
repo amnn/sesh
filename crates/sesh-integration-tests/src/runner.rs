@@ -17,6 +17,7 @@ use shlex::Quoter;
 
 use crate::parser;
 use crate::parser::Key;
+use crate::parser::KeyKind;
 use crate::parser::Line;
 use crate::parser::LineKind;
 
@@ -171,8 +172,9 @@ fn run_tmux_directive(runner: &Runner, raw: &str, args: Vec<String>) -> anyhow::
 
 fn run_keys(runner: &Runner, raw: &str, keys: Vec<Key>) -> anyhow::Result<()> {
     for key in keys {
-        match key {
-            Key::Text(text) => {
+        let _ = (key.ctrl, key.meta, key.shft);
+        match key.kind {
+            KeyKind::Text(text) => {
                 run_tmux_owned(
                     &runner.tmux_tmp_dir,
                     &[
@@ -241,21 +243,21 @@ fn run_snap(runner: &mut Runner, raw: &str, filter: Vec<parser::Filter>) -> anyh
     Ok(())
 }
 
-fn tmux_key_name(key: Key) -> &'static str {
+fn tmux_key_name(key: KeyKind) -> &'static str {
     match key {
-        Key::Backspace => "BSpace",
-        Key::Ctrl => "C",
-        Key::Down => "Down",
-        Key::Enter => "Enter",
-        Key::Esc => "Escape",
-        Key::Left => "Left",
-        Key::Opt => "M",
-        Key::Right => "Right",
-        Key::Shift => "S",
-        Key::Space => "Space",
-        Key::Tab => "Tab",
-        Key::Text(_) => unreachable!("text keys handled separately"),
-        Key::Up => "Up",
+        KeyKind::Backspace => "BSpace",
+        KeyKind::Ctrl => "C",
+        KeyKind::Down => "Down",
+        KeyKind::Enter => "Enter",
+        KeyKind::Esc => "Escape",
+        KeyKind::Left => "Left",
+        KeyKind::Opt => "M",
+        KeyKind::Right => "Right",
+        KeyKind::Shift => "S",
+        KeyKind::Space => "Space",
+        KeyKind::Tab => "Tab",
+        KeyKind::Text(_) => unreachable!("text keys handled separately"),
+        KeyKind::Up => "Up",
     }
 }
 

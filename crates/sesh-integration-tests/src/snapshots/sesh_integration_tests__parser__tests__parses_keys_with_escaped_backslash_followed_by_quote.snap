@@ -7,9 +7,14 @@ Script {
         Line {
             kind: Keys {
                 keys: [
-                    Text(
-                        "a\\",
-                    ),
+                    Key {
+                        kind: Text(
+                            "a\\",
+                        ),
+                        ctrl: false,
+                        meta: false,
+                        shft: false,
+                    },
                 ],
             },
             raw: ":k \"a\\\\\"",
