@@ -6,7 +6,7 @@ Script {
     lines: [
         Line {
             kind: Error {
-                message: "error parsing keys: \"unterminated\n^\n",
+                message: "invalid shell arguments",
             },
             raw: ":k \"unterminated",
         },

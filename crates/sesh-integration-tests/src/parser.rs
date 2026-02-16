@@ -4,25 +4,10 @@
 //! `LineKind`. Directive parse failures become `LineKind::Error` entries so test output can show
 //! parser issues in context instead of failing early.
 
-use std::borrow::Cow;
-
 use anyhow::Context as _;
-use anyhow::anyhow;
 use anyhow::bail;
+use anyhow::ensure;
 use regex::Regex;
-use winnow::Parser;
-use winnow::ascii::multispace0;
-use winnow::combinator::alt;
-use winnow::combinator::delimited;
-use winnow::combinator::repeat;
-use winnow::combinator::terminated;
-use winnow::error::ErrMode;
-use winnow::error::FromExternalError;
-use winnow::stream::Stream;
-use winnow::token::any;
-use winnow::token::take_till;
-
-type ParseError = ErrMode<winnow::error::ContextError>;
 
 /// Entrypoint for the parsed representation of a test script.
 #[derive(Debug)]
@@ -32,13 +17,13 @@ pub(crate) struct Script<'s> {
 
 #[derive(Debug)]
 pub(crate) struct Line<'s> {
-    pub(crate) kind: LineKind<'s>,
+    pub(crate) kind: LineKind,
     pub(crate) raw: &'s str,
 }
 
 /// Structured representation of a single line in a test script.
 #[derive(Debug)]
-pub(crate) enum LineKind<'s> {
+pub(crate) enum LineKind {
     /// The line is a plain markdown/text line.
     Text,
 
@@ -49,13 +34,13 @@ pub(crate) enum LineKind<'s> {
     Tmux { args: Vec<String> },
 
     /// Set the current pane target.
-    Pane { target: &'s str },
+    Pane { target: String },
 
     /// Send key inputs to current pane.
-    Keys { keys: Vec<Key<'s>> },
+    Keys { keys: Vec<Key> },
 
     /// Capture pane output and apply regex replacement filters.
-    Snap { filters: Vec<Filter<'s>> },
+    Snap { filters: Vec<Filter> },
 
     /// The directive failed to parse.
     Error { message: String },
@@ -63,7 +48,7 @@ pub(crate) enum LineKind<'s> {
 
 /// One key token parsed from `:keys`.
 #[derive(Debug, Clone)]
-pub(crate) enum Key<'s> {
+pub(crate) enum Key {
     Backspace,
     Ctrl,
     Down,
@@ -75,26 +60,21 @@ pub(crate) enum Key<'s> {
     Shift,
     Space,
     Tab,
-    Text(Cow<'s, str>),
+    Text(String),
     Up,
 }
 
 /// One regex replacement filter parsed from `:snap`.
 #[derive(Debug)]
-pub(crate) struct Filter<'s> {
+pub(crate) struct Filter {
     pub(crate) patt: Regex,
-    pub(crate) repl: &'s str,
+    pub(crate) repl: String,
 }
 
 impl<'s> Script<'s> {
     /// Parse a full script into an AST.
     pub(crate) fn parse(input: &'s str) -> Self {
-        let mut lines = Vec::new();
-
-        for line in input.lines() {
-            lines.push(Line::parse(line));
-        }
-
+        let lines = input.lines().map(Line::parse).collect();
         Self { lines }
     }
 }
@@ -121,115 +101,89 @@ impl<'s> Line<'s> {
     }
 }
 
-impl<'s> LineKind<'s> {
+impl LineKind {
     /// Parse one directive payload (without a leading `:`) into a `LineKind`.
-    fn parse(rest: &'s str) -> anyhow::Result<Self> {
-        let Some((cmd, args)) = rest.split_once(char::is_whitespace) else {
-            bail!("empty directive");
+    fn parse(rest: &str) -> anyhow::Result<Self> {
+        let (cmd, args) = rest
+            .trim()
+            .split_once(char::is_whitespace)
+            .unwrap_or((rest, ""));
+
+        let Some(args) = shlex::split(args) else {
+            bail!("invalid shell arguments");
         };
 
         Ok(match cmd {
-            "s" | "sh" => LineKind::Sh {
-                args: shlex::split(args).context("bad shell arguments")?,
-            },
-            "t" | "tmux" => LineKind::Tmux {
-                args: shlex::split(args).context("bad tmux arguments")?,
-            },
+            "s" | "sh" => LineKind::Sh { args },
+
+            "t" | "tmux" => LineKind::Tmux { args },
+
             "p" | "pane" => LineKind::Pane {
-                target: args.trim(),
+                target: {
+                    ensure!(args.len() == 1, "':pane' expects exactly one argument");
+                    args.into_iter().next().unwrap()
+                },
             },
+
             "k" | "keys" => LineKind::Keys {
-                keys: parse_keys(args.trim())?,
+                keys: args.into_iter().map(parse_key).collect(),
             },
+
             "snap" => LineKind::Snap {
-                filters: parse_filters(args.trim())?,
+                filters: args
+                    .into_iter()
+                    .map(parse_filter)
+                    .collect::<anyhow::Result<_>>()?,
             },
+
             other => bail!("unknown directive ':{other}'"),
         })
     }
 }
 
-/// Parse key arguments from a `:keys` directive.
-fn parse_keys(keys: &str) -> anyhow::Result<Vec<Key<'_>>> {
-    repeat(0.., terminated(parse_key, multispace0))
-        .parse(keys)
-        .map_err(|error| anyhow!("error parsing keys: {error}"))
-}
-
-/// Parse filter arguments from a `:snap` directive.
-fn parse_filters(filters: &str) -> anyhow::Result<Vec<Filter<'_>>> {
-    repeat(0.., terminated(parse_filter, multispace0))
-        .parse(filters)
-        .map_err(|error| anyhow!("error parsing filters: {error}"))
-}
-
-fn parse_key<'s>(input: &mut &'s str) -> Result<Key<'s>, ParseError> {
-    alt((
-        "backspace".value(Key::Backspace),
-        "ctrl".value(Key::Ctrl),
-        "down".value(Key::Down),
-        "enter".value(Key::Enter),
-        "esc".value(Key::Esc),
-        "left".value(Key::Left),
-        "opt".value(Key::Opt),
-        "right".value(Key::Right),
-        "shift".value(Key::Shift),
-        "space".value(Key::Space),
-        "tab".value(Key::Tab),
-        "up".value(Key::Up),
-        parse_string.map(Key::Text),
-    ))
-    .parse_next(input)
-}
-
-fn parse_string<'s>(input: &mut &'s str) -> Result<Cow<'s, str>, ParseError> {
-    let fragments: Vec<Cow<'s, str>> =
-        delimited('"', repeat(0.., parse_fragment), '"').parse_next(input)?;
-    let mut iter = fragments.into_iter();
-
-    let Some(mut result) = iter.next() else {
-        return Ok(Cow::Borrowed(""));
-    };
-
-    for fragment in iter {
-        result += fragment;
+/// Parse keys to send. Recognises a set of named keys, otherwise treats the input as literal text
+/// to send.
+fn parse_key(input: String) -> Key {
+    match input.as_str() {
+        "backspace" => Key::Backspace,
+        "ctrl" => Key::Ctrl,
+        "down" => Key::Down,
+        "enter" => Key::Enter,
+        "esc" => Key::Esc,
+        "left" => Key::Left,
+        "opt" => Key::Opt,
+        "right" => Key::Right,
+        "shift" => Key::Shift,
+        "space" => Key::Space,
+        "tab" => Key::Tab,
+        "up" => Key::Up,
+        _ => Key::Text(input),
     }
-
-    Ok(result)
 }
 
-fn parse_fragment<'s>(input: &mut &'s str) -> Result<Cow<'s, str>, ParseError> {
-    alt((
-        "\\\\".value(Cow::Borrowed("\\")),
-        "\\\"".value(Cow::Borrowed("\"")),
-        take_till(1.., |ch: char| ch == '"' || ch == '\\').map(Cow::Borrowed),
-    ))
-    .parse_next(input)
-}
+/// Parse a filter for `:snap` output.
+///
+/// A filter is a regular expression pattern and replacement string, separated by a common
+/// delimiter character. For example, `/foo/bar/` or `|foo|bar|` (the delimiter can be any
+/// character as long as it doesn't appear in the pattern or replacement).
+fn parse_filter(input: String) -> anyhow::Result<Filter> {
+    let delim = input.chars().next().context("empty filter string")?;
 
-fn parse_filter<'s>(input: &mut &'s str) -> Result<Filter<'s>, ParseError> {
-    let start = input.checkpoint();
-    parse_filter_(input).inspect_err(|_| {
-        input.reset(&start);
-    })
-}
+    let input = input
+        .strip_prefix(delim)
+        .unwrap()
+        .strip_suffix(delim)
+        .context("missing closing delimiter")?;
 
-fn parse_filter_<'s>(input: &mut &'s str) -> Result<Filter<'s>, ParseError> {
-    let mut separator = any.parse_next(input)?;
+    let mut parts = input.split(delim);
+    let patt = parts.next().context("missing pattern")?;
+    let repl = parts.next().context("missing replacement")?;
+    ensure!(parts.next().is_none(), "trailing content after replacement");
 
-    let pattern = take_till(0.., separator).parse_next(input)?;
-    separator.parse_next(input)?;
+    let patt = Regex::new(patt).context("invalid regex pattern")?;
+    let repl = repl.to_owned();
 
-    let pattern =
-        Regex::new(pattern).map_err(|error| ParseError::from_external_error(input, error))?;
-
-    let replacement = take_till(0.., separator).parse_next(input)?;
-    separator.parse_next(input)?;
-
-    Ok(Filter {
-        patt: pattern,
-        repl: replacement,
-    })
+    Ok(Filter { patt, repl })
 }
 
 #[cfg(test)]
@@ -271,18 +225,22 @@ mod tests {
     }
 
     #[test]
-    fn captures_command_without_arguments_as_error() {
-        insta::assert_debug_snapshot!(Script::parse(&[r#":sh"#, r#""#].join("\n")));
-    }
-
-    #[test]
-    fn captures_invalid_key_as_error() {
-        insta::assert_debug_snapshot!(Script::parse(&[":k INVALID", ""].join("\n")));
-    }
-
-    #[test]
     fn captures_unterminated_keys_string_as_error() {
         insta::assert_debug_snapshot!(Script::parse(&[r#":k "unterminated"#, r#""#].join("\n")));
+    }
+
+    #[test]
+    fn captures_bad_filters_as_error() {
+        insta::assert_debug_snapshot!(Script::parse(
+            &[
+                r#":snap """#,
+                r#":snap /foo"#,
+                r#":snap /foo/"#,
+                r#":snap /foo/bar"#,
+                r#":snap /foo/bar/baz/"#,
+            ]
+            .join("\n")
+        ));
     }
 
     #[test]
@@ -295,7 +253,7 @@ mod tests {
     #[test]
     fn parses_snap_with_multiple_filters() {
         insta::assert_debug_snapshot!(Script::parse(
-            &[":snap /foo/bar/  #baz#qux#", ""].join("\n")
+            &[":snap /foo/bar/  |baz|qux|", ""].join("\n")
         ));
     }
 

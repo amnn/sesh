@@ -169,7 +169,7 @@ fn run_tmux_directive(runner: &Runner, raw: &str, args: Vec<String>) -> anyhow::
     maybe_settle(runner)
 }
 
-fn run_keys(runner: &Runner, raw: &str, keys: Vec<Key<'_>>) -> anyhow::Result<()> {
+fn run_keys(runner: &Runner, raw: &str, keys: Vec<Key>) -> anyhow::Result<()> {
     for key in keys {
         match key {
             Key::Text(text) => {
@@ -182,7 +182,7 @@ fn run_keys(runner: &Runner, raw: &str, keys: Vec<Key<'_>>) -> anyhow::Result<()
                         "-t".to_owned(),
                         runner.current_pane.clone(),
                         "-l".to_owned(),
-                        text.into_owned(),
+                        text,
                     ],
                 )
                 .with_context(|| format!("failed to send :keys input for '{raw}'"))?;
@@ -208,7 +208,7 @@ fn run_keys(runner: &Runner, raw: &str, keys: Vec<Key<'_>>) -> anyhow::Result<()
     maybe_settle(runner)
 }
 
-fn run_snap(runner: &mut Runner, raw: &str, filter: Vec<parser::Filter<'_>>) -> anyhow::Result<()> {
+fn run_snap(runner: &mut Runner, raw: &str, filter: Vec<parser::Filter>) -> anyhow::Result<()> {
     maybe_settle(runner)?;
 
     let mut captured = run_tmux(
@@ -241,7 +241,7 @@ fn run_snap(runner: &mut Runner, raw: &str, filter: Vec<parser::Filter<'_>>) -> 
     Ok(())
 }
 
-fn tmux_key_name(key: Key<'_>) -> &'static str {
+fn tmux_key_name(key: Key) -> &'static str {
     match key {
         Key::Backspace => "BSpace",
         Key::Ctrl => "C",
