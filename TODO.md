@@ -3,6 +3,11 @@
 ## Testing
 
 - [ ] Interaction tests for UI
+  - [ ] Modifier keys for `:k` directive.
+  - [ ] Review `runner` module.
+  - [ ] Test: Basic session.
+  - [ ] Test: Session with repo attached.
+  - [ ] Test: Session with multiple workspaces.
 
 ## Foundation
 
