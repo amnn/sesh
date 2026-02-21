@@ -1,0 +1,16 @@
+# Runner text passthrough behavior
+
+This file verifies that ordinary markdown text is written back to the transcript exactly as it
+appears in the input when no actionable directives are present.
+
+The runner should preserve headings, paragraphs, punctuation, and spacing without adding any extra
+callouts.
+
+## A nested heading
+
+Plain text lines should remain plain text lines.
+
+Another paragraph follows to make sure multi-paragraph content is faithfully passed through.
+
+---
+vim: set ft=markdown:

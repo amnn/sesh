@@ -27,6 +27,7 @@ fn main() -> anyhow::Result<()> {
 >
 > | Directive | Description |
 > | --- | --- |
+> | `:b` / `:bins <binary...>` | Restrict test PATH to linked binaries |
 > | `:s` / `:sh <cmd...>` | Run host command (Rust `Command` + shlex args) |
 > | `:t` / `:tmux <args...>` | Run tmux command on test socket |
 > | `:p` / `:pane <target>` | Change current tmux pane target |
@@ -35,6 +36,7 @@ fn main() -> anyhow::Result<()> {
 
 ## Setup
 
+:b jj sleep tmux
 :t new-session -d -s fixture -x 120 -y 40 "sleep 3600"
 
 ## Exercise

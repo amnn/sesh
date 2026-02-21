@@ -11,7 +11,7 @@ use regex::Regex;
 
 /// Entrypoint for the parsed representation of a test script.
 #[derive(Debug)]
-pub(crate) struct Script<'s> {
+pub struct Script<'s> {
     pub(crate) lines: Vec<Line<'s>>,
 }
 
@@ -26,6 +26,9 @@ pub(crate) struct Line<'s> {
 pub(crate) enum LineKind {
     /// The line is a plain markdown/text line.
     Text,
+
+    /// Require particular binaries be made available in the test environment.
+    Bins { args: Vec<String> },
 
     /// Run a host command.
     Sh { args: Vec<String> },
@@ -82,7 +85,7 @@ pub(crate) struct Filter {
 
 impl<'s> Script<'s> {
     /// Parse a full script into an AST.
-    pub(crate) fn parse(input: &'s str) -> Self {
+    pub fn parse(input: &'s str) -> Self {
         let lines = input.lines().map(Line::parse).collect();
         Self { lines }
     }
@@ -123,9 +126,17 @@ impl LineKind {
         };
 
         Ok(match cmd {
-            "s" | "sh" => LineKind::Sh { args },
+            "b" | "bins" => LineKind::Bins { args },
 
-            "t" | "tmux" => LineKind::Tmux { args },
+            "s" | "sh" => {
+                ensure!(!args.is_empty(), "':sh' expects at least one argument");
+                LineKind::Sh { args }
+            }
+
+            "t" | "tmux" => {
+                ensure!(!args.is_empty(), "':tmux' expects at least one argument");
+                LineKind::Tmux { args }
+            }
 
             "p" | "pane" => LineKind::Pane {
                 target: {
