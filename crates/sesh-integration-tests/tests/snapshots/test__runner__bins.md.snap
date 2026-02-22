@@ -39,7 +39,7 @@ message for that exact binary.
 :b definitely-not-a-real-binary
 > [!WARNING]
 > 'definitely-not-a-real-binary' is unavailable: failed to add 'definitely-not-a-real-binary' to
-> environment
+> environment: cannot find binary path
 
 ## Multiple missing binaries fail
 
@@ -49,11 +49,11 @@ callouts.
 :b definitely-not-a-real-binary another-not-a-real-binary
 > [!WARNING]
 > 'definitely-not-a-real-binary' is unavailable: failed to add 'definitely-not-a-real-binary' to
-> environment
+> environment: cannot find binary path
 
 > [!WARNING]
 > 'another-not-a-real-binary' is unavailable: failed to add 'another-not-a-real-binary' to
-> environment
+> environment: cannot find binary path
 
 ## Mixed success and failure
 
@@ -66,7 +66,7 @@ both valid and invalid binaries.
 
 > [!WARNING]
 > 'definitely-not-a-real-binary' is unavailable: failed to add 'definitely-not-a-real-binary' to
-> environment
+> environment: cannot find binary path
 
 ## Mixed multiple success and multiple failure
 
@@ -79,11 +79,11 @@ and multiple WARNING callouts.
 
 > [!WARNING]
 > 'definitely-not-a-real-binary' is unavailable: failed to add 'definitely-not-a-real-binary' to
-> environment
+> environment: cannot find binary path
 
 > [!WARNING]
 > 'another-not-a-real-binary' is unavailable: failed to add 'another-not-a-real-binary' to
-> environment
+> environment: cannot find binary path
 
 ## Empty bins directive is a no-op
 

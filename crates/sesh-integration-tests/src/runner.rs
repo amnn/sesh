@@ -95,7 +95,7 @@ impl Runner {
         for (arg, result) in args.iter().zip(results) {
             match result {
                 Ok(_) => success.push(arg.as_str()),
-                Err(error) => failure.push((arg.as_str(), error.to_string())),
+                Err(error) => failure.push((arg.as_str(), format!("{error:#}"))),
             }
         }
 
