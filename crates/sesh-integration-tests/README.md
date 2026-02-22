@@ -5,7 +5,7 @@ These tests run `sesh` in a headless tmux server and snapshot pane output with
 
 ## Test case syntax
 
-Test cases live in `tests/cases/*.md`.
+Test cases live in `tests/cases/**/*.md`.
 
 - Lines starting with `:` are directives.
 - Other markdown lines are copied verbatim into the snapshot transcript.
@@ -31,21 +31,12 @@ Supported directives:
   - Optional replacement rules are sed-style pairs, separated by whitespace.
   - Replacements are global and applied in order.
 
-## Create a new test
-
-```bash
-cargo run -p sesh-integration-tests --bin new-test -- <name>
-```
-
-This creates `tests/cases/<name>.md` with a starter template and syntax
-reference.
-
 ## Run tests
 
 Run only this crate's integration test harness:
 
 ```bash
-cargo test -p sesh-integration-tests --test test
+cargo nextest run -p sesh-integration-tests --test test
 ```
 
 Run the full workspace test suite:
