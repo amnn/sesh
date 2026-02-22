@@ -1,6 +1,7 @@
 //! Runtime for parsed markdown integration scripts.
 
-use std::fmt::Write;
+use std::fmt;
+use std::fmt::Write as _;
 use std::path::Path;
 
 use futures::future;
@@ -36,7 +37,7 @@ impl Runner {
         Ok(Self { env, tmux })
     }
 
-    pub async fn run(&self, w: &mut impl Write, script: &parser::Script<'_>) -> anyhow::Result<()> {
+    pub async fn run(&self, w: &mut impl fmt::Write, script: &parser::Script<'_>) -> fmt::Result {
         for line in &script.lines {
             self.eval_line(w, line).await?;
         }
@@ -44,7 +45,7 @@ impl Runner {
         Ok(())
     }
 
-    async fn eval_line(&self, w: &mut impl Write, line: &Line<'_>) -> anyhow::Result<()> {
+    async fn eval_line(&self, w: &mut impl fmt::Write, line: &Line<'_>) -> fmt::Result {
         match &line.kind {
             LineKind::Text => {
                 writeln!(w, "{}", line.raw)?;
@@ -93,7 +94,7 @@ impl Runner {
         Ok(())
     }
 
-    async fn eval_bins(&self, w: &mut impl Write, args: &[String]) -> anyhow::Result<()> {
+    async fn eval_bins(&self, w: &mut impl fmt::Write, args: &[String]) -> fmt::Result {
         let futures = args.iter().map(|arg| self.env.bin(arg));
         let results = future::join_all(futures).await;
 
@@ -143,7 +144,7 @@ impl Runner {
         Ok(())
     }
 
-    async fn eval_sh(&self, w: &mut impl Write, raw: &str, args: &[String]) -> anyhow::Result<()> {
+    async fn eval_sh(&self, w: &mut impl fmt::Write, raw: &str, args: &[String]) -> fmt::Result {
         write!(w, "{raw}")?;
 
         let Some((program, tail)) = args.split_first() else {
@@ -180,7 +181,7 @@ impl Runner {
     }
 }
 
-fn write_callout(w: &mut impl Write, kind: &str, lines: &[&str]) -> anyhow::Result<()> {
+fn write_callout(w: &mut impl fmt::Write, kind: &str, lines: &[&str]) -> fmt::Result {
     writeln!(w, "> [!{kind}]")?;
 
     for line in lines {
@@ -206,7 +207,7 @@ fn write_callout(w: &mut impl Write, kind: &str, lines: &[&str]) -> anyhow::Resu
     Ok(())
 }
 
-fn write_fenced_block(w: &mut impl Write, label: &str, text: &str) -> anyhow::Result<()> {
+fn write_fenced_block(w: &mut impl fmt::Write, label: &str, text: &str) -> fmt::Result {
     writeln!(w, "```{label}")?;
     write!(w, "{text}")?;
 

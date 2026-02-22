@@ -22,7 +22,10 @@ fn test(path: &Path) -> datatest_stable::Result<()> {
 
     runtime.block_on(async {
         let runner = Runner::new(&tmp).await?;
-        runner.run(&mut output, &script).await
+        runner
+            .run(&mut output, &script)
+            .await
+            .context("failed to write integration test output")
     })?;
 
     let snapshot_name = path
