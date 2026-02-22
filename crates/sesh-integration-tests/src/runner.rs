@@ -66,9 +66,7 @@ impl Runner {
             }
 
             LineKind::Tmux { args } => {
-                writeln!(w, "{}", line.raw)?;
-                let _ = args.len();
-                let _ = &self.tmux;
+                self.eval_tmux(w, line.raw, args).await?;
             }
 
             LineKind::Pane { target } => {
@@ -173,7 +171,45 @@ impl Runner {
 
             Err(e) => {
                 writeln!(w)?;
-                write_callout(w, "WARNING", &[&format!("failed to execute command: {e}")])?;
+                let msg = format!("failed to execute command: {e}");
+                write_callout(w, "WARNING", &[&msg])?;
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn eval_tmux(&self, w: &mut impl fmt::Write, raw: &str, args: &[String]) -> fmt::Result {
+        write!(w, "{raw}")?;
+
+        if args.is_empty() {
+            // This should be validated by the parser, but add a defensive check here.
+            writeln!(w)?;
+            write_callout(w, "WARNING", &["':tmux' expects at least one argument"])?;
+            return Ok(());
+        }
+
+        match self.tmux.command(&self.env).args(args).output().await {
+            Ok(output) => {
+                if let Some(code) = output.status.code() {
+                    writeln!(w, " (exit: {code})")?;
+                } else {
+                    writeln!(w, " (exit: killed)")?;
+                }
+
+                if !output.stdout.is_empty() {
+                    write_fenced_block(w, "stdout", &String::from_utf8_lossy(&output.stdout))?;
+                }
+
+                if !output.stderr.is_empty() && !output.status.success() {
+                    write_fenced_block(w, "stderr", &String::from_utf8_lossy(&output.stderr))?;
+                }
+            }
+
+            Err(e) => {
+                writeln!(w)?;
+                let msg = format!("failed to execute tmux command: {e}");
+                write_callout(w, "WARNING", &[&msg])?;
             }
         }
 

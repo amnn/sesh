@@ -1,0 +1,35 @@
+---
+source: crates/sesh-integration-tests/tests/test.rs
+expression: output
+---
+# Runner tmux directive behavior
+
+## Successful tmux command prints stdout
+
+Successful tmux commands should append an exit annotation and then write stdout inside a fenced
+code block.
+
+:tmux list-sessions -F '#S' (exit: 0)
+```stdout
+0
+```
+
+## Tmux commands share runner socket state
+
+Commands run via `:tmux` should operate on the same runner-managed tmux server/socket across
+multiple invocations.
+
+:tmux new-session -d -s socket-check (exit: 0)
+:tmux list-sessions -F '#S' (exit: 0)
+```stdout
+0
+socket-check
+```
+:tmux kill-session -t socket-check (exit: 0)
+:tmux has-session -t socket-check (exit: 1)
+```stderr
+can't find session: socket-check
+```
+
+---
+vim: set ft=markdown:

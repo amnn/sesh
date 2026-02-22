@@ -42,7 +42,7 @@ impl Tmux {
     }
 
     /// Build a `tmux` command in the given `env`ironment.
-    fn command(&self, env: &Env) -> Command {
+    pub(crate) fn command(&self, env: &Env) -> Command {
         let mut command = env.command("tmux");
         command.arg("-S").arg(self.socket.as_os_str());
         command
