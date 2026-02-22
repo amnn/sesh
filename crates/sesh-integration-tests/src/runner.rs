@@ -117,7 +117,7 @@ impl Runner {
                     prefix = ", ";
                 }
 
-                write!(line, " and '{last}' are available.")?;
+                write!(line, ", and '{last}' are available.")?;
                 write_callout(w, "NOTE", &[&line])?;
                 add_space = true;
             }

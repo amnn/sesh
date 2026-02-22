@@ -18,7 +18,7 @@ Exactly two valid binaries in one directive should both be reported as available
 
 :b ls cat
 > [!NOTE]
-> 'ls' and 'cat' are available.
+> 'ls', and 'cat' are available.
 
 ## Three binaries succeed
 
@@ -26,7 +26,7 @@ With 2+ valid binaries, the success message should join them correctly and menti
 
 :b ls cat echo
 > [!NOTE]
-> 'ls', 'cat' and 'echo' are available.
+> 'ls', 'cat', and 'echo' are available.
 
 ## Missing binary fails
 
@@ -69,7 +69,7 @@ callouts.
 
 :b ls cat definitely-not-a-real-binary another-not-a-real-binary
 > [!NOTE]
-> 'ls' and 'cat' are available.
+> 'ls', and 'cat' are available.
 
 > [!WARNING]
 > 'definitely-not-a-real-binary' is unavailable: failed to add 'definitely-not-a-real-binary' to
