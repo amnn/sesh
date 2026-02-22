@@ -14,22 +14,26 @@ Script {
         },
         Line {
             kind: Sh {
-                args: [
-                    "cargo",
-                    "--version",
-                ],
+                args: NonEmpty {
+                    head: "cargo",
+                    tail: [
+                        "--version",
+                    ],
+                },
             },
             raw: ":$ cargo --version",
         },
         Line {
             kind: Tmux {
-                args: [
-                    "new-session",
-                    "-d",
-                    "-s",
-                    "fixture",
-                    "sleep 3600",
-                ],
+                args: NonEmpty {
+                    head: "new-session",
+                    tail: [
+                        "-d",
+                        "-s",
+                        "fixture",
+                        "sleep 3600",
+                    ],
+                },
             },
             raw: ":t new-session -d -s fixture \"sleep 3600\"",
         },

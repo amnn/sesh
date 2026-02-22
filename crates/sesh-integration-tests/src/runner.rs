@@ -6,6 +6,7 @@ use std::path::Path;
 
 use futures::future;
 use futures::try_join;
+use nonempty::NonEmpty;
 use textwrap::Options;
 
 use crate::env::Env;
@@ -142,17 +143,15 @@ impl Runner {
         Ok(())
     }
 
-    async fn eval_sh(&self, w: &mut impl fmt::Write, raw: &str, args: &[String]) -> fmt::Result {
+    async fn eval_sh(
+        &self,
+        w: &mut impl fmt::Write,
+        raw: &str,
+        args: &NonEmpty<String>,
+    ) -> fmt::Result {
         write!(w, "{raw}")?;
 
-        let Some((program, tail)) = args.split_first() else {
-            // This should be validated by the parser, but add a defensive check here.
-            writeln!(w)?;
-            write_callout(w, "WARNING", &["':sh' expects at least one argument"])?;
-            return Ok(());
-        };
-
-        match self.env.command(program).args(tail).output().await {
+        match self.env.command(&args.head).args(&args.tail).output().await {
             Ok(output) => {
                 if let Some(code) = output.status.code() {
                     writeln!(w, " (exit: {code})")?;
@@ -179,15 +178,13 @@ impl Runner {
         Ok(())
     }
 
-    async fn eval_tmux(&self, w: &mut impl fmt::Write, raw: &str, args: &[String]) -> fmt::Result {
+    async fn eval_tmux(
+        &self,
+        w: &mut impl fmt::Write,
+        raw: &str,
+        args: &NonEmpty<String>,
+    ) -> fmt::Result {
         write!(w, "{raw}")?;
-
-        if args.is_empty() {
-            // This should be validated by the parser, but add a defensive check here.
-            writeln!(w)?;
-            write_callout(w, "WARNING", &["':tmux' expects at least one argument"])?;
-            return Ok(());
-        }
 
         match self.tmux.command(&self.env).args(args).output().await {
             Ok(output) => {

@@ -7,6 +7,7 @@
 use anyhow::Context as _;
 use anyhow::bail;
 use anyhow::ensure;
+use nonempty::NonEmpty;
 use regex::Regex;
 
 /// Entrypoint for the parsed representation of a test script.
@@ -31,10 +32,10 @@ pub(crate) enum LineKind {
     Bins { args: Vec<String> },
 
     /// Run a host command.
-    Sh { args: Vec<String> },
+    Sh { args: NonEmpty<String> },
 
     /// Run a tmux command on the test socket.
-    Tmux { args: Vec<String> },
+    Tmux { args: NonEmpty<String> },
 
     /// Set the current pane target.
     Pane { target: String },
@@ -128,15 +129,13 @@ impl LineKind {
         Ok(match cmd {
             "b" | "bins" => LineKind::Bins { args },
 
-            "$" | "sh" => {
-                ensure!(!args.is_empty(), "':sh' expects at least one argument");
-                LineKind::Sh { args }
-            }
+            "$" | "sh" => LineKind::Sh {
+                args: NonEmpty::from_vec(args).context("':sh' expects at least one argument")?,
+            },
 
-            "t" | "tmux" => {
-                ensure!(!args.is_empty(), "':tmux' expects at least one argument");
-                LineKind::Tmux { args }
-            }
+            "t" | "tmux" => LineKind::Tmux {
+                args: NonEmpty::from_vec(args).context("':tmux' expects at least one argument")?,
+            },
 
             "p" | "pane" => LineKind::Pane {
                 target: {
