@@ -13,7 +13,6 @@ WARNING callout.
 > [!NOTE]
 > 'ls' is available.
 
-
 ## Two binaries succeed
 
 This section verifies that exactly two valid binaries in one directive are both reported as
@@ -22,7 +21,6 @@ available.
 :b ls cat
 > [!NOTE]
 > 'ls' and 'cat' are available.
-
 
 ## Three binaries succeed
 
@@ -33,7 +31,6 @@ requested binaries are mentioned.
 > [!NOTE]
 > 'ls', 'cat' and 'echo' are available.
 
-
 ## Missing binary fails
 
 This section verifies that a missing binary produces a WARNING callout that includes the error
@@ -43,7 +40,6 @@ message for that exact binary.
 > [!WARNING]
 > 'definitely-not-a-real-binary' is unavailable: failed to add 'definitely-not-a-real-binary' to
 > environment
-
 
 ## Mixed success and failure
 
@@ -57,7 +53,6 @@ both valid and invalid binaries.
 > [!WARNING]
 > 'definitely-not-a-real-binary' is unavailable: failed to add 'definitely-not-a-real-binary' to
 > environment
-
 
 ## Empty bins directive is a no-op
 

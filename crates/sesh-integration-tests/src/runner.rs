@@ -99,11 +99,12 @@ impl Runner {
             }
         }
 
+        let mut add_space = false;
         match &success[..] {
             [] => {}
             [bin] => {
                 write_callout(w, "NOTE", &[&format!("'{bin}' is available.")])?;
-                writeln!(w)?;
+                add_space = true;
             }
 
             [heads @ .., last] => {
@@ -118,14 +119,18 @@ impl Runner {
 
                 write!(line, " and '{last}' are available.")?;
                 write_callout(w, "NOTE", &[&line])?;
-                writeln!(w)?;
+                add_space = true;
             }
         }
 
         for (bin, err) in &failure {
+            if add_space {
+                writeln!(w)?;
+            }
+
             let line = format!("'{bin}' is unavailable: {err}");
             write_callout(w, "WARNING", &[&line])?;
-            writeln!(w)?;
+            add_space = true;
         }
 
         Ok(())
