@@ -30,7 +30,7 @@ diagnostic detail.
 :snap /(unterminated/repl/
 > [!WARNING]
 > Parser error: invalid regex pattern
-
+>
 > Caused by:
 >     regex parse error:
 >         (unterminated

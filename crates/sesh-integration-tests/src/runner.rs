@@ -141,15 +141,22 @@ fn write_callout(w: &mut impl Write, kind: &str, lines: &[&str]) -> anyhow::Resu
     writeln!(w, "> [!{kind}]")?;
 
     for line in lines {
-        let opts = Options::new(100).break_words(false);
-        let wrapped = if let Some(rest) = line.strip_prefix("- ") {
-            textwrap::wrap(rest, opts.initial_indent("> - ").subsequent_indent(">   "))
-        } else {
-            textwrap::wrap(line, opts.initial_indent("> ").subsequent_indent("> "))
-        };
+        for line in line.split('\n') {
+            if line.is_empty() {
+                writeln!(w, ">")?;
+                continue;
+            }
 
-        for line in wrapped {
-            writeln!(w, "{line}")?;
+            let opts = Options::new(100).break_words(false);
+            let wrapped = if let Some(rest) = line.strip_prefix("- ") {
+                textwrap::wrap(rest, opts.initial_indent("> - ").subsequent_indent(">   "))
+            } else {
+                textwrap::wrap(line, opts.initial_indent("> ").subsequent_indent("> "))
+            };
+
+            for line in wrapped {
+                writeln!(w, "{line}")?;
+            }
         }
     }
 
