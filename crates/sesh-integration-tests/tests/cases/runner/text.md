@@ -1,7 +1,7 @@
 # Runner text passthrough behavior
 
-This file verifies that ordinary markdown text is written back to the transcript exactly as it
-appears in the input when no actionable directives are present.
+Ordinary markdown text should be written back to the transcript exactly as it appears in the input
+when no actionable directives are present.
 
 The runner should preserve headings, paragraphs, punctuation, and spacing without adding any extra
 callouts.
