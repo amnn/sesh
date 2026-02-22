@@ -28,12 +28,26 @@ message for that exact binary.
 
 :b definitely-not-a-real-binary
 
+## Multiple missing binaries fail
+
+This section verifies that multiple invalid binaries in one directive produce multiple WARNING
+callouts.
+
+:b definitely-not-a-real-binary another-not-a-real-binary
+
 ## Mixed success and failure
 
 This section verifies that one directive can emit both NOTE and WARNING callouts when it contains
 both valid and invalid binaries.
 
 :b ls definitely-not-a-real-binary
+
+## Mixed multiple success and multiple failure
+
+This section verifies that one directive with multiple valid and invalid binaries emits one NOTE
+and multiple WARNING callouts.
+
+:b ls cat definitely-not-a-real-binary another-not-a-real-binary
 
 ## Empty bins directive is a no-op
 
