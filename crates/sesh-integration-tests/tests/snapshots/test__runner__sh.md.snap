@@ -1,0 +1,85 @@
+---
+source: crates/sesh-integration-tests/tests/test.rs
+expression: output
+---
+# Runner shell directive behavior
+
+## Successful shell command prints stdout
+
+Successful shell commands should append an exit annotation and then write stdout inside a fenced
+code block.
+
+:b echo
+> [!NOTE]
+> 'echo' is available.
+
+:$ echo hello from sh (exit: 0)
+```stdout
+hello from sh
+```
+
+## Command not in bins fails to execute
+
+A command that exists on the host but has not been added via `:b` should fail to spawn in the
+isolated environment and produce a WARNING callout.
+
+:$ cat
+> [!WARNING]
+> failed to execute command: No such file or directory (os error 2)
+
+## Failing shell command prints stderr
+
+Failing shell commands should append a non-zero exit annotation and then write stderr inside a
+fenced code block.
+
+:b ls
+> [!NOTE]
+> 'ls' is available.
+
+:$ ls does-not-exist (exit: 1)
+```stderr
+ls: does-not-exist: No such file or directory
+```
+
+## Command writes both streams and fails
+
+When a command exits non-zero and writes both streams, stdout should be shown first and stderr
+should be shown second.
+
+:b sh
+> [!NOTE]
+> 'sh' is available.
+
+:$ sh -c "printf 'hello from stdout\n'; printf 'hello from stderr\n' >&2; exit 7" (exit: 7)
+```stdout
+hello from stdout
+```
+```stderr
+hello from stderr
+```
+
+## Command writes both streams and succeeds
+
+When a command exits zero and writes both streams, only stdout should be shown in the transcript.
+
+:b sh
+> [!NOTE]
+> 'sh' is available.
+
+:$ sh -c "printf 'hello from stdout\n'; printf 'hello from stderr\n' >&2; exit 0" (exit: 0)
+```stdout
+hello from stdout
+```
+
+## Successful shell command can be silent
+
+Successful shell commands without stdout should only produce the annotated raw line.
+
+:b true
+> [!NOTE]
+> 'true' is available.
+
+:$ true (exit: 0)
+
+---
+vim: set ft=markdown:

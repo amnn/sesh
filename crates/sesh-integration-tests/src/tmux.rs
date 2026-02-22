@@ -25,7 +25,7 @@ impl Tmux {
         let tmux = Self { bin, socket };
 
         let new = tmux
-            .command(env)?
+            .command(env)
             .args(["new-session", "-d"])
             .args(["-x", "160", "-y", "100"])
             .output()
@@ -42,11 +42,10 @@ impl Tmux {
     }
 
     /// Build a `tmux` command in the given `env`ironment.
-    fn command(&self, env: &Env) -> anyhow::Result<Command> {
-        let mut command = env.command("tmux")?;
+    fn command(&self, env: &Env) -> Command {
+        let mut command = env.command("tmux");
         command.arg("-S").arg(self.socket.as_os_str());
-
-        Ok(command)
+        command
     }
 }
 

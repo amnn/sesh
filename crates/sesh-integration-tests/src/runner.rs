@@ -1,9 +1,10 @@
 //! Runtime for parsed markdown integration scripts.
 
-use futures::future;
-use futures::try_join;
 use std::fmt::Write;
 use std::path::Path;
+
+use futures::future;
+use futures::try_join;
 use textwrap::Options;
 
 use crate::env::Env;
@@ -44,39 +45,45 @@ impl Runner {
     }
 
     async fn eval_line(&self, w: &mut impl Write, line: &Line<'_>) -> anyhow::Result<()> {
-        writeln!(w, "{}", line.raw)?;
-
         match &line.kind {
-            LineKind::Text => {}
+            LineKind::Text => {
+                writeln!(w, "{}", line.raw)?;
+            }
 
             LineKind::Error { message } => {
+                writeln!(w, "{}", line.raw)?;
                 write_callout(w, "WARNING", &[&format!("Parser error: {message}")])?;
             }
 
             LineKind::Bins { args } => {
+                writeln!(w, "{}", line.raw)?;
                 self.eval_bins(w, args).await?;
             }
 
             LineKind::Sh { args } => {
-                let _ = args.len();
+                self.eval_sh(w, line.raw, args).await?;
             }
 
             LineKind::Tmux { args } => {
+                writeln!(w, "{}", line.raw)?;
                 let _ = args.len();
                 let _ = &self.tmux;
             }
 
             LineKind::Pane { target } => {
+                writeln!(w, "{}", line.raw)?;
                 let _ = target.len();
             }
 
             LineKind::Keys { keys } => {
+                writeln!(w, "{}", line.raw)?;
                 for key in keys {
                     let _ = (&key.kind, key.ctrl, key.meta, key.shft);
                 }
             }
 
             LineKind::Snap { filters } => {
+                writeln!(w, "{}", line.raw)?;
                 for filter in filters {
                     let _ = (filter.patt.as_str(), &filter.repl);
                 }
@@ -135,6 +142,42 @@ impl Runner {
 
         Ok(())
     }
+
+    async fn eval_sh(&self, w: &mut impl Write, raw: &str, args: &[String]) -> anyhow::Result<()> {
+        write!(w, "{raw}")?;
+
+        let Some((program, tail)) = args.split_first() else {
+            // This should be validated by the parser, but add a defensive check here.
+            writeln!(w)?;
+            write_callout(w, "WARNING", &["':sh' expects at least one argument"])?;
+            return Ok(());
+        };
+
+        match self.env.command(program).args(tail).output().await {
+            Ok(output) => {
+                if let Some(code) = output.status.code() {
+                    writeln!(w, " (exit: {code})")?;
+                } else {
+                    writeln!(w, " (exit: killed)")?;
+                }
+
+                if !output.stdout.is_empty() {
+                    write_fenced_block(w, "stdout", &String::from_utf8_lossy(&output.stdout))?;
+                }
+
+                if !output.stderr.is_empty() && !output.status.success() {
+                    write_fenced_block(w, "stderr", &String::from_utf8_lossy(&output.stderr))?;
+                }
+            }
+
+            Err(e) => {
+                writeln!(w)?;
+                write_callout(w, "WARNING", &[&format!("failed to execute command: {e}")])?;
+            }
+        }
+
+        Ok(())
+    }
 }
 
 fn write_callout(w: &mut impl Write, kind: &str, lines: &[&str]) -> anyhow::Result<()> {
@@ -160,5 +203,17 @@ fn write_callout(w: &mut impl Write, kind: &str, lines: &[&str]) -> anyhow::Resu
         }
     }
 
+    Ok(())
+}
+
+fn write_fenced_block(w: &mut impl Write, label: &str, text: &str) -> anyhow::Result<()> {
+    writeln!(w, "```{label}")?;
+    write!(w, "{text}")?;
+
+    if !text.ends_with('\n') {
+        writeln!(w)?;
+    }
+
+    writeln!(w, "```")?;
     Ok(())
 }

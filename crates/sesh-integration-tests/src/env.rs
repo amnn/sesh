@@ -83,7 +83,7 @@ impl Env {
     ///
     /// Its `$HOME` and `$PATH` environment variables point inside the environment, and its current
     /// directory is also set to `$HOME`.
-    pub(crate) fn command(&self, program: &str) -> anyhow::Result<Command> {
+    pub(crate) fn command(&self, program: &str) -> Command {
         let mut command = Command::new(program);
 
         command
@@ -92,7 +92,7 @@ impl Env {
             .env("PATH", self.path("bin"))
             .current_dir(self.path("home"));
 
-        Ok(command)
+        command
     }
 
     /// Relativize `path` in this environment's context.
