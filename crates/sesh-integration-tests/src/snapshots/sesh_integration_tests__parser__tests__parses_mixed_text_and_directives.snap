@@ -1,6 +1,6 @@
 ---
 source: crates/sesh-integration-tests/src/parser.rs
-expression: "Script::parse(&[r#\"# Scenario\"#, r#\"\"#, r#\":s cargo --version\"#,\nr#\":t new-session -d -s fixture \"sleep 3600\"\"#, r#\":p runner:0.0\"#,\nr#\":k down \"abc\"\"#, r#\":snap /foo/bar/\"#, r#\"\"#, r#\"Notes.\"#,\nr#\"\"#,].join(\"\\n\"))"
+expression: "Script::parse(&[r#\"# Scenario\"#, r#\"\"#, r#\":$ cargo --version\"#,\nr#\":t new-session -d -s fixture \"sleep 3600\"\"#, r#\":p runner:0.0\"#,\nr#\":k down \"abc\"\"#, r#\":s /foo/bar/\"#, r#\"\"#, r#\"Notes.\"#, r#\"\"#,].join(\"\\n\"))"
 ---
 Script {
     lines: [
@@ -19,7 +19,7 @@ Script {
                     "--version",
                 ],
             },
-            raw: ":s cargo --version",
+            raw: ":$ cargo --version",
         },
         Line {
             kind: Tmux {
@@ -71,7 +71,7 @@ Script {
                     },
                 ],
             },
-            raw: ":snap /foo/bar/",
+            raw: ":s /foo/bar/",
         },
         Line {
             kind: Text,

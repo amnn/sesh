@@ -128,7 +128,7 @@ impl LineKind {
         Ok(match cmd {
             "b" | "bins" => LineKind::Bins { args },
 
-            "s" | "sh" => {
+            "$" | "sh" => {
                 ensure!(!args.is_empty(), "':sh' expects at least one argument");
                 LineKind::Sh { args }
             }
@@ -152,7 +152,7 @@ impl LineKind {
                     .collect::<anyhow::Result<_>>()?,
             },
 
-            "snap" => LineKind::Snap {
+            "s" | "snap" => LineKind::Snap {
                 filters: args
                     .into_iter()
                     .map(parse_filter)
@@ -259,11 +259,11 @@ mod tests {
             &[
                 r#"# Scenario"#,
                 r#""#,
-                r#":s cargo --version"#,
+                r#":$ cargo --version"#,
                 r#":t new-session -d -s fixture "sleep 3600""#,
                 r#":p runner:0.0"#,
                 r#":k down "abc""#,
-                r#":snap /foo/bar/"#,
+                r#":s /foo/bar/"#,
                 r#""#,
                 r#"Notes."#,
                 r#""#,

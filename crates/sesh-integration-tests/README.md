@@ -12,7 +12,7 @@ Test cases live in `tests/cases/*.md`.
 
 Supported directives:
 
-- `:s` / `:sh <cmd...>`
+- `:$` / `:sh <cmd...>`
   - Run a host command via Rust `Command`.
   - Arguments are parsed with `shlex`.
 - `:t` / `:tmux <args...>`
@@ -26,7 +26,7 @@ Supported directives:
     `backspace`, `shift`, `ctrl`, `opt`, `esc`, `tab`, `space`.
   - Modifiers are canonical uppercase only: `C-`, `M-`, `S-`.
   - Printable text must be quoted: `"abc"`.
-- `:snap [dregexdreplacementd ...]`
+- `:s` / `:snap [dregexdreplacementd ...]`
   - Capture current pane and append it in a fenced `terminal` code block.
   - Optional replacement rules are sed-style pairs, separated by whitespace.
   - Replacements are global and applied in order.
