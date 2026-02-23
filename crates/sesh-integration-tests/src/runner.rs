@@ -19,6 +19,7 @@ use crate::tmux::Tmux;
 /// Integration-test runner state.
 pub struct Runner {
     env: Env,
+    pane: String,
     tmux: Tmux,
 }
 
@@ -35,10 +36,18 @@ impl Runner {
             Tmux::new(&env)
         )?;
 
-        Ok(Self { env, tmux })
+        Ok(Self {
+            env,
+            pane: "0.0".to_owned(),
+            tmux,
+        })
     }
 
-    pub async fn run(&self, w: &mut impl fmt::Write, script: &parser::Script<'_>) -> fmt::Result {
+    pub async fn run(
+        &mut self,
+        w: &mut impl fmt::Write,
+        script: &parser::Script<'_>,
+    ) -> fmt::Result {
         for line in &script.lines {
             self.eval_line(w, line).await?;
         }
@@ -46,7 +55,7 @@ impl Runner {
         Ok(())
     }
 
-    async fn eval_line(&self, w: &mut impl fmt::Write, line: &Line<'_>) -> fmt::Result {
+    async fn eval_line(&mut self, w: &mut impl fmt::Write, line: &Line<'_>) -> fmt::Result {
         match &line.kind {
             LineKind::Text => {
                 writeln!(w, "{}", line.raw)?;
@@ -72,7 +81,7 @@ impl Runner {
 
             LineKind::Pane { target } => {
                 writeln!(w, "{}", line.raw)?;
-                let _ = target.len();
+                self.eval_pane(w, target).await?;
             }
 
             LineKind::Keys { keys } => {
@@ -212,13 +221,53 @@ impl Runner {
 
         Ok(())
     }
+
+    async fn eval_pane(&mut self, w: &mut impl fmt::Write, target: &str) -> fmt::Result {
+        const TEMPLATE: &str = "#{pane_id}\t#{session_name}:#{window_index}.#{pane_index}";
+
+        let output = self
+            .tmux
+            .command(&self.env)
+            .args(["display-message", "-p", "-t", target, TEMPLATE])
+            .output()
+            .await;
+
+        let output = match output {
+            Ok(output) => output,
+            Err(e) => {
+                let message = format!("failed to validate pane target '{target}': {e}");
+                write_callout(w, "WARNING", &[&message])?;
+                return Ok(());
+            }
+        };
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let candidates: Vec<_> = stdout
+            .lines()
+            .filter_map(|line| {
+                let (id, target) = line.split_once('\t')?;
+                Some((id, target))
+            })
+            .collect();
+
+        if output.status.success()
+            && let [(pane, _)] = &candidates[..]
+            && pane.starts_with('%')
+        {
+            self.pane = (*pane).to_owned();
+        } else {
+            write_callout(w, "WARNING", &["No such pane."])?;
+        }
+
+        Ok(())
+    }
 }
 
-fn write_callout(w: &mut impl fmt::Write, kind: &str, lines: &[&str]) -> fmt::Result {
+fn write_callout<S: AsRef<str>>(w: &mut impl fmt::Write, kind: &str, lines: &[S]) -> fmt::Result {
     writeln!(w, "> [!{kind}]")?;
 
     for line in lines {
-        for line in line.split('\n') {
+        for line in line.as_ref().split('\n') {
             if line.is_empty() {
                 writeln!(w, ">")?;
                 continue;

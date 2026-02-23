@@ -21,7 +21,7 @@ fn test(path: &Path) -> datatest_stable::Result<()> {
     let mut output = String::new();
 
     runtime.block_on(async {
-        let runner = Runner::new(&tmp).await?;
+        let mut runner = Runner::new(&tmp).await?;
         runner
             .run(&mut output, &script)
             .await

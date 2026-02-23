@@ -1,0 +1,49 @@
+# Runner pane directive behavior
+
+## Single pane target succeeds without warning
+
+Selecting a concrete pane target should update the active pane selection without producing a
+warning.
+
+:pane 0.0
+
+## Missing pane target emits an error callout
+
+A target that does not exist should produce a warning with error details from tmux.
+
+:pane does-not-exist
+
+## Window target resolves to one active pane
+
+Window-level targets should still resolve to one pane selection.
+
+:tmux split-window -d
+:pane 0
+
+## Explicit pane id target is unambiguous
+
+Selecting a specific pane id target after a split should succeed without warning.
+
+:pane %1
+
+## Explicit pane index target is unambiguous
+
+Pane-index targets should resolve directly to that pane.
+
+:pane 0.1
+
+## Pane ids that no longer exist emit warnings
+
+After removing a pane, selecting that removed pane id should fail with a warning.
+
+:tmux kill-pane -t 0.1
+:pane %1
+
+## Window target still resolves after pane removal
+
+After removing one pane, selecting the window target should still succeed.
+
+:pane 0
+
+---
+vim: set ft=markdown:

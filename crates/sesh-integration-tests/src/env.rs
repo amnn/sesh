@@ -89,6 +89,7 @@ impl Env {
         command
             .env_clear()
             .env("HOME", self.path("home"))
+            .env("LC_CTYPE", "en_US.UTF-8")
             .env("PATH", self.path("bin"))
             .current_dir(self.path("home"));
 
