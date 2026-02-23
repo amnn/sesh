@@ -1,6 +1,6 @@
 ---
 source: crates/sesh-integration-tests/src/parser.rs
-expression: "Script::parse(&[r#\":k C-M-S-enter\"#, r#\"\"#].join(\"\\n\"))"
+expression: "Script::parse(&[r#\":k C-M-S-up\"#, r#\"\"#].join(\"\\n\"))"
 ---
 Script {
     lines: [
@@ -8,14 +8,14 @@ Script {
             kind: Keys {
                 keys: [
                     Key {
-                        kind: Enter,
+                        kind: Up,
                         ctrl: true,
                         meta: true,
                         shft: true,
                     },
                 ],
             },
-            raw: ":k C-M-S-enter",
+            raw: ":k C-M-S-up",
         },
     ],
 }

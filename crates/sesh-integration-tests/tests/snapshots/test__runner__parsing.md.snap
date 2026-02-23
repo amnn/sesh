@@ -36,5 +36,24 @@ Invalid regular expressions in `:snap` should become parser errors with diagnost
 >         ^
 >     error: unclosed group
 
+## Invalid shift-modified text key
+
+Shift modifier should not apply directly to text keys.
+
+:keys S-a
+> [!WARNING]
+> Parser error: 'S-' only applies to arrow keys
+
+## Invalid shift-modified non-shiftable key
+
+Shift modifier should only apply to arrow keys.
+
+:keys S-enter
+> [!WARNING]
+> Parser error: 'S-' only applies to arrow keys
+:keys S-tab
+> [!WARNING]
+> Parser error: 'S-' only applies to arrow keys
+
 ---
 vim: set ft=markdown:

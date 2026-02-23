@@ -12,6 +12,7 @@ use textwrap::Options;
 
 use crate::env::Env;
 use crate::parser;
+use crate::parser::Key;
 use crate::parser::Line;
 use crate::parser::LineKind;
 use crate::sesh;
@@ -99,10 +100,7 @@ impl Runner {
             }
 
             LineKind::Keys { keys } => {
-                writeln!(w, "{}", line.raw)?;
-                for key in keys {
-                    let _ = (&key.kind, key.ctrl, key.meta, key.shft);
-                }
+                self.eval_keys(w, line.raw, keys).await?;
             }
 
             LineKind::Snap { filters } => {
@@ -271,6 +269,48 @@ impl Runner {
             self.pane = (*pane).to_owned();
         } else {
             write_callout(w, "WARNING", &["No such pane."])?;
+        }
+
+        Ok(())
+    }
+
+    async fn eval_keys(&self, w: &mut impl fmt::Write, raw: &str, keys: &[Key]) -> fmt::Result {
+        writeln!(w, "{raw}")?;
+
+        for key in keys {
+            let code = key.code();
+
+            let output = match self
+                .tmux
+                .command(&self.env)
+                .args(["send-keys", "-t", &self.pane])
+                .arg(code.as_ref())
+                .output()
+                .await
+            {
+                Ok(output) => output,
+                Err(e) => {
+                    let msg = format!("failed to send {} to pane '{}': {}", key, self.pane, e);
+                    write_callout(w, "WARNING", &[&msg])?;
+                    break;
+                }
+            };
+
+            if output.status.success() {
+                continue;
+            }
+
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stderr = stderr.trim();
+
+            let msg = if !stderr.is_empty() {
+                format!("failed to send {} to pane '{}': {}", key, self.pane, stderr)
+            } else {
+                format!("failed to send {} to pane '{}'", key, self.pane)
+            };
+
+            write_callout(w, "WARNING", &[&msg])?;
+            break;
         }
 
         Ok(())

@@ -21,11 +21,11 @@ Supported directives:
   - Set current pane target (default is `zz-sesh-ui-runner:0.0`).
 - `:k` / `:keys <tokens...>`
   - Send key presses to the current pane.
-  - Bare tokens are key names / combinations only.
   - Key names are lowercase only: `enter`, `up`, `down`, `left`, `right`,
-    `backspace`, `shift`, `ctrl`, `opt`, `esc`, `tab`, `space`.
+    `backspace`, `btab`, `esc`, `tab`, `space`.
   - Modifiers are canonical uppercase only: `C-`, `M-`, `S-`.
-  - Printable text must be quoted: `"abc"`.
+  - `S-` only applies to arrow keys.
+  - Anything that doesn't match the above is treated as a literal string to send.
 - `:s` / `:snap [dregexdreplacementd ...]`
   - Capture current pane and append it in a fenced `terminal` code block.
   - Optional replacement rules are sed-style pairs, separated by whitespace.

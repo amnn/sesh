@@ -4,6 +4,9 @@
 //! `LineKind`. Directive parse failures become `LineKind::Error` entries so test output can show
 //! parser issues in context instead of failing early.
 
+use std::borrow::Cow;
+use std::fmt;
+
 use anyhow::Context as _;
 use anyhow::bail;
 use anyhow::ensure;
@@ -63,14 +66,12 @@ pub(crate) struct Key {
 #[derive(Debug, Clone)]
 pub(crate) enum KeyKind {
     Backspace,
-    Ctrl,
+    Btab,
     Down,
     Enter,
     Esc,
     Left,
-    Opt,
     Right,
-    Shift,
     Space,
     Tab,
     Text(String),
@@ -163,6 +164,88 @@ impl LineKind {
     }
 }
 
+impl Key {
+    /// Return the tmux key code for this key and its modifiers.
+    pub(crate) fn code(&self) -> Cow<'_, str> {
+        let code = match &self.kind {
+            KeyKind::Backspace => Cow::Borrowed("BSpace"),
+            KeyKind::Btab => Cow::Borrowed("BTab"),
+            KeyKind::Down => Cow::Borrowed("Down"),
+            KeyKind::Enter => Cow::Borrowed("Enter"),
+            KeyKind::Esc => Cow::Borrowed("Escape"),
+            KeyKind::Left => Cow::Borrowed("Left"),
+            KeyKind::Right => Cow::Borrowed("Right"),
+            KeyKind::Space => Cow::Borrowed("Space"),
+            KeyKind::Tab => Cow::Borrowed("Tab"),
+            KeyKind::Text(text) => Cow::Borrowed(text.as_str()),
+            KeyKind::Up => Cow::Borrowed("Up"),
+        };
+
+        if !self.ctrl && !self.meta && !self.shft {
+            return code;
+        }
+
+        let mut prefixed = String::new();
+
+        if self.ctrl {
+            prefixed.push_str("C-");
+        }
+
+        if self.meta {
+            prefixed.push_str("M-");
+        }
+
+        if self.shft {
+            prefixed.push_str("S-");
+        }
+
+        prefixed.push_str(&code);
+        Cow::Owned(prefixed)
+    }
+}
+
+impl fmt::Display for Key {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let KeyKind::Text(text) = &self.kind
+            && !self.ctrl
+            && !self.meta
+            && !self.shft
+        {
+            return write!(f, "text '{text}'");
+        }
+
+        f.write_str("code '")?;
+
+        if self.ctrl {
+            f.write_str("C-")?;
+        }
+
+        if self.meta {
+            f.write_str("M-")?;
+        }
+
+        if self.shft {
+            f.write_str("S-")?;
+        }
+
+        match &self.kind {
+            KeyKind::Backspace => f.write_str("backspace"),
+            KeyKind::Btab => f.write_str("btab"),
+            KeyKind::Down => f.write_str("down"),
+            KeyKind::Enter => f.write_str("enter"),
+            KeyKind::Esc => f.write_str("esc"),
+            KeyKind::Left => f.write_str("left"),
+            KeyKind::Right => f.write_str("right"),
+            KeyKind::Space => f.write_str("space"),
+            KeyKind::Tab => f.write_str("tab"),
+            KeyKind::Text(text) => f.write_str(text),
+            KeyKind::Up => f.write_str("up"),
+        }?;
+
+        f.write_str("'")
+    }
+}
+
 /// Parse a key to send (modifiers and the key code).
 fn parse_key(input: String) -> anyhow::Result<Key> {
     let mut input = input.as_str();
@@ -186,12 +269,20 @@ fn parse_key(input: String) -> anyhow::Result<Key> {
     }
 
     let kind = parse_key_kind(input);
+    if shft {
+        use KeyKind as K;
+        ensure!(
+            matches!(kind, K::Down | K::Left | K::Right | K::Up),
+            "'S-' only applies to arrow keys"
+        );
+    }
+
     if let KeyKind::Text(t) = &kind
-        && (ctrl || meta || shft)
+        && (ctrl || meta)
     {
         ensure!(
             t.len() == 1 && t.is_ascii(),
-            "modifiers only apply to single key codes"
+            "modifiers only apply to single ASCII key codes"
         );
     }
 
@@ -208,14 +299,12 @@ fn parse_key(input: String) -> anyhow::Result<Key> {
 fn parse_key_kind(input: &str) -> KeyKind {
     match input {
         "backspace" => KeyKind::Backspace,
-        "ctrl" => KeyKind::Ctrl,
+        "btab" => KeyKind::Btab,
         "down" => KeyKind::Down,
         "enter" => KeyKind::Enter,
         "esc" => KeyKind::Esc,
         "left" => KeyKind::Left,
-        "opt" => KeyKind::Opt,
         "right" => KeyKind::Right,
-        "shift" => KeyKind::Shift,
         "space" => KeyKind::Space,
         "tab" => KeyKind::Tab,
         "up" => KeyKind::Up,
@@ -346,7 +435,7 @@ mod tests {
 
     #[test]
     fn parses_keys_with_stacked_modifiers() {
-        insta::assert_debug_snapshot!(Script::parse(&[r#":k C-M-S-enter"#, r#""#].join("\n")));
+        insta::assert_debug_snapshot!(Script::parse(&[r#":k C-M-S-up"#, r#""#].join("\n")));
     }
 
     #[test]

@@ -6,19 +6,19 @@ Script {
     lines: [
         Line {
             kind: Error {
-                message: "modifiers only apply to single key codes",
+                message: "modifiers only apply to single ASCII key codes",
             },
             raw: ":k C-ab",
         },
         Line {
             kind: Error {
-                message: "modifiers only apply to single key codes",
+                message: "modifiers only apply to single ASCII key codes",
             },
             raw: ":k M-é",
         },
         Line {
             kind: Error {
-                message: "modifiers only apply to single key codes",
+                message: "'S-' only applies to arrow keys",
             },
             raw: ":k S-\"\"",
         },

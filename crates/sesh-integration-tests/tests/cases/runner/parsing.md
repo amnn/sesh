@@ -20,5 +20,18 @@ Invalid regular expressions in `:snap` should become parser errors with diagnost
 
 :snap /(unterminated/repl/
 
+## Invalid shift-modified text key
+
+Shift modifier should not apply directly to text keys.
+
+:keys S-a
+
+## Invalid shift-modified non-shiftable key
+
+Shift modifier should only apply to arrow keys.
+
+:keys S-enter
+:keys S-tab
+
 ---
 vim: set ft=markdown:
