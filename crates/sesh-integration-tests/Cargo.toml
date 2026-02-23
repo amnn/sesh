@@ -9,7 +9,6 @@ anyhow.workspace = true
 futures.workspace = true
 nonempty.workspace = true
 regex.workspace = true
-sesh.workspace = true
 shlex.workspace = true
 skim.workspace = true
 tempfile.workspace = true

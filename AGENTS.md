@@ -116,3 +116,9 @@ if !cond { bail!(...) }  -> ensure!(cond, ...)
 .map_err(|e| anyhow!("...: {e}")
   -> .context("...") OR .with_context(|| format!("..."))
 ```
+
+### Paths
+
+Avoid building paths using hard-coded separators (e.g., `"/"`). Use
+`std::path::PathBuf` and its `Extend` implementation to add multiple
+components to preserve the portability of the code.

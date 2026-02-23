@@ -1,12 +1,12 @@
 //! Runtime for parsed markdown integration scripts.
 
+use std::ffi::OsStr;
 use std::fmt;
 use std::fmt::Write as _;
 use std::path::Path;
 
 use anyhow::ensure;
 use futures::future;
-use futures::try_join;
 use nonempty::NonEmpty;
 use textwrap::Options;
 
@@ -15,7 +15,6 @@ use crate::parser;
 use crate::parser::Key;
 use crate::parser::Line;
 use crate::parser::LineKind;
-use crate::sesh;
 use crate::tmux::Tmux;
 
 /// Integration-test runner state.
@@ -32,11 +31,7 @@ impl Runner {
     /// `CARGO_TARGET_TMPDIR`) so all runner artifacts are scoped to the current test execution.
     pub async fn new(tmp: &Path) -> anyhow::Result<Self> {
         let env = Env::new(tmp).await?;
-
-        let (_, tmux) = try_join!(
-            async { env.bin(sesh::binary().await?).await },
-            Tmux::new(&env)
-        )?;
+        let tmux = Tmux::new(&env).await?;
 
         let mut runner = Self {
             env,
@@ -56,6 +51,11 @@ impl Runner {
         ensure!(!runner.pane.is_empty(), "failed to query initial tmux pane");
 
         Ok(runner)
+    }
+
+    /// Add a binary to the runner environment's `$PATH`.
+    pub async fn bin(&self, bin: impl AsRef<OsStr>) -> anyhow::Result<()> {
+        self.env.bin(bin).await.map(|_| ())
     }
 
     pub async fn run(

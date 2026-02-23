@@ -10,7 +10,6 @@ const ROOT: &str = "tests/cases";
 
 fn test(path: &Path) -> datatest_stable::Result<()> {
     let tmp = PathBuf::from(env!("CARGO_TARGET_TMPDIR"));
-
     let input = std::fs::read_to_string(path)?;
     let script = Script::parse(&input);
 
@@ -20,9 +19,12 @@ fn test(path: &Path) -> datatest_stable::Result<()> {
         .context("failed to construct async runtime for integration runner")?;
 
     let mut output = String::new();
-
     runtime.block_on(async {
         let mut runner = Runner::new(&tmp).await?;
+        runner
+            .bin(env!("CARGO_BIN_EXE_sesh"))
+            .await
+            .context("failed to add sesh binary to runner environment")?;
 
         runner
             .run(&mut output, &script)

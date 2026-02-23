@@ -1,6 +1,6 @@
 # sesh integration tests
 
-These tests run `sesh` in a headless tmux server and snapshot pane output with
+These tests run markdown directives in a headless tmux server and snapshot pane output with
 `tmux capture-pane`.
 
 ## Test case syntax
