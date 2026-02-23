@@ -4,6 +4,7 @@ use std::fmt;
 use std::fmt::Write as _;
 use std::path::Path;
 
+use anyhow::ensure;
 use futures::future;
 use futures::try_join;
 use nonempty::NonEmpty;
@@ -36,11 +37,24 @@ impl Runner {
             Tmux::new(&env)
         )?;
 
-        Ok(Self {
+        let mut runner = Self {
             env,
-            pane: "0.0".to_owned(),
+            pane: "".to_owned(),
             tmux,
-        })
+        };
+
+        struct Sink;
+        impl fmt::Write for Sink {
+            fn write_str(&mut self, _: &str) -> fmt::Result {
+                Ok(())
+            }
+        }
+
+        // Query the `tmux` server to set the initial pane target.
+        runner.eval_pane(&mut Sink, "0.0").await?;
+        ensure!(!runner.pane.is_empty(), "failed to query initial tmux pane");
+
+        Ok(runner)
     }
 
     pub async fn run(
