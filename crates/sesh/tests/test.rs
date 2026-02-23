@@ -1,14 +1,24 @@
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::LazyLock;
 
 use anyhow::Context as _;
 use sesh_integration_tests::Runner;
 use sesh_integration_tests::Script;
+use telemetry_subscribers::TelemetryConfig;
+use telemetry_subscribers::TelemetryGuards;
 use tokio::runtime::Builder;
 
 const ROOT: &str = "tests/cases";
+static TRACE: LazyLock<TelemetryGuards> = LazyLock::new(|| {
+    let (guards, _handle) = TelemetryConfig::new("sesh").with_env().init();
+
+    guards
+});
 
 fn test(path: &Path) -> datatest_stable::Result<()> {
+    LazyLock::force(&TRACE);
+
     let tmp = PathBuf::from(env!("CARGO_TARGET_TMPDIR"));
     let input = std::fs::read_to_string(path)?;
     let script = Script::parse(&input);

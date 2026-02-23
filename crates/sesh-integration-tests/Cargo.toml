@@ -14,12 +14,14 @@ skim.workspace = true
 tempfile.workspace = true
 textwrap.workspace = true
 tokio.workspace = true
+tracing.workspace = true
 which.workspace = true
 winnow.workspace = true
 
 [dev-dependencies]
 datatest-stable.workspace = true
 insta.workspace = true
+telemetry-subscribers.workspace = true
 
 [[test]]
 name = "test"

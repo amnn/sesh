@@ -9,6 +9,7 @@ use anyhow::ensure;
 use futures::future;
 use nonempty::NonEmpty;
 use textwrap::Options;
+use tracing::instrument;
 
 use crate::env::Env;
 use crate::parser;
@@ -55,7 +56,8 @@ impl Runner {
 
     /// Add a binary to the runner environment's `$PATH`.
     pub async fn bin(&self, bin: impl AsRef<OsStr>) -> anyhow::Result<()> {
-        self.env.bin(bin).await.map(|_| ())
+        self.env.bin(bin).await?;
+        Ok(())
     }
 
     pub async fn run(
@@ -70,6 +72,7 @@ impl Runner {
         Ok(())
     }
 
+    #[instrument(level = "trace", skip(self, w, line), fields(raw = line.raw))]
     async fn eval_line(&mut self, w: &mut impl fmt::Write, line: &Line<'_>) -> fmt::Result {
         match &line.kind {
             LineKind::Text => {
