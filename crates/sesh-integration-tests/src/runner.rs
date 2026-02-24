@@ -280,40 +280,30 @@ impl Runner {
     async fn eval_keys(&self, w: &mut impl fmt::Write, raw: &str, keys: &[Key]) -> fmt::Result {
         writeln!(w, "{raw}")?;
 
-        for key in keys {
-            let code = key.code();
+        let mut command = self.tmux.command(&self.env);
+        command.args(["send-keys", "-t", &self.pane]);
+        command.args(keys.iter().map(|k| k.code().into_owned()));
 
-            let output = match self
-                .tmux
-                .command(&self.env)
-                .args(["send-keys", "-t", &self.pane])
-                .arg(code.as_ref())
-                .output()
-                .await
-            {
-                Ok(output) => output,
-                Err(e) => {
-                    let msg = format!("failed to send {} to pane '{}': {}", key, self.pane, e);
-                    write_callout(w, "WARNING", &[&msg])?;
-                    break;
-                }
-            };
-
-            if output.status.success() {
-                continue;
+        let output = match command.output().await {
+            Ok(output) => output,
+            Err(e) => {
+                let msg = format!("failed to send keys to pane '{}': {}", self.pane, e);
+                write_callout(w, "WARNING", &[&msg])?;
+                return Ok(());
             }
+        };
 
+        if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stderr = stderr.trim();
 
             let msg = if !stderr.is_empty() {
-                format!("failed to send {} to pane '{}': {}", key, self.pane, stderr)
+                format!("failed to send keys to pane '{}': {}", self.pane, stderr)
             } else {
-                format!("failed to send {} to pane '{}'", key, self.pane)
+                format!("failed to send keys to pane '{}'", self.pane)
             };
 
             write_callout(w, "WARNING", &[&msg])?;
-            break;
         }
 
         Ok(())

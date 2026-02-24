@@ -6,75 +6,93 @@ The runner should send text keys literally, then named keys like `enter`, to the
 pane.
 
 :bins cat
-:tmux new-window -d -n keys-a "cat > keys-a.txt"
-:pane 0:keys-a.0
-:keys "hello" space "world" enter C-d
-:sh cat keys-a.txt
+
+:t new-window -d -n keys 'tmux wait-for -S ready-keys; cat > keys.txt; tmux wait-for -S done-keys'
+:p 0:keys.0
+
+:t wait-for ready-keys
+:k "hello" space "world" enter C-d
+
+:t wait-for done-keys
+:$ cat keys.txt
 
 ## Pane switching sends keys to selected pane
 
 Switching active pane should route keys into the newly selected pane.
 
-:tmux new-window -d -n keys-b "cat > keys-b.txt"
-:pane 0:keys-b.0
-:keys "pane-b" enter C-d
-:sh cat keys-b.txt
+:t new-window -d -n new 'tmux wait-for -S ready-new; cat > new.txt; tmux wait-for -S done-new'
+:p 0:new.0
+
+:t wait-for ready-new
+:k "pane-b" enter C-d
+
+:t wait-for done-new
+:$ cat new.txt
 
 ## Sends hello world as one literal text key
 
 The runner should send a whole phrase as one literal text payload when quoted as a single token.
 
-:tmux new-window -d -n keys-literal "cat > keys-literal.txt"
-:pane 0:keys-literal.0
-:keys "hello world" enter C-d
-:sh cat keys-literal.txt
+:t new-window -d -n text 'tmux wait-for -S ready-text; cat > text.txt; tmux wait-for -S done-text'
+:p 0:text.0
+
+:t wait-for ready-text
+:k "hello world" enter C-d
+
+:t wait-for done-text
+:$ cat text.txt
 
 ## Sends punctuation and capitals as literal text
 
 Literal text keys should preserve case and punctuation.
 
-:tmux new-window -d -n keys-punct "cat > keys-punct.txt"
-:pane 0:keys-punct.0
-:keys "Hello, world!" enter C-d
-:sh cat keys-punct.txt
+:t new-window -d -n pct 'tmux wait-for -S ready-pct; cat > pct.txt; tmux wait-for -S done-pct'
+:p 0:pct.0
+
+:t wait-for ready-pct
+:k "Hello, world!" enter C-d
+
+:t wait-for done-pct
+:$ cat pct.txt
 
 ## Sends complex modifier combinations
 
 Complex modifier combinations should be forwarded to tmux as key codes, including explicit
 `btab`.
 
-:tmux new-window -d -n keys-mod "cat -v > keys-mod.txt"
-:pane 0:keys-mod.0
-:keys C-a M-a C-M-a btab C-btab S-up enter C-d
-:sh cat keys-mod.txt
+:t new-window -d -n mod 'tmux wait-for -S ready-mod; cat -v > mod.txt; tmux wait-for -S done-mod'
+:p 0:mod.0
 
-## Bare modifier names are treated as text
+:t wait-for ready-mod
+:k C-a M-a C-M-a btab C-btab S-up enter C-d
 
-Bare modifier key names should be treated as plain text tokens.
-
-:tmux new-window -d -n keys-modtext "cat > keys-modtext.txt"
-:pane 0:keys-modtext.0
-:keys ctrl space opt space shift enter C-d
-:sh cat keys-modtext.txt
+:t wait-for done-mod
+:$ cat mod.txt
 
 ## Failed pane selection does not retarget active pane
 
 If `:pane` fails, key input should still go to the last successfully selected pane.
 
-:tmux new-window -d -n keys-c "cat > keys-c.txt"
-:pane 0:keys-c.0
+:t new-window -d -n c 'tmux wait-for -S ready-c; cat > c.txt; tmux wait-for -S done-c'
+:p 0:c.0
+
 :pane does-not-exist
-:keys "still-c" enter C-d
-:sh cat keys-c.txt
+
+:t wait-for ready-c
+:k "still-c" enter C-d
+
+:t wait-for done-c
+:$ cat c.txt
 
 ## Invalid active pane reports send-keys error
 
 Sending keys to a removed pane should emit a warning.
 
-:tmux new-window -d -n keys-d "cat > keys-d.txt"
-:pane 0:keys-d.0
-:tmux kill-pane -t 0:keys-d.0
-:keys "boom"
+:t new-window -d -n d "cat > d.txt"
+:p 0:d.0
+:t kill-pane -t 0:d.0
+
+:k "boom"
 
 ---
 vim: set ft=markdown:
