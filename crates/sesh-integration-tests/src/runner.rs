@@ -20,9 +20,11 @@ use crate::tmux::Tmux;
 
 /// Integration-test runner state.
 pub struct Runner {
+    /// Client for managing the `tmux` server. Ordered before `env` so that it is dropped first and
+    /// clean up the server before the environment is cleaned up, deleting its socket file.
+    tmux: Tmux,
     env: Env,
     pane: String,
-    tmux: Tmux,
 }
 
 impl Runner {
@@ -35,9 +37,9 @@ impl Runner {
         let tmux = Tmux::new(&env).await?;
 
         let mut runner = Self {
+            tmux,
             env,
             pane: "".to_owned(),
-            tmux,
         };
 
         struct Sink;
