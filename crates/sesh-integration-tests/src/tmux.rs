@@ -148,6 +148,50 @@ impl Command {
 
         self
     }
+
+    /// Run this command against a control-mode `tmux` instance and stream output lines.
+    ///
+    /// The returned channel yields one item per output line while the command is active. When tmux
+    /// emits `%end`, the channel is closed and no additional item is sent. When tmux emits
+    /// `%error`, a final `Err(...)` item is sent and then the channel is closed.
+    pub(crate) async fn output(
+        self,
+        tmux: &Tmux,
+    ) -> anyhow::Result<mpsc::Receiver<anyhow::Result<Vec<u8>>>> {
+        let (tx, rx) = mpsc::channel(32);
+        tmux._tx
+            .send(Request { cmd: self.line, tx })
+            .await
+            .context("failed to queue tmux command")?;
+
+        Ok(rx)
+    }
+
+    /// Run this command against a control-mode `tmux` instance and collect output.
+    ///
+    /// Output lines are joined with trailing newlines until the command terminates. `%end` maps to
+    /// `Ok(collected_bytes)`. `%error` maps to `Err(...)`, where the error message is built from
+    /// the collected bytes using lossy UTF-8 conversion.
+    pub(crate) async fn status(self, tmux: &Tmux) -> anyhow::Result<Vec<u8>> {
+        let mut output = self.output(tmux).await?;
+
+        let mut joined = vec![];
+        while let Some(line) = output.recv().await {
+            match line {
+                Ok(line) => {
+                    joined.extend_from_slice(&line);
+                    joined.push(b'\n');
+                }
+
+                Err(e) => {
+                    let output = String::from_utf8_lossy(&joined);
+                    return Err(anyhow!("tmux command failed: {e:?}\noutput:\n{output}"));
+                }
+            }
+        }
+
+        Ok(joined)
+    }
 }
 
 /// Task looking after `stdout` (and `stdin`) for a control-mode `tmux` client.
