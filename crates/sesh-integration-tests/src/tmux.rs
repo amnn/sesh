@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::collections::VecDeque;
 use std::ffi::OsStr;
 use std::fmt::Write;
 use std::path::Path;
@@ -7,6 +8,7 @@ use std::process::Stdio;
 use std::time::Duration;
 
 use anyhow::Context as _;
+use anyhow::anyhow;
 use anyhow::ensure;
 use tokio::io::AsyncBufReadExt as _;
 use tokio::io::AsyncWriteExt as _;
@@ -16,6 +18,7 @@ use tokio::process::ChildStderr;
 use tokio::sync::mpsc;
 use tokio::time::sleep;
 use tokio_util::task::AbortOnDropHandle;
+use tracing::debug;
 use tracing::error;
 use tracing::warn;
 
@@ -36,15 +39,16 @@ pub(crate) struct Command {
     line: String,
 }
 
+type Response = mpsc::Sender<anyhow::Result<Vec<u8>>>;
+
 /// A request to the control task to run a command and return its output.
-#[allow(dead_code)]
 struct Request {
     /// The command to run.
     cmd: String,
 
     /// A channel to receive the command's output. Output is streamed down this channel,
     /// line-by-line.
-    _tx: mpsc::Sender<anyhow::Result<Vec<u8>>>,
+    tx: Response,
 }
 
 impl Tmux {
@@ -53,11 +57,21 @@ impl Tmux {
     /// Fails if the tmux socket file already exists, the `tmux` binary can't be added to the
     /// environment, or the server fails to start.
     pub(crate) async fn new(env: &Env) -> anyhow::Result<Self> {
+        // Ensure `tmux` is available in the environment.
         env.bin("tmux").await?;
 
         let socket = env.path("tmux.sock");
         ensure!(!socket.exists(), "tmux socket already exists");
 
+        // Start tmux in control mode, and not in daemon mode, with a dedicated socket.
+        //
+        // This results in a single long-lived tmux process that is both the server and the client.
+        // When the client process exits, the tmux server will exit with it. This can be triggered
+        // by dropping the child handle.
+        //
+        // Commands can be sent to the tmux server via `stdin` of this process, while the server
+        // communicates notifications and command outputs via `stdout`. The server can also be
+        // interacted with by other `tmux` commands, using the same socket.
         let mut child = env
             .command("tmux")
             .args(["-D", "-C", "-S"])
@@ -70,10 +84,10 @@ impl Tmux {
             .context("failed to spawn control-mode tmux client")?;
 
         let stderr = child.stderr.take().unwrap();
+        let stderr_task = AbortOnDropHandle::new(tokio::task::spawn(stderr_task(stderr)));
 
         let (_tx, rx) = mpsc::channel(32);
         let stdout_task = AbortOnDropHandle::new(tokio::task::spawn(stdout_task(child, rx)));
-        let stderr_task = AbortOnDropHandle::new(tokio::task::spawn(stderr_task(stderr)));
 
         wait_until_ready(env, &socket).await?;
 
@@ -136,7 +150,11 @@ impl Command {
     }
 }
 
-/// TODO Docs
+/// Task looking after `stdout` (and `stdin`) for a control-mode `tmux` client.
+///
+/// `child` is a handle to the child process that is kept alive by this task, while `requests` is a
+/// channel on which the task receives requests to pass on to the `tmux`. Each request includes a
+/// command to run, and a channel on which to send the command's output back to the requester.
 async fn stdout_task(mut child: Child, mut requests: mpsc::Receiver<Request>) {
     let Some(mut stdin) = child.stdin.take() else {
         error!("failed to setup stdin");
@@ -148,10 +166,28 @@ async fn stdout_task(mut child: Child, mut requests: mpsc::Receiver<Request>) {
         return;
     };
 
+    let mut active: Option<Response> = None;
+    let mut pending: VecDeque<Response> = VecDeque::new();
+
     loop {
         tokio::select! {
+            Some(request) = requests.recv() => {
+                pending.push_back(request.tx);
+
+                if let Err(e) = async {
+                    stdin.write_all(request.cmd.as_bytes()).await?;
+                    stdin.write_all(b"\n").await?;
+                    stdin.flush().await
+                }.await {
+                    // SAFETY: `request.tx` was pushed to the back of `pending` at the top of this
+                    // select arm, and nothing has accessed `pending` since then.
+                    let tx = pending.pop_back().unwrap();
+                    let _ = tx.send(Err(anyhow!(e).context("failed to send command"))).await;
+                }
+            }
+
             line = stdout.next_line() => {
-                let _line = match line {
+                let line = match line {
                     Ok(Some(line)) => line,
 
                     Ok(None) => {
@@ -164,22 +200,38 @@ async fn stdout_task(mut child: Child, mut requests: mpsc::Receiver<Request>) {
                         break;
                     }
                 };
-            }
 
-            Some(request) = requests.recv() => {
-                if let Err(e) = async {
-                    stdin.write_all(request.cmd.as_bytes()).await?;
-                    stdin.write_all(b"\n").await?;
-                    stdin.flush().await
-                }.await {
-                    error!(command=request.cmd, "failed to send command: {e}");
+                if let Some(tx) = &active && line.starts_with("%error") {
+                    let _ = tx.send(Err(anyhow!("tmux command failed"))).await;
+                    active = None;
+                } else if active.is_some() && line.starts_with("%end") {
+                    active = None;
+                } else if let Some(tx) = &active {
+                    let _ = tx.send(unescape(line.into_bytes())).await;
+                } else if line.starts_with("%begin") {
+                    active = pending.pop_front();
+                } else if line.starts_with("%") {
+                    debug!("notification: {line}");
+                } else {
+                    warn!("unexpected: {line}");
                 }
             }
         }
     }
+
+    // If the task is exiting while there are still pending tasks, unblock them by sending an error
+    // down their channels.
+    if let Some(tx) = active {
+        let _ = tx.send(Err(anyhow!("unexpected exit"))).await;
+    }
+
+    while let Some(tx) = pending.pop_front() {
+        let _ = tx.send(Err(anyhow!("unexpected exit"))).await;
+    }
 }
 
-/// TODO Docs
+/// A task to monitor `stderr` for a control-mode `tmux` client, and log any output as error
+/// traces.
 async fn stderr_task(stderr: ChildStderr) {
     let mut stderr = BufReader::new(stderr).lines();
 
@@ -250,10 +302,9 @@ fn escape(part: &OsStr) -> Cow<'_, str> {
 /// Decode tmux control-mode escaping in one output payload line.
 ///
 /// This decodes octal escapes (`\ooo`) and escaped backslashes (`\\`).
-#[allow(dead_code)]
-pub(crate) fn unescape(line: &[u8]) -> anyhow::Result<Cow<'_, [u8]>> {
+pub(crate) fn unescape(line: Vec<u8>) -> anyhow::Result<Vec<u8>> {
     if !line.contains(&b'\\') {
-        return Ok(line.into());
+        return Ok(line);
     }
 
     fn is_octal(byte: u8) -> bool {
@@ -261,7 +312,7 @@ pub(crate) fn unescape(line: &[u8]) -> anyhow::Result<Cow<'_, [u8]>> {
     }
 
     let mut output = Vec::with_capacity(line.len());
-    let mut bytes = line.iter().copied();
+    let mut bytes = line.into_iter();
     while let Some(byte) = bytes.next() {
         if byte != b'\\' {
             output.push(byte);
@@ -288,7 +339,7 @@ pub(crate) fn unescape(line: &[u8]) -> anyhow::Result<Cow<'_, [u8]>> {
         output.push(byte as u8);
     }
 
-    Ok(output.into())
+    Ok(output)
 }
 
 // TODO: Temporary measure while we're in a transition period where some command runs are via the
@@ -349,51 +400,50 @@ mod tests {
     }
 
     #[test]
-    fn unescapes_output_without_escapes_as_borrowed() {
-        let input = b"plain output";
-        let output = unescape(input).expect("unescape should succeed");
-        assert!(matches!(output, Cow::Borrowed(_)));
-        assert_eq!(output.as_ref(), input);
+    fn unescapes_output_without_escapes_is_unchanged() {
+        let input = b"plain output".to_vec();
+        let output = unescape(input.clone()).expect("unescape should succeed");
+        assert_eq!(output, input);
     }
 
     #[test]
     fn unescapes_octal_and_backslash_sequences() {
-        let input = br"one\040two\134three\\four\073";
+        let input = br"one\040two\134three\\four\073".to_vec();
         let output = unescape(input).expect("unescape should succeed");
-        assert_eq!(output.as_ref(), b"one two\\three\\four;");
+        assert_eq!(output, b"one two\\three\\four;");
     }
 
     #[test]
     fn rejects_malformed_escapes() {
-        let input = br"bad\08 tail\x\";
+        let input = br"bad\08 tail\x\".to_vec();
         let error = unescape(input).expect_err("unescape should fail");
         assert_eq!(error.to_string(), "malformed escape");
     }
 
     #[test]
     fn rejects_non_octal_escape() {
-        let input = br"bad\999x";
+        let input = br"bad\999x".to_vec();
         let error = unescape(input).expect_err("unescape should fail");
         assert_eq!(error.to_string(), "malformed escape");
     }
 
     #[test]
     fn rejects_escape_overflow() {
-        let input = br"bad\777";
+        let input = br"bad\777".to_vec();
         let error = unescape(input).expect_err("unescape should fail");
         assert_eq!(error.to_string(), "overflow");
     }
 
     #[test]
     fn rejects_character_escape() {
-        let input = br"bad\x";
+        let input = br"bad\x".to_vec();
         let error = unescape(input).expect_err("unescape should fail");
         assert_eq!(error.to_string(), "malformed escape");
     }
 
     #[test]
     fn rejects_unfinished_escape() {
-        let input = br"bad\";
+        let input = br"bad\".to_vec();
         let error = unescape(input).expect_err("unescape should fail");
         assert_eq!(error.to_string(), "unfinished escape");
     }
