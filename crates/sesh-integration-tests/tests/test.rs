@@ -36,10 +36,14 @@ fn test(path: &Path) -> datatest_stable::Result<()> {
     runtime.block_on(async {
         let mut runner = Runner::new(&tmp).await?;
 
-        runner
+        let res = runner
             .run(&mut output, &script)
             .await
-            .context("failed to write integration test output")
+            .context("failed to write integration test output");
+
+        runner.shutdown().await.ok();
+
+        res
     })?;
 
     let mut snapshots = PathBuf::from(env!("CARGO_MANIFEST_DIR"));

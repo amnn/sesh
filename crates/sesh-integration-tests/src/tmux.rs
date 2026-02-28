@@ -10,9 +10,11 @@ use anyhow::ensure;
 use tokio::io::AsyncBufReadExt as _;
 use tokio::io::AsyncWriteExt as _;
 use tokio::io::BufReader;
+use tokio::join;
 use tokio::process::Child;
 use tokio::process::ChildStderr;
 use tokio::sync::mpsc;
+use tokio::task::JoinHandle;
 use tokio_util::task::AbortOnDropHandle;
 use tracing::debug;
 use tracing::error;
@@ -29,9 +31,9 @@ pub(crate) struct Command {
 
 /// Handle for managing a `tmux` server.
 pub(crate) struct Tmux {
-    _server: Child,
+    server: Child,
     _stderr_task: AbortOnDropHandle<()>,
-    _stdout_task: AbortOnDropHandle<()>,
+    stdout_task: JoinHandle<()>,
     tx: mpsc::Sender<Request>,
 }
 
@@ -90,12 +92,12 @@ impl Tmux {
         let stderr_task = AbortOnDropHandle::new(tokio::task::spawn(stderr_task(stderr)));
 
         let (tx, rx) = mpsc::channel(32);
-        let stdout_task = AbortOnDropHandle::new(tokio::task::spawn(stdout_task(client, rx)));
+        let stdout_task = tokio::task::spawn(stdout_task(client, rx));
 
         Ok(Self {
-            _server: server,
+            server,
             _stderr_task: stderr_task,
-            _stdout_task: stdout_task,
+            stdout_task,
             tx,
         })
     }
@@ -106,6 +108,14 @@ impl Tmux {
             tx: self.tx.clone(),
             line: escape(name.as_ref()).into_owned(),
         }
+    }
+
+    /// Gracefully shutdown the `tmux` server and control client, waiting for them to exit.
+    pub(crate) async fn shutdown(mut self) -> anyhow::Result<()> {
+        drop(self.tx);
+        let (_, _) = join!(self.server.kill(), self.stdout_task);
+
+        Ok(())
     }
 }
 
@@ -192,7 +202,12 @@ async fn stdout_task(mut client: Child, mut requests: mpsc::Receiver<Request>) {
 
     loop {
         tokio::select! {
-            Some(request) = requests.recv() => {
+            request = requests.recv() => {
+                let Some(request) = request else {
+                    debug!("requests channel closed, shutting down...");
+                    break;
+                };
+
                 pending.push_back(request.tx);
 
                 if let Err(e) = async {
@@ -245,6 +260,9 @@ async fn stdout_task(mut client: Child, mut requests: mpsc::Receiver<Request>) {
     for tx in active.into_iter().chain(pending) {
         let _ = tx.send(Err(anyhow!("unexpected exit"))).await;
     }
+
+    // Kill the control client now that command processing has stopped.
+    client.kill().await.ok();
 }
 
 /// A task to monitor `stderr` for a control-mode `tmux` client, and log any output as error

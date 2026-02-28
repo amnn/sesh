@@ -69,6 +69,12 @@ impl Runner {
         Ok(())
     }
 
+    /// Gracefully shutdown the runner, waiting for all its components to exit.
+    pub async fn shutdown(self) -> anyhow::Result<()> {
+        self.tmux.shutdown().await?;
+        Ok(())
+    }
+
     #[instrument(level = "trace", skip(self, w, line), fields(raw = line.raw))]
     async fn eval_line(&mut self, w: &mut impl fmt::Write, line: &Line<'_>) -> fmt::Result {
         match &line.kind {
