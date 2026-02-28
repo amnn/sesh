@@ -242,11 +242,7 @@ async fn stdout_task(mut client: Child, mut requests: mpsc::Receiver<Request>) {
 
     // If the task is exiting while there are still pending tasks, unblock them by sending an error
     // down their channels.
-    if let Some(tx) = active {
-        let _ = tx.send(Err(anyhow!("unexpected exit"))).await;
-    }
-
-    while let Some(tx) = pending.pop_front() {
+    for tx in active.into_iter().chain(pending) {
         let _ = tx.send(Err(anyhow!("unexpected exit"))).await;
     }
 }
