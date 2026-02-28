@@ -38,6 +38,9 @@ In each section, there is one import per-line (no nested imports, or wildcard
 imports), and the imports are sorted alphabetically. Internal crate imports all
 start with `crate::`, (never `super::` or `self::`).
 
+Exception: `use super::*` is recommended inside a nested test (`#[cfg(test)]`)
+module.
+
 If traits are imported for use (rather than definition), import them `as _`.
 
 Re-exported items (i.e., `pub use ...`) are grouped separately at the bottom of
