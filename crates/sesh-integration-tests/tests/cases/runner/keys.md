@@ -5,9 +5,9 @@
 The runner should send text keys literally, then named keys like `enter`, to the current active
 pane.
 
-:bins cat
+:bins cat python3 scripts/tmcap
 
-:t new-window -d -n keys 'tmux wait-for -S ready-keys; cat > keys.txt; tmux wait-for -S done-keys'
+:t new-window -d -n keys 'tmcap keys'
 :p 0:keys.0
 
 :t wait-for ready-keys
@@ -20,7 +20,7 @@ pane.
 
 Switching active pane should route keys into the newly selected pane.
 
-:t new-window -d -n new 'tmux wait-for -S ready-new; cat > new.txt; tmux wait-for -S done-new'
+:t new-window -d -n new 'tmcap new'
 :p 0:new.0
 
 :t wait-for ready-new
@@ -33,7 +33,7 @@ Switching active pane should route keys into the newly selected pane.
 
 The runner should send a whole phrase as one literal text payload when quoted as a single token.
 
-:t new-window -d -n text 'tmux wait-for -S ready-text; cat > text.txt; tmux wait-for -S done-text'
+:t new-window -d -n text 'tmcap text'
 :p 0:text.0
 
 :t wait-for ready-text
@@ -46,7 +46,7 @@ The runner should send a whole phrase as one literal text payload when quoted as
 
 Literal text keys should preserve case and punctuation.
 
-:t new-window -d -n pct 'tmux wait-for -S ready-pct; cat > pct.txt; tmux wait-for -S done-pct'
+:t new-window -d -n pct 'tmcap pct'
 :p 0:pct.0
 
 :t wait-for ready-pct
@@ -60,7 +60,7 @@ Literal text keys should preserve case and punctuation.
 Complex modifier combinations should be forwarded to tmux as key codes, including explicit
 `btab`.
 
-:t new-window -d -n mod 'tmux wait-for -S ready-mod; cat -v > mod.txt; tmux wait-for -S done-mod'
+:t new-window -d -n mod 'tmcap mod'
 :p 0:mod.0
 
 :t wait-for ready-mod
@@ -73,7 +73,7 @@ Complex modifier combinations should be forwarded to tmux as key codes, includin
 
 If `:pane` fails, key input should still go to the last successfully selected pane.
 
-:t new-window -d -n c 'tmux wait-for -S ready-c; cat > c.txt; tmux wait-for -S done-c'
+:t new-window -d -n c 'tmcap c'
 :p 0:c.0
 
 :pane does-not-exist

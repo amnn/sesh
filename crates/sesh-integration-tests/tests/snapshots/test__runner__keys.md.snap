@@ -9,17 +9,17 @@ expression: output
 The runner should send text keys literally, then named keys like `enter`, to the current active
 pane.
 
-:bins cat
+:bins cat python3 scripts/tmcap
 > [!NOTE]
-> 'cat' is available.
+> 'cat', 'python3', and 'scripts/tmcap' are available.
 
-:t new-window -d -n keys 'tmux wait-for -S ready-keys; cat > keys.txt; tmux wait-for -S done-keys' (exit: 0)
+:t new-window -d -n keys 'tmcap keys' (success)
 :p 0:keys.0
 
-:t wait-for ready-keys (exit: 0)
+:t wait-for ready-keys (success)
 :k "hello" space "world" enter C-d
 
-:t wait-for done-keys (exit: 0)
+:t wait-for done-keys (success)
 :$ cat keys.txt (exit: 0)
 ```stdout
 hello world
@@ -29,13 +29,13 @@ hello world
 
 Switching active pane should route keys into the newly selected pane.
 
-:t new-window -d -n new 'tmux wait-for -S ready-new; cat > new.txt; tmux wait-for -S done-new' (exit: 0)
+:t new-window -d -n new 'tmcap new' (success)
 :p 0:new.0
 
-:t wait-for ready-new (exit: 0)
+:t wait-for ready-new (success)
 :k "pane-b" enter C-d
 
-:t wait-for done-new (exit: 0)
+:t wait-for done-new (success)
 :$ cat new.txt (exit: 0)
 ```stdout
 pane-b
@@ -45,13 +45,13 @@ pane-b
 
 The runner should send a whole phrase as one literal text payload when quoted as a single token.
 
-:t new-window -d -n text 'tmux wait-for -S ready-text; cat > text.txt; tmux wait-for -S done-text' (exit: 0)
+:t new-window -d -n text 'tmcap text' (success)
 :p 0:text.0
 
-:t wait-for ready-text (exit: 0)
+:t wait-for ready-text (success)
 :k "hello world" enter C-d
 
-:t wait-for done-text (exit: 0)
+:t wait-for done-text (success)
 :$ cat text.txt (exit: 0)
 ```stdout
 hello world
@@ -61,13 +61,13 @@ hello world
 
 Literal text keys should preserve case and punctuation.
 
-:t new-window -d -n pct 'tmux wait-for -S ready-pct; cat > pct.txt; tmux wait-for -S done-pct' (exit: 0)
+:t new-window -d -n pct 'tmcap pct' (success)
 :p 0:pct.0
 
-:t wait-for ready-pct (exit: 0)
+:t wait-for ready-pct (success)
 :k "Hello, world!" enter C-d
 
-:t wait-for done-pct (exit: 0)
+:t wait-for done-pct (success)
 :$ cat pct.txt (exit: 0)
 ```stdout
 Hello, world!
@@ -78,33 +78,33 @@ Hello, world!
 Complex modifier combinations should be forwarded to tmux as key codes, including explicit
 `btab`.
 
-:t new-window -d -n mod 'tmux wait-for -S ready-mod; cat -v > mod.txt; tmux wait-for -S done-mod' (exit: 0)
+:t new-window -d -n mod 'tmcap mod' (success)
 :p 0:mod.0
 
-:t wait-for ready-mod (exit: 0)
+:t wait-for ready-mod (success)
 :k C-a M-a C-M-a btab C-btab S-up enter C-d
 
-:t wait-for done-mod (exit: 0)
+:t wait-for done-mod (success)
 :$ cat mod.txt (exit: 0)
 ```stdout
-^A^[a^[^A^[[Z^[[1;2A
+\x01\x1ba\x1b\x01\x1b[Z\x1b[1;2A
 ```
 
 ## Failed pane selection does not retarget active pane
 
 If `:pane` fails, key input should still go to the last successfully selected pane.
 
-:t new-window -d -n c 'tmux wait-for -S ready-c; cat > c.txt; tmux wait-for -S done-c' (exit: 0)
+:t new-window -d -n c 'tmcap c' (success)
 :p 0:c.0
 
 :pane does-not-exist
 > [!WARNING]
 > No such pane.
 
-:t wait-for ready-c (exit: 0)
+:t wait-for ready-c (success)
 :k "still-c" enter C-d
 
-:t wait-for done-c (exit: 0)
+:t wait-for done-c (success)
 :$ cat c.txt (exit: 0)
 ```stdout
 still-c
@@ -114,9 +114,9 @@ still-c
 
 Sending keys to a removed pane should emit a warning.
 
-:t new-window -d -n d "cat > d.txt" (exit: 0)
+:t new-window -d -n d "cat > d.txt" (success)
 :p 0:d.0
-:t kill-pane -t 0:d.0 (exit: 0)
+:t kill-pane -t 0:d.0 (success)
 
 :k "boom"
 > [!WARNING]

@@ -5,7 +5,7 @@ use std::fmt;
 use std::fmt::Write as _;
 use std::path::Path;
 
-use anyhow::ensure;
+use anyhow::Context as _;
 use futures::future;
 use nonempty::NonEmpty;
 use textwrap::Options;
@@ -42,16 +42,11 @@ impl Runner {
             pane: "".to_owned(),
         };
 
-        struct Sink;
-        impl fmt::Write for Sink {
-            fn write_str(&mut self, _: &str) -> fmt::Result {
-                Ok(())
-            }
-        }
-
-        // Query the `tmux` server to set the initial pane target.
-        runner.eval_pane(&mut Sink, "0.0").await?;
-        ensure!(!runner.pane.is_empty(), "failed to query initial tmux pane");
+        runner.pane = runner
+            .target_to_pane_id("0.0")
+            .await
+            .context("failed to query initial tmux pane target '0.0'")?
+            .context("initial tmux pane target '0.0' not found")?;
 
         Ok(runner)
     }
@@ -212,27 +207,26 @@ impl Runner {
     ) -> fmt::Result {
         write!(w, "{raw}")?;
 
-        match self.tmux.command(&self.env).args(args).output().await {
+        let command = self.tmux.command(&args.head).args(&args.tail);
+        match command.status().await {
             Ok(output) => {
-                if let Some(code) = output.status.code() {
-                    writeln!(w, " (exit: {code})")?;
-                } else {
-                    writeln!(w, " (exit: killed)")?;
-                }
+                writeln!(w, " (success)")?;
 
-                if !output.stdout.is_empty() {
-                    write_fenced_block(w, "stdout", &String::from_utf8_lossy(&output.stdout))?;
-                }
-
-                if !output.stderr.is_empty() && !output.status.success() {
-                    write_fenced_block(w, "stderr", &String::from_utf8_lossy(&output.stderr))?;
+                let output = String::from_utf8_lossy(&output);
+                let output = output.trim();
+                if !output.is_empty() {
+                    write_fenced_block(w, "", output)?;
                 }
             }
 
             Err(e) => {
-                writeln!(w)?;
-                let msg = format!("failed to execute tmux command: {e}");
-                write_callout(w, "WARNING", &[&msg])?;
+                writeln!(w, " (failure)")?;
+
+                let output = e.to_string();
+                let output = output.trim();
+                if !output.is_empty() {
+                    write_fenced_block(w, "", output)?;
+                }
             }
         }
 
@@ -240,17 +234,8 @@ impl Runner {
     }
 
     async fn eval_pane(&mut self, w: &mut impl fmt::Write, target: &str) -> fmt::Result {
-        const TEMPLATE: &str = "#{pane_id}\t#{session_name}:#{window_index}.#{pane_index}";
-
-        let output = self
-            .tmux
-            .command(&self.env)
-            .args(["display-message", "-p", "-t", target, TEMPLATE])
-            .output()
-            .await;
-
-        let output = match output {
-            Ok(output) => output,
+        let pane = match self.target_to_pane_id(target).await {
+            Ok(pane) => pane,
             Err(e) => {
                 let message = format!("failed to validate pane target '{target}': {e}");
                 write_callout(w, "WARNING", &[&message])?;
@@ -258,20 +243,8 @@ impl Runner {
             }
         };
 
-        let stdout = String::from_utf8_lossy(&output.stdout);
-        let candidates: Vec<_> = stdout
-            .lines()
-            .filter_map(|line| {
-                let (id, target) = line.split_once('\t')?;
-                Some((id, target))
-            })
-            .collect();
-
-        if output.status.success()
-            && let [(pane, _)] = &candidates[..]
-            && pane.starts_with('%')
-        {
-            self.pane = (*pane).to_owned();
+        if let Some(pane) = pane {
+            self.pane = pane;
         } else {
             write_callout(w, "WARNING", &["No such pane."])?;
         }
@@ -282,33 +255,49 @@ impl Runner {
     async fn eval_keys(&self, w: &mut impl fmt::Write, raw: &str, keys: &[Key]) -> fmt::Result {
         writeln!(w, "{raw}")?;
 
-        let mut command = self.tmux.command(&self.env);
-        command.args(["send-keys", "-t", &self.pane]);
-        command.args(keys.iter().map(|k| k.code().into_owned()));
+        let command = self
+            .tmux
+            .command("send-keys")
+            .arg("-t")
+            .arg(&self.pane)
+            .args(keys.iter().map(|k| k.code().into_owned()));
 
-        let output = match command.output().await {
-            Ok(output) => output,
-            Err(e) => {
-                let msg = format!("failed to send keys to pane '{}': {}", self.pane, e);
-                write_callout(w, "WARNING", &[&msg])?;
-                return Ok(());
-            }
-        };
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
+        if let Err(e) = command.status().await {
+            let stderr = e.to_string();
             let stderr = stderr.trim();
-
             let msg = if !stderr.is_empty() {
                 format!("failed to send keys to pane '{}': {}", self.pane, stderr)
             } else {
                 format!("failed to send keys to pane '{}'", self.pane)
             };
-
             write_callout(w, "WARNING", &[&msg])?;
         }
 
         Ok(())
+    }
+
+    async fn target_to_pane_id(&self, target: &str) -> anyhow::Result<Option<String>> {
+        let output = self
+            .tmux
+            .command("display-message")
+            .args(["-p", "-t", target])
+            .arg("#{pane_id}\t#{session_name}:#{window_index}.#{pane_index}")
+            .status()
+            .await?;
+
+        let output = String::from_utf8_lossy(&output);
+        let candidates: Vec<_> = output
+            .lines()
+            .filter_map(|line| line.split_once('\t'))
+            .collect();
+
+        if let [(pane, _)] = &candidates[..]
+            && pane.starts_with('%')
+        {
+            Ok(Some((*pane).to_owned()))
+        } else {
+            Ok(None)
+        }
     }
 }
 

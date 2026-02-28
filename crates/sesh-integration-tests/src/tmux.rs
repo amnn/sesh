@@ -1,11 +1,8 @@
 use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::ffi::OsStr;
-use std::fmt::Write;
-use std::path::Path;
-use std::path::PathBuf;
+use std::fmt::Write as _;
 use std::process::Stdio;
-use std::time::Duration;
 
 use anyhow::Context as _;
 use anyhow::anyhow;
@@ -16,7 +13,6 @@ use tokio::io::BufReader;
 use tokio::process::Child;
 use tokio::process::ChildStderr;
 use tokio::sync::mpsc;
-use tokio::time::sleep;
 use tokio_util::task::AbortOnDropHandle;
 use tracing::debug;
 use tracing::error;
@@ -24,19 +20,19 @@ use tracing::warn;
 
 use crate::env::Env;
 
-/// Handle for managing a `tmux` server.
-pub(crate) struct Tmux {
-    _stderr_task: AbortOnDropHandle<()>,
-    _stdout_task: AbortOnDropHandle<()>,
-    _tx: mpsc::Sender<Request>,
-    socket: PathBuf,
+/// A `tmux` command represented as a single escaped line.
+#[derive(Debug, Clone)]
+pub(crate) struct Command {
+    tx: mpsc::Sender<Request>,
+    line: String,
 }
 
-/// A `tmux` command represented as a single line of text, with proper escaping.
-#[derive(Debug, Clone, Eq, PartialEq)]
-#[allow(dead_code)]
-pub(crate) struct Command {
-    line: String,
+/// Handle for managing a `tmux` server.
+pub(crate) struct Tmux {
+    _server: Child,
+    _stderr_task: AbortOnDropHandle<()>,
+    _stdout_task: AbortOnDropHandle<()>,
+    tx: mpsc::Sender<Request>,
 }
 
 type Response = mpsc::Sender<anyhow::Result<Vec<u8>>>;
@@ -63,18 +59,25 @@ impl Tmux {
         let socket = env.path("tmux.sock");
         ensure!(!socket.exists(), "tmux socket already exists");
 
-        // Start tmux in control mode, and not in daemon mode, with a dedicated socket.
-        //
-        // This results in a single long-lived tmux process that is both the server and the client.
-        // When the client process exits, the tmux server will exit with it. This can be triggered
-        // by dropping the child handle.
-        //
-        // Commands can be sent to the tmux server via `stdin` of this process, while the server
-        // communicates notifications and command outputs via `stdout`. The server can also be
-        // interacted with by other `tmux` commands, using the same socket.
-        let mut child = env
+        // Start tmux as a foreground server on a dedicated socket. This child is stored directly
+        // on `Tmux` (`_server`) so server lifetime maps exactly to `Tmux` lifetime.
+        let server = env
             .command("tmux")
-            .args(["-D", "-C", "-S"])
+            .args(["-D", "-S"])
+            .arg(socket.as_os_str())
+            .kill_on_drop(true)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .context("failed to spawn foreground tmux server")?;
+
+        // Start a separate control-mode client connected to the same server/socket. The client's
+        // stdio is owned by background tasks; aborting those tasks drops the guard and tears down
+        // the client process.
+        let mut client = env
+            .command("tmux")
+            .args(["-C", "-S"])
             .arg(socket.as_os_str())
             .kill_on_drop(true)
             .stdin(Stdio::piped())
@@ -83,55 +86,30 @@ impl Tmux {
             .spawn()
             .context("failed to spawn control-mode tmux client")?;
 
-        let stderr = child.stderr.take().unwrap();
+        let stderr = client.stderr.take().unwrap();
         let stderr_task = AbortOnDropHandle::new(tokio::task::spawn(stderr_task(stderr)));
 
-        let (_tx, rx) = mpsc::channel(32);
-        let stdout_task = AbortOnDropHandle::new(tokio::task::spawn(stdout_task(child, rx)));
-
-        wait_until_ready(env, &socket).await?;
-
-        // TODO: Send down channel, eventually.
-        let new = env
-            .command("tmux")
-            .arg("-S")
-            .arg(socket.as_os_str())
-            .args(["new-session", "-d", "-x", "160", "-y", "100"])
-            .output()
-            .await
-            .context("failed to execute 'tmux new-session'")?;
-
-        ensure!(
-            new.status.success(),
-            "'tmux new-session' failed: {}",
-            String::from_utf8_lossy(&new.stderr),
-        );
+        let (tx, rx) = mpsc::channel(32);
+        let stdout_task = AbortOnDropHandle::new(tokio::task::spawn(stdout_task(client, rx)));
 
         Ok(Self {
+            _server: server,
             _stderr_task: stderr_task,
             _stdout_task: stdout_task,
-            _tx,
-            socket,
+            tx,
         })
     }
 
-    /// Build a `tmux` command in the given `env`ironment.
-    pub(crate) fn command(&self, env: &Env) -> tokio::process::Command {
-        let mut command = env.command("tmux");
-        command.arg("-S").arg(self.socket.as_os_str());
-        command
-    }
-}
-
-#[allow(dead_code)]
-impl Command {
-    /// Construct a command from the command name.
-    pub(crate) fn new(name: impl AsRef<OsStr>) -> Self {
-        Self {
+    /// Create a new `Command` with the given name, that will be run against this `Tmux` instance.
+    pub(crate) fn command(&self, name: impl AsRef<OsStr>) -> Command {
+        Command {
+            tx: self.tx.clone(),
             line: escape(name.as_ref()).into_owned(),
         }
     }
+}
 
+impl Command {
     /// Add one argument.
     pub(crate) fn arg(mut self, arg: impl AsRef<OsStr>) -> Self {
         self.line.push(' ');
@@ -149,17 +127,15 @@ impl Command {
         self
     }
 
-    /// Run this command against a control-mode `tmux` instance and stream output lines.
+    /// Run this command against the control-mode `tmux` instance it was created from and stream
+    /// output lines.
     ///
     /// The returned channel yields one item per output line while the command is active. When tmux
     /// emits `%end`, the channel is closed and no additional item is sent. When tmux emits
     /// `%error`, a final `Err(...)` item is sent and then the channel is closed.
-    pub(crate) async fn output(
-        self,
-        tmux: &Tmux,
-    ) -> anyhow::Result<mpsc::Receiver<anyhow::Result<Vec<u8>>>> {
+    pub(crate) async fn output(self) -> anyhow::Result<mpsc::Receiver<anyhow::Result<Vec<u8>>>> {
         let (tx, rx) = mpsc::channel(32);
-        tmux._tx
+        self.tx
             .send(Request { cmd: self.line, tx })
             .await
             .context("failed to queue tmux command")?;
@@ -167,15 +143,15 @@ impl Command {
         Ok(rx)
     }
 
-    /// Run this command against a control-mode `tmux` instance and collect output.
+    /// Run this command against the control-mode `tmux` instance it was created from and collect
+    /// output.
     ///
     /// Output lines are joined with trailing newlines until the command terminates. `%end` maps to
     /// `Ok(collected_bytes)`. `%error` maps to `Err(...)`, where the error message is built from
     /// the collected bytes using lossy UTF-8 conversion.
-    pub(crate) async fn status(self, tmux: &Tmux) -> anyhow::Result<Vec<u8>> {
-        let mut output = self.output(tmux).await?;
-
+    pub(crate) async fn status(self) -> anyhow::Result<Vec<u8>> {
         let mut joined = vec![];
+        let mut output = self.output().await?;
         while let Some(line) = output.recv().await {
             match line {
                 Ok(line) => {
@@ -183,10 +159,7 @@ impl Command {
                     joined.push(b'\n');
                 }
 
-                Err(e) => {
-                    let output = String::from_utf8_lossy(&joined);
-                    return Err(anyhow!("tmux command failed: {e:?}\noutput:\n{output}"));
-                }
+                Err(_) => return Err(anyhow!(String::from_utf8_lossy(&joined).into_owned())),
             }
         }
 
@@ -196,22 +169,26 @@ impl Command {
 
 /// Task looking after `stdout` (and `stdin`) for a control-mode `tmux` client.
 ///
-/// `child` is a handle to the child process that is kept alive by this task, while `requests` is a
-/// channel on which the task receives requests to pass on to the `tmux`. Each request includes a
-/// command to run, and a channel on which to send the command's output back to the requester.
-async fn stdout_task(mut child: Child, mut requests: mpsc::Receiver<Request>) {
-    let Some(mut stdin) = child.stdin.take() else {
-        error!("failed to setup stdin");
+/// `client` is kept alive by this task, and `requests` receives control commands to send to tmux.
+async fn stdout_task(mut client: Child, mut requests: mpsc::Receiver<Request>) {
+    let Some(mut stdin) = client.stdin.take() else {
+        error!("failed to setup control client stdin");
         return;
     };
 
-    let Some(mut stdout) = child.stdout.take().map(|p| BufReader::new(p).lines()) else {
-        error!("failed to setup stdout");
+    let Some(mut stdout) = client.stdout.take().map(|p| BufReader::new(p).lines()) else {
+        error!("failed to setup control client stdout");
         return;
     };
 
     let mut active: Option<Response> = None;
     let mut pending: VecDeque<Response> = VecDeque::new();
+
+    // The control client emits a `%begin`/`%end` pair associated with the command that spins up
+    // the control mode client. Add a channel to `pending` (already closed) to soak up the output
+    // of this command, so future commands remain properly aligned with the control client's
+    // output.
+    pending.push_back(mpsc::channel(1).0);
 
     loop {
         tokio::select! {
@@ -386,61 +363,28 @@ pub(crate) fn unescape(line: Vec<u8>) -> anyhow::Result<Vec<u8>> {
     Ok(output)
 }
 
-// TODO: Temporary measure while we're in a transition period where some command runs are via the
-// control task and some are direct spawns. We should eventually move all command runs to the
-// control task and remove this.
-async fn wait_until_ready(env: &Env, socket: &Path) -> anyhow::Result<()> {
-    let mut command = env.command("tmux");
-    command
-        .arg("-S")
-        .arg(socket.as_os_str())
-        .args(["display-message", "-p", "#{version}"]);
-
-    for _ in 0..200 {
-        if socket.exists()
-            && let Ok(output) = command.output().await
-            && output.status.success()
-        {
-            return Ok(());
-        }
-
-        sleep(Duration::from_millis(10)).await;
-    }
-
-    ensure!(socket.exists(), "tmux socket was not created");
-    anyhow::bail!("tmux control-mode client did not become ready")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    use std::ffi::OsStr;
+
     #[test]
-    fn serializes_command_with_barewords() {
-        let command = Command::new("list-sessions").arg("-F").arg("#S");
-        insta::assert_snapshot!(command.line, @r###"list-sessions -F "\#S""###);
+    fn escapes_barewords() {
+        let escaped = escape(OsStr::new("list-sessions"));
+        insta::assert_snapshot!(escaped.as_ref(), @"list-sessions");
     }
 
     #[test]
-    fn serializes_command_with_spaces_and_quotes() {
-        let command = Command::new("display-message")
-            .arg("-p")
-            .arg("pane has spaces")
-            .arg("\"quoted\"");
-
-        insta::assert_snapshot!(command.line, @r###"display-message -p "pane has spaces" "\"quoted\"""###);
+    fn escapes_spaces() {
+        let escaped = escape(OsStr::new("pane has spaces"));
+        insta::assert_snapshot!(escaped.as_ref(), @r###""pane has spaces""###);
     }
 
     #[test]
-    fn serializes_command_with_backslashes_semicolons_and_empty_parts() {
-        let command = Command::new("send-keys")
-            .arg("-t")
-            .arg("%1")
-            .arg(r"path\\segment")
-            .arg(";")
-            .arg("");
-
-        insta::assert_snapshot!(command.line, @r###"send-keys -t %1 "path\\\\segment" "\;" ''"###);
+    fn escapes_backslashes() {
+        let escaped = escape(OsStr::new(r"path\\segment"));
+        insta::assert_snapshot!(escaped.as_ref(), @r###""path\\\\segment""###);
     }
 
     #[test]
