@@ -1,0 +1,66 @@
+---
+source: crates/sesh-integration-tests/tests/test.rs
+expression: output
+---
+# Runner snap directive behavior
+
+## Captures stable pane content
+
+If repeated pane captures converge, the dominant filtered capture should be
+emitted as the snapshot.
+
+:bins echo sleep
+> [!NOTE]
+> 'echo', and 'sleep' are available.
+
+:t new-window -d -n stable 'echo "hello stable"; sleep 10' (success)
+:p 0:stable.0
+
+:$ sleep 0.1 (exit: 0)
+:snap /stable/STABLE/
+```terminal
+hello STABLE
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```
+
+## Warns for unstable pane content
+
+If repeated pane captures do not have a dominant value (>75%), the runner should emit a warning
+instead of a snapshot.
+
+:bins python3
+> [!NOTE]
+> 'python3' is available.
+
+:t new-window -d -n unstable 'python3 -c "import itertools, time; [print(i, flush=True) or time.sleep(0.005) for i in itertools.count()]"' (success)
+:p 0:unstable.0
+
+:$ sleep 0.1 (exit: 0)
+:snap
+> [!WARNING]
+> pane did not stabilize within 100ms
+
+---
+vim: set ft=markdown:

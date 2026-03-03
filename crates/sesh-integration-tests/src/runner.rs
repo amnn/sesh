@@ -4,11 +4,16 @@ use std::ffi::OsStr;
 use std::fmt;
 use std::fmt::Write as _;
 use std::path::Path;
+use std::time::Duration;
+
+use std::collections::HashMap;
 
 use anyhow::Context as _;
 use futures::future;
 use nonempty::NonEmpty;
 use textwrap::Options;
+use tokio::time;
+use tokio::time::MissedTickBehavior;
 use tracing::instrument;
 
 use crate::env::Env;
@@ -111,9 +116,7 @@ impl Runner {
 
             LineKind::Snap { filters } => {
                 writeln!(w, "{}", line.raw)?;
-                for filter in filters {
-                    let _ = (filter.patt.as_str(), &filter.repl);
-                }
+                self.eval_snap(w, filters).await?;
             }
         }
 
@@ -280,6 +283,77 @@ impl Runner {
         }
 
         Ok(())
+    }
+
+    /// Capture the current pane repeatedly over a short duration, applying `filters` to each
+    /// capture to normalize dynamic content. If more than `SNAP_MIN_DOMINANCE` of the captures
+    /// stabilize to the same content, write that content as a fenced block, otherwise write a
+    /// warning callout.
+    async fn eval_snap(&self, w: &mut impl fmt::Write, filters: &[parser::Filter]) -> fmt::Result {
+        const SNAP_DURATION: Duration = Duration::from_millis(100);
+        const SNAP_INTERVAL: Duration = Duration::from_millis(10);
+        const SNAP_MIN_DOMINANCE: f64 = 0.75;
+
+        let mut samples = HashMap::new();
+        let mut total = 0usize;
+
+        let mut ticker = time::interval(SNAP_INTERVAL);
+        ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
+
+        let start = time::Instant::now();
+        loop {
+            ticker.tick().await;
+            if start.elapsed() >= SNAP_DURATION {
+                break;
+            }
+
+            let capture = match self.capture_pane(filters).await {
+                Ok(capture) => capture,
+                Err(error) => {
+                    let message = format!("failed to capture pane '{}': {error:#}", self.pane);
+                    write_callout(w, "WARNING", &[&message])?;
+                    return Ok(());
+                }
+            };
+
+            *samples.entry(capture).or_insert(0usize) += 1;
+            total += 1;
+        }
+
+        let Some((capture, count)) = samples.into_iter().max_by(|(_, l), (_, r)| l.cmp(&r)) else {
+            write_callout(w, "WARNING", &["did not capture any pane samples"])?;
+            return Ok(());
+        };
+
+        let ratio = count as f64 / total as f64;
+        if ratio < SNAP_MIN_DOMINANCE {
+            let warning = format!("pane did not stabilize in {}ms", SNAP_DURATION.as_millis());
+            write_callout(w, "WARNING", &[&warning])?;
+            return Ok(());
+        }
+
+        write_fenced_block(w, "terminal", &capture)?;
+        Ok(())
+    }
+
+    async fn capture_pane(&self, filters: &[parser::Filter]) -> anyhow::Result<String> {
+        let output = self
+            .tmux
+            .command("capture-pane")
+            .args(["-p", "-t"])
+            .arg(&self.pane)
+            .status()
+            .await?;
+
+        let mut capture = String::from_utf8_lossy(&output).into_owned();
+        for filter in filters {
+            capture = filter
+                .patt
+                .replace_all(&capture, filter.repl.as_str())
+                .into_owned();
+        }
+
+        Ok(capture)
     }
 
     async fn target_to_pane_id(&self, target: &str) -> anyhow::Result<Option<String>> {
