@@ -1,6 +1,6 @@
 ---
 source: crates/sesh-integration-tests/src/parser.rs
-expression: "Script::parse(&[r#\":snap \"\"\"#, r#\":snap /foo\"#, r#\":snap /foo/\"#,\nr#\":snap /foo/bar\"#, r#\":snap /foo/bar/baz/\"#,].join(\"\\n\"))"
+expression: "Script::parse(&[r#\":snap \"\"\"#, r#\":snap /foo\"#, r#\":snap /foo/x/\"#,\nr#\":snap /foo/bar\"#, r#\":snap /foo/\"#,].join(\"\\n\"))"
 ---
 Script {
     lines: [
@@ -12,27 +12,27 @@ Script {
         },
         Line {
             kind: Error {
-                message: "missing closing delimiter",
+                message: "missing separator delimiter",
             },
             raw: ":snap /foo",
         },
         Line {
             kind: Error {
-                message: "missing replacement",
+                message: "trailing content after replacement",
             },
-            raw: ":snap /foo/",
-        },
-        Line {
-            kind: Error {
-                message: "missing closing delimiter",
-            },
-            raw: ":snap /foo/bar",
+            raw: ":snap /foo/x/",
         },
         Line {
             kind: Error {
                 message: "trailing content after replacement",
             },
-            raw: ":snap /foo/bar/baz/",
+            raw: ":snap /foo/bar",
+        },
+        Line {
+            kind: Error {
+                message: "missing replacement character",
+            },
+            raw: ":snap /foo/",
         },
     ],
 }

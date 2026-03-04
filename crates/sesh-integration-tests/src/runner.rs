@@ -320,7 +320,7 @@ impl Runner {
             total += 1;
         }
 
-        let Some((capture, count)) = samples.into_iter().max_by(|(_, l), (_, r)| l.cmp(&r)) else {
+        let Some((capture, count)) = samples.into_iter().max_by(|(_, l), (_, r)| l.cmp(r)) else {
             write_callout(w, "WARNING", &["did not capture any pane samples"])?;
             return Ok(());
         };
@@ -347,10 +347,7 @@ impl Runner {
 
         let mut capture = String::from_utf8_lossy(&output).into_owned();
         for filter in filters {
-            capture = filter
-                .patt
-                .replace_all(&capture, filter.repl.as_str())
-                .into_owned();
+            capture = paint_filter(&capture, filter);
         }
 
         Ok(capture)
@@ -379,6 +376,61 @@ impl Runner {
             Ok(None)
         }
     }
+}
+
+fn paint_filter(input: &str, filter: &parser::Filter) -> String {
+    // Convert regex captures to a list of ranges. If there are no groups, the entire match is
+    // treated as a single group.
+    let mut ranges = vec![];
+    for captures in filter.patt.captures_iter(input) {
+        if captures.len() == 1 {
+            let m = captures.get_match();
+            ranges.push(m.start()..m.end());
+        }
+
+        for m in captures.iter().skip(1).flatten() {
+            ranges.push(m.start()..m.end());
+        }
+    }
+
+    // Sort ranges, and then merge overlapping ranges. All merged ranges will share the same start
+    // as the predecessor they were merged into.
+    ranges.sort_by_key(|r| (r.start, r.end));
+
+    let mut i = 0;
+    let mut j = 0;
+    while i + j + 1 < ranges.len() {
+        let (head, tail) = ranges.split_at_mut(i + 1);
+        let a = &mut head[i];
+        let b = &mut tail[j];
+
+        if a.contains(&b.start) {
+            a.end = a.end.max(b.end);
+            b.start = a.start;
+            j += 1;
+        } else {
+            i += j + 1;
+        }
+    }
+
+    // Remove ranges that have been merged into a previous range.
+    ranges.dedup_by_key(|r| r.start);
+
+    fn paint(text: &str, char: char) -> String {
+        std::iter::repeat_n(char, text.chars().count()).collect()
+    }
+
+    // Write output out, painting over matched captures.
+    let mut last = 0;
+    let mut output = String::with_capacity(input.len());
+    for r in ranges {
+        output.push_str(&input[last..r.start]);
+        output.push_str(&paint(&input[r.clone()], filter.paint));
+        last = r.end;
+    }
+
+    output.push_str(&input[last..]);
+    output
 }
 
 fn write_callout<S: AsRef<str>>(w: &mut impl fmt::Write, kind: &str, lines: &[S]) -> fmt::Result {

@@ -1,6 +1,6 @@
 ---
 source: crates/sesh-integration-tests/src/parser.rs
-expression: "Script::parse(&[r#\"# Scenario\"#, r#\"\"#, r#\":$ cargo --version\"#,\nr#\":t new-session -d -s fixture \"sleep 3600\"\"#, r#\":p runner:0.0\"#,\nr#\":k down \"abc\"\"#, r#\":s /foo/bar/\"#, r#\"\"#, r#\"Notes.\"#, r#\"\"#,].join(\"\\n\"))"
+expression: "Script::parse(&[r#\"# Scenario\"#, r#\"\"#, r#\":$ cargo --version\"#,\nr#\":t new-session -d -s fixture \"sleep 3600\"\"#, r#\":p runner:0.0\"#,\nr#\":k down \"abc\"\"#, r#\":s /foo/x\"#, r#\"\"#, r#\"Notes.\"#, r#\"\"#,].join(\"\\n\"))"
 ---
 Script {
     lines: [
@@ -71,11 +71,11 @@ Script {
                         patt: Regex(
                             "foo",
                         ),
-                        repl: "bar",
+                        paint: 'x',
                     },
                 ],
             },
-            raw: ":s /foo/bar/",
+            raw: ":s /foo/x",
         },
         Line {
             kind: Text,

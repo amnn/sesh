@@ -3,8 +3,9 @@
 ## Testing
 
 - [ ] Interaction tests for UI
-  - [ ] Modifier keys for `:k` directive.
-  - [ ] Review `runner` module.
+  - [x] Modifier keys for `:k` directive.
+  - [x] Review `runner` module.
+  - [x] Snapshot filters paint pattern over with single character.
   - [ ] Test: Basic session.
   - [ ] Test: Session with repo attached.
   - [ ] Test: Session with multiple workspaces.

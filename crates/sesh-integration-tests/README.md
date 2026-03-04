@@ -26,10 +26,12 @@ Supported directives:
   - Modifiers are canonical uppercase only: `C-`, `M-`, `S-`.
   - `S-` only applies to arrow keys.
   - Anything that doesn't match the above is treated as a literal string to send.
-- `:s` / `:snap [dregexdreplacementd ...]`
+- `:s` / `:snap [dregexdchar ...]`
   - Capture current pane and append it in a fenced `terminal` code block.
-  - Optional replacement rules are sed-style pairs, separated by whitespace.
-  - Replacements are global and applied in order.
+  - Optional replacement rules are `dregexdchar`, separated by whitespace.
+  - Replacements are global and applied in order, painting over matches with the replacement
+    character.
+  - If the regex has capture groups, only those groups' contents are painted.
 
 ## Run tests
 

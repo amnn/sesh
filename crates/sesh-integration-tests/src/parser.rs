@@ -82,7 +82,7 @@ pub(crate) enum KeyKind {
 #[derive(Debug)]
 pub(crate) struct Filter {
     pub(crate) patt: Regex,
-    pub(crate) repl: String,
+    pub(crate) paint: char,
 }
 
 impl<'s> Script<'s> {
@@ -314,27 +314,27 @@ fn parse_key_kind(input: &str) -> KeyKind {
 
 /// Parse a filter for `:snap` output.
 ///
-/// A filter is a regular expression pattern and replacement string, separated by a common
-/// delimiter character. For example, `/foo/bar/` or `|foo|bar|` (the delimiter can be any
-/// character as long as it doesn't appear in the pattern or replacement).
+/// A filter is a regular expression pattern and a paint character, separated by a common delimiter
+/// character. For example, `/foo/x` or `|foo|x`.
+///
+/// If the pattern has capture groups, only captured group contents are painted.
 fn parse_filter(input: String) -> anyhow::Result<Filter> {
-    let delim = input.chars().next().context("empty filter string")?;
+    let mut chars = input.chars();
+    let delim = chars.next().context("empty filter string")?;
+    let rest = chars.as_str();
 
-    let input = input
-        .strip_prefix(delim)
-        .unwrap()
-        .strip_suffix(delim)
-        .context("missing closing delimiter")?;
+    let Some((patt, repl)) = rest.split_once(delim) else {
+        bail!("missing separator delimiter");
+    };
 
-    let mut parts = input.split(delim);
-    let patt = parts.next().context("missing pattern")?;
-    let repl = parts.next().context("missing replacement")?;
-    ensure!(parts.next().is_none(), "trailing content after replacement");
+    ensure!(!patt.is_empty(), "missing pattern");
+
+    let mut chars = repl.chars();
+    let paint = chars.next().context("missing replacement character")?;
+    ensure!(chars.next().is_none(), "trailing content after replacement");
 
     let patt = Regex::new(patt).context("invalid regex pattern")?;
-    let repl = repl.to_owned();
-
-    Ok(Filter { patt, repl })
+    Ok(Filter { patt, paint })
 }
 
 #[cfg(test)]
@@ -351,7 +351,7 @@ mod tests {
                 r#":t new-session -d -s fixture "sleep 3600""#,
                 r#":p runner:0.0"#,
                 r#":k down "abc""#,
-                r#":s /foo/bar/"#,
+                r#":s /foo/x"#,
                 r#""#,
                 r#"Notes."#,
                 r#""#,
@@ -386,9 +386,9 @@ mod tests {
             &[
                 r#":snap """#,
                 r#":snap /foo"#,
-                r#":snap /foo/"#,
+                r#":snap /foo/x/"#,
                 r#":snap /foo/bar"#,
-                r#":snap /foo/bar/baz/"#,
+                r#":snap /foo/"#,
             ]
             .join("\n")
         ));
@@ -396,16 +396,17 @@ mod tests {
 
     #[test]
     fn captures_invalid_snap_regex_as_error() {
-        insta::assert_debug_snapshot!(Script::parse(
-            &[":snap /(unterminated/repl/", ""].join("\n")
-        ));
+        insta::assert_debug_snapshot!(Script::parse(&[":snap /(unterminated/x", ""].join("\n")));
     }
 
     #[test]
     fn parses_snap_with_multiple_filters() {
-        insta::assert_debug_snapshot!(Script::parse(
-            &[":snap /foo/bar/  |baz|qux|", ""].join("\n")
-        ));
+        insta::assert_debug_snapshot!(Script::parse(&[":snap /foo/x  |baz|q", ""].join("\n")));
+    }
+
+    #[test]
+    fn parses_snap_with_multiple_capture_groups() {
+        insta::assert_debug_snapshot!(Script::parse(&[":snap /(a)(b)/x", ""].join("\n")));
     }
 
     #[test]

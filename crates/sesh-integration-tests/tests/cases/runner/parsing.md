@@ -18,7 +18,7 @@ silently ignored.
 
 Invalid regular expressions in `:snap` should become parser errors with diagnostic detail.
 
-:snap /(unterminated/repl/
+:snap /(unterminated/x
 
 ## Invalid shift-modified text key
 
