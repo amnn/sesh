@@ -15,6 +15,8 @@ style issues in the files touched by the codebase.
      for this), only style issues.
 2. Apply the code style guidelines from `STYLE.md` to all relevant touched
    files.
+   - Work through each rule systematically: focus on one rule at a time,
+     applying it across all relevant files before moving to the next rule.
    - If there are no issues, stop and report back that the code is clean.
    - Otherwise, fix the style issues.
 3. Run the validation pass, fixing any issues. Repeat until there are no
