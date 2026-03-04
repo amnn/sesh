@@ -1,11 +1,20 @@
 # TODO
 
+## Agents
+
+- [-] Reflection skill: Learn from past sessions and pull request to update
+  context/skills/sub-agents available in repo.
+
 ## Testing
 
 - [ ] Interaction tests for UI
   - [x] Modifier keys for `:k` directive.
   - [x] Review `runner` module.
   - [x] Snapshot filters paint pattern over with single character.
+  - [-] Snapshot filters paint pattern supports grapheme clusters.
+  - [-] Fix tmux control client leak.
+  - [-] Standardize shell, prompt used by tests (don't use user's default shell.
+  - [-] Configurable session width/height
   - [ ] Test: Basic session.
   - [ ] Test: Session with repo attached.
   - [ ] Test: Session with multiple workspaces.
