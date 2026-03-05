@@ -11,33 +11,13 @@ The default pane prompt should be stable across test environments.
 :bins sleep
 > [!NOTE]
 > 'sleep' is available.
+
 :$ sleep 0.2 (exit: 0)
+:tmux resize-window -x 80 -y 2 -t 0 (success)
 
 :snap
 ```terminal
 sh$
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ```
 
@@ -47,33 +27,12 @@ Creating a new window without a command should still produce the same stable pro
 
 :tmux new-window -d -n fresh (success)
 :pane fresh.0
+:tmux resize-window -x 80 -y 2 -t fresh (success)
 :$ sleep 0.2 (exit: 0)
 
 :snap
 ```terminal
 sh$
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ```
 

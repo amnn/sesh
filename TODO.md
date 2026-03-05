@@ -18,7 +18,7 @@
   - [x] Snapshot filters paint pattern supports grapheme clusters.
   - [x] Fix tmux control client leak.
   - [x] Standardize shell, prompt used by tests (don't use user's default shell.
-  - [-] Configurable session width/height
+  - [x] Configurable session width/height
   - [ ] Test: Basic session.
   - [ ] Test: Session with repo attached.
   - [ ] Test: Session with multiple workspaces.

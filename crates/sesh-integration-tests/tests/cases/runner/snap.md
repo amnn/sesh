@@ -9,6 +9,7 @@ emitted as the snapshot.
 
 :t new-window -d -n stable 'echo "hello stable"; tmux wait-for -S ready-stable; sleep 10'
 :p 0:stable.0
+:t resize-window -x 80 -y 2 -t 0:stable
 
 :t wait-for ready-stable
 :snap /stable/X
@@ -20,6 +21,7 @@ surrounding literal text should remain unchanged.
 
 :t new-window -d -n groups 'echo "id=123 user=alice"; tmux wait-for -S ready-groups; sleep 10'
 :p 0:groups.0
+:t resize-window -x 80 -y 2 -t 0:groups
 
 :t wait-for ready-groups
 :snap "/id=([0-9]+) user=([a-z]+)/👩🏽‍💻"
@@ -31,6 +33,7 @@ painted once.
 
 :t new-window -d -n nested 'echo "token=abcd"; tmux wait-for -S ready-nested; sleep 10'
 :p 0:nested.0
+:t resize-window -x 80 -y 2 -t 0:nested
 
 :t wait-for ready-nested
 :snap /token=(a(bc)d)/👩🏽‍💻
@@ -44,6 +47,7 @@ instead of a snapshot.
 
 :t new-window -d -n unstable 'python3 -c "import itertools, time; [print(i, flush=True) or time.sleep(0.005) for i in itertools.count()]"'
 :p 0:unstable.0
+:t resize-window -x 80 -y 2 -t 0:unstable
 
 :$ sleep 0.1
 :snap

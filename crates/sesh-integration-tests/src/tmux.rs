@@ -25,6 +25,8 @@ use crate::env::Env;
 const TMUX_CONFIG: &str = r#"
 set -g default-shell /bin/sh
 set -g default-command \"/bin/sh -i\"
+set -g default-size 160x100
+set -g window-size manual
 "#;
 
 /// A `tmux` command represented as a single escaped line.
