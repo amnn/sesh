@@ -70,6 +70,30 @@ impl Env {
             .with_context(|| format!("failed to add '{}' to environment", bin.display()))
     }
 
+    /// Start a new command in this environment.
+    ///
+    /// Its `$HOME` and `$PATH` environment variables point inside the environment, and its current
+    /// directory is also set to `$HOME`.
+    pub(crate) fn command(&self, program: &str) -> Command {
+        let mut command = Command::new(program);
+
+        command
+            .env_clear()
+            .env("HOME", self.path("home"))
+            .env("LC_CTYPE", "en_US.UTF-8")
+            .env("ENV", self.path("home").join(".shrc"))
+            .env("PATH", self.path("bin"))
+            .env("SHELL", "/bin/sh")
+            .current_dir(self.path("home"));
+
+        command
+    }
+
+    /// Relativize `path` in this environment's context.
+    pub(crate) fn path(&self, path: impl AsRef<Path>) -> PathBuf {
+        self._dir.path().join(path)
+    }
+
     async fn bin_(&self, bin: &OsStr) -> anyhow::Result<PathBuf> {
         let source = which(bin)?;
         let name = source
@@ -89,30 +113,6 @@ impl Env {
         }
 
         Ok(target)
-    }
-
-    /// Start a new command in this environment.
-    ///
-    /// Its `$HOME` and `$PATH` environment variables point inside the environment, and its current
-    /// directory is also set to `$HOME`.
-    pub(crate) fn command(&self, program: &str) -> Command {
-        let mut command = Command::new(program);
-
-        command
-            .env_clear()
-            .env("HOME", self.path("home"))
-            .env("LC_CTYPE", "en_US.UTF-8")
-            .env("ENV", self.path("home/.shrc"))
-            .env("PATH", self.path("bin"))
-            .env("SHELL", "/bin/sh")
-            .current_dir(self.path("home"));
-
-        command
-    }
-
-    /// Relativize `path` in this environment's context.
-    pub(crate) fn path(&self, path: impl AsRef<Path>) -> PathBuf {
-        self._dir.path().join(path)
     }
 }
 

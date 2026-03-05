@@ -1,3 +1,5 @@
+//! Helpers for querying and invoking tmux.
+
 use std::collections::BTreeMap;
 use std::env;
 use std::os::unix::process::CommandExt as _;

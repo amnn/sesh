@@ -1,3 +1,5 @@
+//! Minimal tmux control-mode client for integration tests.
+
 use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::ffi::OsStr;
@@ -56,7 +58,7 @@ struct Request {
 }
 
 impl Tmux {
-    /// Start a `tmux` control-mode client in the given `env`ironment.
+    /// Start a `tmux` control-mode client in the given environment.
     ///
     /// `tmux -C` will automatically spawn the server daemon on the target socket when needed.
     /// Shutdown sends `kill-server` through the same control client to tear down that daemon.
@@ -180,6 +182,118 @@ impl Command {
     }
 }
 
+/// Decode tmux control-mode escaping in one output payload line.
+///
+/// This decodes octal escapes (`\ooo`) and escaped backslashes (`\\`).
+pub(crate) fn unescape(line: Vec<u8>) -> anyhow::Result<Vec<u8>> {
+    if !line.contains(&b'\\') {
+        return Ok(line);
+    }
+
+    fn is_octal(byte: u8) -> bool {
+        matches!(byte, b'0'..=b'7')
+    }
+
+    let mut output = Vec::with_capacity(line.len());
+    let mut bytes = line.into_iter();
+    while let Some(byte) = bytes.next() {
+        if byte != b'\\' {
+            output.push(byte);
+            continue;
+        }
+
+        let e0 = bytes.next().context("unfinished escape")?;
+        ensure!(is_octal(e0) || e0 == b'\\', "malformed escape");
+
+        if e0 == b'\\' {
+            output.push(b'\\');
+            continue;
+        }
+
+        let e1 = bytes.next().context("unfinished escape")?;
+        ensure!(is_octal(e1), "malformed escape");
+
+        let e2 = bytes.next().context("unfinished escape")?;
+        ensure!(is_octal(e2), "malformed escape");
+
+        let byte: u16 = (e0 - b'0') as u16 * 64 + (e1 - b'0') as u16 * 8 + (e2 - b'0') as u16;
+        ensure!(byte <= 0xFF, "overflow");
+
+        output.push(byte as u8);
+    }
+
+    Ok(output)
+}
+
+/// Escape a command argument using tmux's syntax.
+///
+/// Empty strings are quoted, otherwise strings that are comprised of just graphics characters and
+/// no characters that have a special meaning to tmux are left unquoted.
+///
+/// Otherwise, the string is wrapped in double quotes, with special characters escaped.
+fn escape(part: &OsStr) -> Cow<'_, str> {
+    let bytes = part.as_encoded_bytes();
+
+    if bytes.is_empty() {
+        return "''".into();
+    }
+
+    const SPECIAL: &[u8] = b"\"#$';\\~";
+    fn needs_escape(b: &u8) -> bool {
+        !b.is_ascii_graphic() || SPECIAL.contains(b)
+    }
+
+    if !bytes.iter().any(needs_escape) {
+        // SAFETY: Check ensures that bytes contain a subset of ASCII graphics characters.
+        return unsafe { str::from_utf8_unchecked(bytes).into() };
+    }
+
+    let mut escaped = String::with_capacity(part.len() + 2);
+    escaped.push('"');
+
+    for b in bytes {
+        match *b {
+            b' ' => escaped.push(' '),
+            b'\n' => escaped.push_str("\\n"),
+            b'\r' => escaped.push_str("\\r"),
+            b'\t' => escaped.push_str("\\t"),
+
+            b if SPECIAL.contains(&b) => {
+                escaped.push('\\');
+                escaped.push(b as char);
+            }
+
+            b if b.is_ascii_graphic() => escaped.push(b as char),
+            b => write!(escaped, "\\{:03o}", b).unwrap(),
+        }
+    }
+
+    escaped.push('"');
+    escaped.into()
+}
+
+/// A task to monitor `stderr` for a control-mode `tmux` client, and log any output as error
+/// traces.
+async fn stderr_task(stderr: ChildStderr) {
+    let mut stderr = BufReader::new(stderr).lines();
+
+    loop {
+        match stderr.next_line().await {
+            Ok(Some(line)) => error!("stderr: {line}"),
+
+            Ok(None) => {
+                warn!("stderr closed");
+                break;
+            }
+
+            Err(e) => {
+                error!("stderr error: {e}");
+                break;
+            }
+        }
+    }
+}
+
 /// Task looking after `stdout` (and `stdin`) for a control-mode `tmux` client.
 ///
 /// `client` is kept alive by this task, and `requests` receives control commands to send to tmux.
@@ -266,118 +380,6 @@ async fn stdout_task(mut client: Child, mut requests: mpsc::Receiver<Request>) {
 
     // Kill the control client now that command processing has stopped.
     client.kill().await.ok();
-}
-
-/// A task to monitor `stderr` for a control-mode `tmux` client, and log any output as error
-/// traces.
-async fn stderr_task(stderr: ChildStderr) {
-    let mut stderr = BufReader::new(stderr).lines();
-
-    loop {
-        match stderr.next_line().await {
-            Ok(Some(line)) => error!("stderr: {line}"),
-
-            Ok(None) => {
-                warn!("stderr closed");
-                break;
-            }
-
-            Err(e) => {
-                error!("stderr error: {e}");
-                break;
-            }
-        }
-    }
-}
-
-/// Escape a command argument using tmux's syntax.
-///
-/// Empty strings are quoted, otherwise strings that are comprised of just graphics characters and
-/// no characters that have a special meaning to tmux are left unquoted.
-///
-/// Otherwise, the string is wrapped in double quotes, with special characters escaped.
-fn escape(part: &OsStr) -> Cow<'_, str> {
-    let bytes = part.as_encoded_bytes();
-
-    if bytes.is_empty() {
-        return "''".into();
-    }
-
-    const SPECIAL: &[u8] = b"\"#$';\\~";
-    fn needs_escape(b: &u8) -> bool {
-        !b.is_ascii_graphic() || SPECIAL.contains(b)
-    }
-
-    if !bytes.iter().any(needs_escape) {
-        // SAFETY: Check ensures that bytes contain a subset of ASCII graphics characters.
-        return unsafe { str::from_utf8_unchecked(bytes).into() };
-    }
-
-    let mut escaped = String::with_capacity(part.len() + 2);
-    escaped.push('"');
-
-    for b in bytes {
-        match *b {
-            b' ' => escaped.push(' '),
-            b'\n' => escaped.push_str("\\n"),
-            b'\r' => escaped.push_str("\\r"),
-            b'\t' => escaped.push_str("\\t"),
-
-            b if SPECIAL.contains(&b) => {
-                escaped.push('\\');
-                escaped.push(b as char);
-            }
-
-            b if b.is_ascii_graphic() => escaped.push(b as char),
-            b => write!(escaped, "\\{:03o}", b).unwrap(),
-        }
-    }
-
-    escaped.push('"');
-    escaped.into()
-}
-
-/// Decode tmux control-mode escaping in one output payload line.
-///
-/// This decodes octal escapes (`\ooo`) and escaped backslashes (`\\`).
-pub(crate) fn unescape(line: Vec<u8>) -> anyhow::Result<Vec<u8>> {
-    if !line.contains(&b'\\') {
-        return Ok(line);
-    }
-
-    fn is_octal(byte: u8) -> bool {
-        matches!(byte, b'0'..=b'7')
-    }
-
-    let mut output = Vec::with_capacity(line.len());
-    let mut bytes = line.into_iter();
-    while let Some(byte) = bytes.next() {
-        if byte != b'\\' {
-            output.push(byte);
-            continue;
-        }
-
-        let e0 = bytes.next().context("unfinished escape")?;
-        ensure!(is_octal(e0) || e0 == b'\\', "malformed escape");
-
-        if e0 == b'\\' {
-            output.push(b'\\');
-            continue;
-        }
-
-        let e1 = bytes.next().context("unfinished escape")?;
-        ensure!(is_octal(e1), "malformed escape");
-
-        let e2 = bytes.next().context("unfinished escape")?;
-        ensure!(is_octal(e2), "malformed escape");
-
-        let byte: u16 = (e0 - b'0') as u16 * 64 + (e1 - b'0') as u16 * 8 + (e2 - b'0') as u16;
-        ensure!(byte <= 0xFF, "overflow");
-
-        output.push(byte as u8);
-    }
-
-    Ok(output)
 }
 
 #[cfg(test)]

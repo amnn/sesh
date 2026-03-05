@@ -19,6 +19,12 @@ Each Rust module should follow the following order:
 Entries in each section are in decreasing order of visibility, and then
 sorted lexicographically.
 
+For `impl` and trait `impl` sections, treat member items (for example methods,
+associated consts, and associated types) as entries and apply the same rule:
+decreasing visibility, then lexicographic order. Make an exception for
+constructors, which should be surfaced at the top of their `impl` block (but
+can again be sorted by visibility and then lexicographically).
+
 If you find that a module is getting too large, and elements pertaining to,
 e.g. the same type are spread out too far, that is a sign that this module
 needs to be split up.
@@ -84,11 +90,14 @@ Hard wrap comments at column 100.
 
 ### Turbofish
 
-Avoid turbofish operators where possible:
+Avoid turbofish operators where the following transformation is possible:
 
 ```rust
 let x = (..1).collect::<..2>(); -> let x: ..2 = (..1).collect();
 ```
+
+It's okay to use the turbofish in circumstances where the type cannot be
+inferred and there is not a binding that a type annotation can be attached to.
 
 ### Strings
 

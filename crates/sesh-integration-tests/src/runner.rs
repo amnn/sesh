@@ -1,12 +1,11 @@
 //! Runtime for parsed markdown integration scripts.
 
+use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fmt;
 use std::fmt::Write as _;
 use std::path::Path;
 use std::time::Duration;
-
-use std::collections::HashMap;
 
 use anyhow::Context as _;
 use futures::future;
@@ -81,47 +80,21 @@ impl Runner {
         Ok(())
     }
 
-    #[instrument(level = "trace", skip(self, w, line), fields(raw = line.raw))]
-    async fn eval_line(&mut self, w: &mut impl fmt::Write, line: &Line<'_>) -> fmt::Result {
-        match &line.kind {
-            LineKind::Text => {
-                writeln!(w, "{}", line.raw)?;
-            }
+    async fn capture_pane(&self, filters: &[parser::Filter]) -> anyhow::Result<String> {
+        let output = self
+            .tmux
+            .command("capture-pane")
+            .args(["-p", "-t"])
+            .arg(&self.pane)
+            .status()
+            .await?;
 
-            LineKind::Error { message } => {
-                writeln!(w, "{}", line.raw)?;
-                write_callout(w, "WARNING", &[&format!("Parser error: {message}")])?;
-            }
-
-            LineKind::Bins { args } => {
-                writeln!(w, "{}", line.raw)?;
-                self.eval_bins(w, args).await?;
-            }
-
-            LineKind::Sh { args } => {
-                self.eval_sh(w, line.raw, args).await?;
-            }
-
-            LineKind::Tmux { args } => {
-                self.eval_tmux(w, line.raw, args).await?;
-            }
-
-            LineKind::Pane { target } => {
-                writeln!(w, "{}", line.raw)?;
-                self.eval_pane(w, target).await?;
-            }
-
-            LineKind::Keys { keys } => {
-                self.eval_keys(w, line.raw, keys).await?;
-            }
-
-            LineKind::Snap { filters } => {
-                writeln!(w, "{}", line.raw)?;
-                self.eval_snap(w, filters).await?;
-            }
+        let mut capture = String::from_utf8_lossy(&output).into_owned();
+        for filter in filters {
+            capture = paint_filter(&capture, filter);
         }
 
-        Ok(())
+        Ok(capture)
     }
 
     async fn eval_bins(&self, w: &mut impl fmt::Write, args: &[String]) -> fmt::Result {
@@ -174,6 +147,92 @@ impl Runner {
         Ok(())
     }
 
+    async fn eval_keys(&self, w: &mut impl fmt::Write, raw: &str, keys: &[Key]) -> fmt::Result {
+        writeln!(w, "{raw}")?;
+
+        let command = self
+            .tmux
+            .command("send-keys")
+            .arg("-t")
+            .arg(&self.pane)
+            .args(keys.iter().map(|k| k.code().into_owned()));
+
+        if let Err(e) = command.status().await {
+            let stderr = e.to_string();
+            let stderr = stderr.trim();
+            let msg = if !stderr.is_empty() {
+                format!("failed to send keys to pane '{}': {}", self.pane, stderr)
+            } else {
+                format!("failed to send keys to pane '{}'", self.pane)
+            };
+            write_callout(w, "WARNING", &[&msg])?;
+        }
+
+        Ok(())
+    }
+
+    #[instrument(level = "trace", skip(self, w, line), fields(raw = line.raw))]
+    async fn eval_line(&mut self, w: &mut impl fmt::Write, line: &Line<'_>) -> fmt::Result {
+        match &line.kind {
+            LineKind::Text => {
+                writeln!(w, "{}", line.raw)?;
+            }
+
+            LineKind::Error { message } => {
+                writeln!(w, "{}", line.raw)?;
+                write_callout(w, "WARNING", &[&format!("Parser error: {message}")])?;
+            }
+
+            LineKind::Bins { args } => {
+                writeln!(w, "{}", line.raw)?;
+                self.eval_bins(w, args).await?;
+            }
+
+            LineKind::Sh { args } => {
+                self.eval_sh(w, line.raw, args).await?;
+            }
+
+            LineKind::Tmux { args } => {
+                self.eval_tmux(w, line.raw, args).await?;
+            }
+
+            LineKind::Pane { target } => {
+                writeln!(w, "{}", line.raw)?;
+                self.eval_pane(w, target).await?;
+            }
+
+            LineKind::Keys { keys } => {
+                self.eval_keys(w, line.raw, keys).await?;
+            }
+
+            LineKind::Snap { filters } => {
+                writeln!(w, "{}", line.raw)?;
+                self.eval_snap(w, filters).await?;
+            }
+        }
+
+        Ok(())
+    }
+
+    async fn eval_pane(&mut self, w: &mut impl fmt::Write, target: &str) -> fmt::Result {
+        let pane = match self.target_to_pane_id(target).await {
+            Ok(pane) => pane,
+            Err(e) => {
+                let message = format!("failed to validate pane target '{target}': {e}");
+                write_callout(w, "WARNING", &[&message])?;
+                return Ok(());
+            }
+        };
+
+        if let Some(pane) = pane {
+            self.pane = pane;
+        } else {
+            write_callout(w, "WARNING", &["No such pane."])?;
+        }
+
+        Ok(())
+    }
+
     async fn eval_sh(
         &self,
         w: &mut impl fmt::Write,
@@ -204,83 +263,6 @@ impl Runner {
                 let msg = format!("failed to execute command: {e}");
                 write_callout(w, "WARNING", &[&msg])?;
             }
-        }
-
-        Ok(())
-    }
-
-    async fn eval_tmux(
-        &self,
-        w: &mut impl fmt::Write,
-        raw: &str,
-        args: &NonEmpty<String>,
-    ) -> fmt::Result {
-        write!(w, "{raw}")?;
-
-        let command = self.tmux.command(&args.head).args(&args.tail);
-        match command.status().await {
-            Ok(output) => {
-                writeln!(w, " (success)")?;
-
-                let output = String::from_utf8_lossy(&output);
-                let output = output.trim();
-                if !output.is_empty() {
-                    write_fenced_block(w, "", output)?;
-                }
-            }
-
-            Err(e) => {
-                writeln!(w, " (failure)")?;
-
-                let output = e.to_string();
-                let output = output.trim();
-                if !output.is_empty() {
-                    write_fenced_block(w, "", output)?;
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    async fn eval_pane(&mut self, w: &mut impl fmt::Write, target: &str) -> fmt::Result {
-        let pane = match self.target_to_pane_id(target).await {
-            Ok(pane) => pane,
-            Err(e) => {
-                let message = format!("failed to validate pane target '{target}': {e}");
-                write_callout(w, "WARNING", &[&message])?;
-                return Ok(());
-            }
-        };
-
-        if let Some(pane) = pane {
-            self.pane = pane;
-        } else {
-            write_callout(w, "WARNING", &["No such pane."])?;
-        }
-
-        Ok(())
-    }
-
-    async fn eval_keys(&self, w: &mut impl fmt::Write, raw: &str, keys: &[Key]) -> fmt::Result {
-        writeln!(w, "{raw}")?;
-
-        let command = self
-            .tmux
-            .command("send-keys")
-            .arg("-t")
-            .arg(&self.pane)
-            .args(keys.iter().map(|k| k.code().into_owned()));
-
-        if let Err(e) = command.status().await {
-            let stderr = e.to_string();
-            let stderr = stderr.trim();
-            let msg = if !stderr.is_empty() {
-                format!("failed to send keys to pane '{}': {}", self.pane, stderr)
-            } else {
-                format!("failed to send keys to pane '{}'", self.pane)
-            };
-            write_callout(w, "WARNING", &[&msg])?;
         }
 
         Ok(())
@@ -337,21 +319,38 @@ impl Runner {
         Ok(())
     }
 
-    async fn capture_pane(&self, filters: &[parser::Filter]) -> anyhow::Result<String> {
-        let output = self
-            .tmux
-            .command("capture-pane")
-            .args(["-p", "-t"])
-            .arg(&self.pane)
-            .status()
-            .await?;
+    async fn eval_tmux(
+        &self,
+        w: &mut impl fmt::Write,
+        raw: &str,
+        args: &NonEmpty<String>,
+    ) -> fmt::Result {
+        write!(w, "{raw}")?;
 
-        let mut capture = String::from_utf8_lossy(&output).into_owned();
-        for filter in filters {
-            capture = paint_filter(&capture, filter);
+        let command = self.tmux.command(&args.head).args(&args.tail);
+        match command.status().await {
+            Ok(output) => {
+                writeln!(w, " (success)")?;
+
+                let output = String::from_utf8_lossy(&output);
+                let output = output.trim();
+                if !output.is_empty() {
+                    write_fenced_block(w, "", output)?;
+                }
+            }
+
+            Err(e) => {
+                writeln!(w, " (failure)")?;
+
+                let output = e.to_string();
+                let output = output.trim();
+                if !output.is_empty() {
+                    write_fenced_block(w, "", output)?;
+                }
+            }
         }
 
-        Ok(capture)
+        Ok(())
     }
 
     async fn target_to_pane_id(&self, target: &str) -> anyhow::Result<Option<String>> {

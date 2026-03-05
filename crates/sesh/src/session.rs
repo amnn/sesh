@@ -1,3 +1,5 @@
+//! Session model and skim item rendering.
+
 use std::borrow::Cow;
 use std::env;
 use std::path::PathBuf;
@@ -17,14 +19,6 @@ pub struct Session {
 }
 
 impl Session {
-    /// Construct a potential session from information extracted from `tmux`.
-    ///
-    /// `name` is a tmux session name and `repo` is an
-    /// optional path to a jj repository, that is attached as a user-option on the tmux session.
-    pub fn from_tmux(name: String, repo: Option<PathBuf>) -> Self {
-        Self { name, repo }
-    }
-
     /// Construct a potential session from a repository path.
     ///
     /// The session's name is derived from the repository's root directory name.
@@ -39,6 +33,14 @@ impl Session {
             name,
             repo: Some(path),
         })
+    }
+
+    /// Construct a potential session from information extracted from `tmux`.
+    ///
+    /// `name` is a tmux session name and `repo` is an
+    /// optional path to a jj repository, that is attached as a user-option on the tmux session.
+    pub fn from_tmux(name: String, repo: Option<PathBuf>) -> Self {
+        Self { name, repo }
     }
 
     /// Return the session name.
@@ -58,6 +60,13 @@ impl Session {
 }
 
 impl SkimItem for Session {
+    fn preview(&self, context: PreviewContext) -> ItemPreview {
+        match self.preview(context.width) {
+            Ok(preview) => ItemPreview::Text(preview),
+            Err(error) => ItemPreview::Text(format!("Failed to render preview: {error:?}")),
+        }
+    }
+
     fn text(&self) -> Cow<'_, str> {
         let Some(repo) = &self.repo else {
             return self.name().into();
@@ -69,13 +78,6 @@ impl SkimItem for Session {
             format!("{:<40} ~/{}", self.name(), repo.display()).into()
         } else {
             format!("{:<40} {}", self.name(), repo.display()).into()
-        }
-    }
-
-    fn preview(&self, context: PreviewContext) -> ItemPreview {
-        match self.preview(context.width) {
-            Ok(preview) => ItemPreview::Text(preview),
-            Err(error) => ItemPreview::Text(format!("Failed to render preview: {error:?}")),
         }
     }
 }

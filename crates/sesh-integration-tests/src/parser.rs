@@ -20,6 +20,38 @@ pub struct Script<'s> {
     pub(crate) lines: Vec<Line<'s>>,
 }
 
+/// One regex replacement filter parsed from `:snap`.
+#[derive(Debug)]
+pub(crate) struct Filter {
+    pub(crate) patt: Regex,
+    pub(crate) paint: String,
+}
+
+/// A key accompanied by optional modifiers.
+#[derive(Debug, Clone)]
+pub(crate) struct Key {
+    pub(crate) kind: KeyKind,
+    pub(crate) ctrl: bool,
+    pub(crate) meta: bool,
+    pub(crate) shft: bool,
+}
+
+/// One key token parsed from `:keys`.
+#[derive(Debug, Clone)]
+pub(crate) enum KeyKind {
+    Backspace,
+    Btab,
+    Down,
+    Enter,
+    Esc,
+    Left,
+    Right,
+    Space,
+    Tab,
+    Text(String),
+    Up,
+}
+
 #[derive(Debug)]
 pub(crate) struct Line<'s> {
     pub(crate) kind: LineKind,
@@ -54,43 +86,51 @@ pub(crate) enum LineKind {
     Error { message: String },
 }
 
-/// A key accompanied by optional modifiers.
-#[derive(Debug, Clone)]
-pub(crate) struct Key {
-    pub(crate) kind: KeyKind,
-    pub(crate) ctrl: bool,
-    pub(crate) meta: bool,
-    pub(crate) shft: bool,
-}
-
-/// One key token parsed from `:keys`.
-#[derive(Debug, Clone)]
-pub(crate) enum KeyKind {
-    Backspace,
-    Btab,
-    Down,
-    Enter,
-    Esc,
-    Left,
-    Right,
-    Space,
-    Tab,
-    Text(String),
-    Up,
-}
-
-/// One regex replacement filter parsed from `:snap`.
-#[derive(Debug)]
-pub(crate) struct Filter {
-    pub(crate) patt: Regex,
-    pub(crate) paint: String,
-}
-
 impl<'s> Script<'s> {
     /// Parse a full script into an AST.
     pub fn parse(input: &'s str) -> Self {
         let lines = input.lines().map(Line::parse).collect();
         Self { lines }
+    }
+}
+
+impl Key {
+    /// Return the tmux key code for this key and its modifiers.
+    pub(crate) fn code(&self) -> Cow<'_, str> {
+        let code = match &self.kind {
+            KeyKind::Backspace => Cow::Borrowed("BSpace"),
+            KeyKind::Btab => Cow::Borrowed("BTab"),
+            KeyKind::Down => Cow::Borrowed("Down"),
+            KeyKind::Enter => Cow::Borrowed("Enter"),
+            KeyKind::Esc => Cow::Borrowed("Escape"),
+            KeyKind::Left => Cow::Borrowed("Left"),
+            KeyKind::Right => Cow::Borrowed("Right"),
+            KeyKind::Space => Cow::Borrowed("Space"),
+            KeyKind::Tab => Cow::Borrowed("Tab"),
+            KeyKind::Text(text) => Cow::Borrowed(text.as_str()),
+            KeyKind::Up => Cow::Borrowed("Up"),
+        };
+
+        if !self.ctrl && !self.meta && !self.shft {
+            return code;
+        }
+
+        let mut prefixed = String::new();
+
+        if self.ctrl {
+            prefixed.push_str("C-");
+        }
+
+        if self.meta {
+            prefixed.push_str("M-");
+        }
+
+        if self.shft {
+            prefixed.push_str("S-");
+        }
+
+        prefixed.push_str(&code);
+        Cow::Owned(prefixed)
     }
 }
 
@@ -165,46 +205,6 @@ impl LineKind {
     }
 }
 
-impl Key {
-    /// Return the tmux key code for this key and its modifiers.
-    pub(crate) fn code(&self) -> Cow<'_, str> {
-        let code = match &self.kind {
-            KeyKind::Backspace => Cow::Borrowed("BSpace"),
-            KeyKind::Btab => Cow::Borrowed("BTab"),
-            KeyKind::Down => Cow::Borrowed("Down"),
-            KeyKind::Enter => Cow::Borrowed("Enter"),
-            KeyKind::Esc => Cow::Borrowed("Escape"),
-            KeyKind::Left => Cow::Borrowed("Left"),
-            KeyKind::Right => Cow::Borrowed("Right"),
-            KeyKind::Space => Cow::Borrowed("Space"),
-            KeyKind::Tab => Cow::Borrowed("Tab"),
-            KeyKind::Text(text) => Cow::Borrowed(text.as_str()),
-            KeyKind::Up => Cow::Borrowed("Up"),
-        };
-
-        if !self.ctrl && !self.meta && !self.shft {
-            return code;
-        }
-
-        let mut prefixed = String::new();
-
-        if self.ctrl {
-            prefixed.push_str("C-");
-        }
-
-        if self.meta {
-            prefixed.push_str("M-");
-        }
-
-        if self.shft {
-            prefixed.push_str("S-");
-        }
-
-        prefixed.push_str(&code);
-        Cow::Owned(prefixed)
-    }
-}
-
 impl fmt::Display for Key {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let KeyKind::Text(text) = &self.kind
@@ -245,6 +245,34 @@ impl fmt::Display for Key {
 
         f.write_str("'")
     }
+}
+
+/// Parse a filter for `:snap` output.
+///
+/// A filter is a regular expression pattern and a paint grapheme, separated by a common delimiter
+/// character. For example, `/foo/x` or `|foo|x`.
+///
+/// If the pattern has capture groups, only captured group contents are painted.
+fn parse_filter(input: String) -> anyhow::Result<Filter> {
+    let mut chars = input.chars();
+    let delim = chars.next().context("empty filter string")?;
+    let rest = chars.as_str();
+
+    let Some((patt, repl)) = rest.split_once(delim) else {
+        bail!("missing separator delimiter");
+    };
+
+    ensure!(!patt.is_empty(), "missing pattern");
+
+    let mut gs = repl.graphemes(true);
+    let paint = gs.next().context("missing replacement grapheme cluster")?;
+    ensure!(gs.next().is_none(), "replacement must be one grapheme");
+
+    let patt = Regex::new(patt).context("invalid regex pattern")?;
+    Ok(Filter {
+        patt,
+        paint: paint.to_owned(),
+    })
 }
 
 /// Parse a key to send (modifiers and the key code).
@@ -311,34 +339,6 @@ fn parse_key_kind(input: &str) -> KeyKind {
         "up" => KeyKind::Up,
         _ => KeyKind::Text(input.to_owned()),
     }
-}
-
-/// Parse a filter for `:snap` output.
-///
-/// A filter is a regular expression pattern and a paint grapheme, separated by a common delimiter
-/// character. For example, `/foo/x` or `|foo|x`.
-///
-/// If the pattern has capture groups, only captured group contents are painted.
-fn parse_filter(input: String) -> anyhow::Result<Filter> {
-    let mut chars = input.chars();
-    let delim = chars.next().context("empty filter string")?;
-    let rest = chars.as_str();
-
-    let Some((patt, repl)) = rest.split_once(delim) else {
-        bail!("missing separator delimiter");
-    };
-
-    ensure!(!patt.is_empty(), "missing pattern");
-
-    let mut gs = repl.graphemes(true);
-    let paint = gs.next().context("missing replacement grapheme cluster")?;
-    ensure!(gs.next().is_none(), "replacement must be one grapheme");
-
-    let patt = Regex::new(patt).context("invalid regex pattern")?;
-    Ok(Filter {
-        patt,
-        paint: paint.to_owned(),
-    })
 }
 
 #[cfg(test)]

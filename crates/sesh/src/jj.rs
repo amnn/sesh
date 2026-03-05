@@ -1,3 +1,5 @@
+//! Helpers for interacting with `jj` repositories.
+
 use std::collections::BTreeSet;
 use std::path::Path;
 use std::path::PathBuf;
@@ -13,23 +15,7 @@ pub fn ensure() -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Discover valid jj repositories from directories matching `globs`.
-pub fn repos(globs: &[String]) -> anyhow::Result<BTreeSet<PathBuf>> {
-    let mut repos = BTreeSet::new();
-    for pattern in globs {
-        for path in glob::glob(pattern).with_context(|| format!("invald glob: '{pattern}'"))? {
-            if let Ok(path) = path
-                && path.join(".jj").is_dir()
-            {
-                repos.insert(path);
-            }
-        }
-    }
-
-    Ok(repos)
-}
-
-/// Fetch log output from the repository at path `repo`.
+/// Fetch `jj log` output from the repository at `repo`.
 pub fn log(repo: &Path) -> anyhow::Result<String> {
     let output = Command::new("jj")
         .arg("log")
@@ -45,4 +31,20 @@ pub fn log(repo: &Path) -> anyhow::Result<String> {
     } else {
         String::from_utf8_lossy(&output.stderr).into_owned()
     })
+}
+
+/// Discover valid jj repositories from directories matching `globs`.
+pub fn repos(globs: &[String]) -> anyhow::Result<BTreeSet<PathBuf>> {
+    let mut repos = BTreeSet::new();
+    for pattern in globs {
+        for path in glob::glob(pattern).with_context(|| format!("invalid glob: '{pattern}'"))? {
+            if let Ok(path) = path
+                && path.join(".jj").is_dir()
+            {
+                repos.insert(path);
+            }
+        }
+    }
+
+    Ok(repos)
 }

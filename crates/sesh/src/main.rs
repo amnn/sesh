@@ -1,5 +1,8 @@
+//! CLI entrypoint for `sesh`.
+
 use std::collections::BTreeSet;
 
+use anyhow::Context as _;
 use clap::Parser;
 use clap::Subcommand;
 
@@ -82,7 +85,7 @@ async fn main() -> anyhow::Result<()> {
 
             tokio::task::spawn_blocking(move || skim::run(sessions))
                 .await
-                .unwrap();
+                .context("skim worker task failed to join")?;
 
             Ok(())
         }

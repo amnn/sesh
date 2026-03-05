@@ -49,12 +49,13 @@ fn test(path: &Path) -> datatest_stable::Result<()> {
     let mut snapshots = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     snapshots.extend(["tests", "snapshots"]);
 
-    let snapshot_name = path
+    let snapshot_components: anyhow::Result<Vec<_>> = path
         .strip_prefix(ROOT)?
-        .to_str()
-        .context("invalid test name")?
-        .replace('/', "__");
+        .components()
+        .map(|component| component.as_os_str().to_str().context("invalid test name"))
+        .collect();
 
+    let snapshot_name = snapshot_components?.join("__");
     let snapshot_name = format!("test__{snapshot_name}");
     insta::with_settings!({ prepend_module_to_snapshot => false, snapshot_path => snapshots }, {
         insta::assert_snapshot!(snapshot_name, output);

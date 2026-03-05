@@ -1,3 +1,5 @@
+//! Skim-based session selector UI.
+
 use std::borrow::Cow;
 use std::sync::Arc;
 
@@ -13,22 +15,26 @@ use skim::tui::options::PreviewLayout;
 
 use crate::session::Session;
 
+/// Shared cache for skim preview content.
 #[derive(Clone, Default)]
 struct Cache {
     entries: Arc<DashMap<String, CacheEntry>>,
 }
 
+/// Cached preview content for one skim item and pane size.
 struct CacheEntry {
     width: usize,
     height: usize,
     kind: CacheKind,
 }
 
+/// Wrapper that adds preview caching to any `SkimItem`.
 struct CachedItem<T> {
     cache: Cache,
     inner: T,
 }
 
+/// Cached representation of `ItemPreview` variants.
 enum CacheKind {
     Command(String, Option<PreviewPosition>),
     Text(String, Option<PreviewPosition>),
@@ -69,10 +75,6 @@ impl CacheKind {
 }
 
 impl<T: SkimItem> SkimItem for CachedItem<T> {
-    fn text(&self) -> Cow<'_, str> {
-        self.inner.text()
-    }
-
     fn preview(&self, context: PreviewContext) -> ItemPreview {
         let width = context.width;
         let height = context.height;
@@ -96,8 +98,13 @@ impl<T: SkimItem> SkimItem for CachedItem<T> {
 
         preview
     }
+
+    fn text(&self) -> Cow<'_, str> {
+        self.inner.text()
+    }
 }
 
+/// Run the interactive skim picker for discovered sessions.
 pub fn run(sessions: Vec<Session>) {
     let options = SkimOptionsBuilder::default()
         .reverse(true)
