@@ -1,0 +1,81 @@
+---
+source: crates/sesh-integration-tests/tests/test.rs
+expression: output
+---
+# Runner shell configuration
+
+## Default pane prompt is stable
+
+The default pane prompt should be stable across test environments.
+
+:bins sleep
+> [!NOTE]
+> 'sleep' is available.
+:$ sleep 0.2 (exit: 0)
+
+:snap
+```terminal
+sh$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```
+
+## New windows also have stable prompt
+
+Creating a new window without a command should still produce the same stable prompt.
+
+:tmux new-window -d -n fresh (success)
+:pane fresh.0
+:$ sleep 0.2 (exit: 0)
+
+:snap
+```terminal
+sh$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```
+
+---
+vim: set ft=markdown:

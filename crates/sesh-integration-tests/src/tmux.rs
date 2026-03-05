@@ -7,6 +7,7 @@ use std::process::Stdio;
 use anyhow::Context as _;
 use anyhow::anyhow;
 use anyhow::ensure;
+use tokio::fs;
 use tokio::io::AsyncBufReadExt as _;
 use tokio::io::AsyncWriteExt as _;
 use tokio::io::BufReader;
@@ -20,6 +21,11 @@ use tracing::error;
 use tracing::warn;
 
 use crate::env::Env;
+
+const TMUX_CONFIG: &str = r#"
+set -g default-shell /bin/sh
+set -g default-command \"/bin/sh -i\"
+"#;
 
 /// A `tmux` command represented as a single escaped line.
 #[derive(Debug, Clone)]
@@ -58,6 +64,11 @@ impl Tmux {
     pub(crate) async fn new(env: &Env) -> anyhow::Result<Self> {
         // Ensure `tmux` is available in the environment.
         env.bin("tmux").await?;
+
+        let conf = env.path("home").join(".tmux.conf");
+        fs::write(conf, TMUX_CONFIG)
+            .await
+            .context("failed to write tmux config")?;
 
         let socket = env.path("tmux.sock");
         ensure!(!socket.exists(), "tmux socket already exists");

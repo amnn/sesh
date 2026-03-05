@@ -30,16 +30,28 @@ impl Env {
     /// example, under Cargo's per-test temporary directory).
     pub(crate) async fn new(tmp: impl AsRef<Path>) -> anyhow::Result<Self> {
         let dir = tempfile::tempdir_in(tmp).context("failed to create environment root")?;
+        let tmp = |rest: &[&str]| {
+            let mut path = dir.path().to_path_buf();
+            path.extend(rest);
+            path
+        };
 
         let (home, path) = join!(
-            fs::create_dir(dir.path().join("home")),
-            fs::create_dir(dir.path().join("bin")),
+            fs::create_dir(tmp(&["home"])),
+            fs::create_dir(tmp(&["bin"])),
         );
 
         home.context("failed to create $HOME")?;
         path.context("failed to create $PATH")?;
 
-        Ok(Self { _dir: dir })
+        fs::write(tmp(&["home", ".shrc"]), "PS1='sh$ '\n")
+            .await
+            .context("failed to write sh startup config")?;
+
+        let env = Self { _dir: dir };
+        env.bin("sh").await?;
+
+        Ok(env)
     }
 
     /// Ensure the binary is available in the environment.
@@ -90,7 +102,9 @@ impl Env {
             .env_clear()
             .env("HOME", self.path("home"))
             .env("LC_CTYPE", "en_US.UTF-8")
+            .env("ENV", self.path("home/.shrc"))
             .env("PATH", self.path("bin"))
+            .env("SHELL", "/bin/sh")
             .current_dir(self.path("home"));
 
         command

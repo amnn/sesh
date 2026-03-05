@@ -17,7 +17,7 @@
   - [x] Snapshot filters paint pattern over with single character.
   - [x] Snapshot filters paint pattern supports grapheme clusters.
   - [x] Fix tmux control client leak.
-  - [-] Standardize shell, prompt used by tests (don't use user's default shell.
+  - [x] Standardize shell, prompt used by tests (don't use user's default shell.
   - [-] Configurable session width/height
   - [ ] Test: Basic session.
   - [ ] Test: Session with repo attached.
