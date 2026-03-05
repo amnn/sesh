@@ -6,6 +6,8 @@
   rather than performing an analysis of touched files.
 - [-] Reflection skill: Learn from past sessions and pull request to update
   context/skills/sub-agents available in repo.
+- [-] Truth seeking behaviour: Prompt the agent to not assume, validate
+  assumptions, cite sources.
 
 ## Testing
 
