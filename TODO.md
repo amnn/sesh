@@ -2,6 +2,8 @@
 
 ## Agents
 
+- [-] Validate nits subagent: It seems to always try to run a `nits` binary,
+  rather than performing an analysis of touched files.
 - [-] Reflection skill: Learn from past sessions and pull request to update
   context/skills/sub-agents available in repo.
 
