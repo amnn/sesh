@@ -10,7 +10,6 @@ use anyhow::ensure;
 use tokio::io::AsyncBufReadExt as _;
 use tokio::io::AsyncWriteExt as _;
 use tokio::io::BufReader;
-use tokio::join;
 use tokio::process::Child;
 use tokio::process::ChildStderr;
 use tokio::sync::mpsc;
@@ -31,7 +30,6 @@ pub(crate) struct Command {
 
 /// Handle for managing a `tmux` server.
 pub(crate) struct Tmux {
-    server: Child,
     _stderr_task: AbortOnDropHandle<()>,
     stdout_task: JoinHandle<()>,
     tx: mpsc::Sender<Request>,
@@ -50,10 +48,13 @@ struct Request {
 }
 
 impl Tmux {
-    /// Start a `tmux` server in the given `env`ironment.
+    /// Start a `tmux` control-mode client in the given `env`ironment.
+    ///
+    /// `tmux -C` will automatically spawn the server daemon on the target socket when needed.
+    /// Shutdown sends `kill-server` through the same control client to tear down that daemon.
     ///
     /// Fails if the tmux socket file already exists, the `tmux` binary can't be added to the
-    /// environment, or the server fails to start.
+    /// environment, or the control client fails to start.
     pub(crate) async fn new(env: &Env) -> anyhow::Result<Self> {
         // Ensure `tmux` is available in the environment.
         env.bin("tmux").await?;
@@ -61,22 +62,8 @@ impl Tmux {
         let socket = env.path("tmux.sock");
         ensure!(!socket.exists(), "tmux socket already exists");
 
-        // Start tmux as a foreground server on a dedicated socket. This child is stored directly
-        // on `Tmux` (`_server`) so server lifetime maps exactly to `Tmux` lifetime.
-        let server = env
-            .command("tmux")
-            .args(["-D", "-S"])
-            .arg(socket.as_os_str())
-            .kill_on_drop(true)
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .spawn()
-            .context("failed to spawn foreground tmux server")?;
-
-        // Start a separate control-mode client connected to the same server/socket. The client's
-        // stdio is owned by background tasks; aborting those tasks drops the guard and tears down
-        // the client process.
+        // Start a control-mode client on a dedicated socket. tmux auto-starts the server daemon
+        // for this socket if needed.
         let mut client = env
             .command("tmux")
             .args(["-C", "-S"])
@@ -95,7 +82,6 @@ impl Tmux {
         let stdout_task = tokio::task::spawn(stdout_task(client, rx));
 
         Ok(Self {
-            server,
             _stderr_task: stderr_task,
             stdout_task,
             tx,
@@ -111,9 +97,13 @@ impl Tmux {
     }
 
     /// Gracefully shutdown the `tmux` server and control client, waiting for them to exit.
-    pub(crate) async fn shutdown(mut self) -> anyhow::Result<()> {
+    pub(crate) async fn shutdown(self) -> anyhow::Result<()> {
+        // `tmux -C` may have started the server daemon for this socket, so tear down the server
+        // explicitly before dropping the control loop.
+        self.command("kill-server").status().await.ok();
+
         drop(self.tx);
-        let (_, _) = join!(self.server.kill(), self.stdout_task);
+        self.stdout_task.await.ok();
 
         Ok(())
     }

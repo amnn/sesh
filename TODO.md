@@ -14,7 +14,7 @@
   - [x] Review `runner` module.
   - [x] Snapshot filters paint pattern over with single character.
   - [x] Snapshot filters paint pattern supports grapheme clusters.
-  - [-] Fix tmux control client leak.
+  - [x] Fix tmux control client leak.
   - [-] Standardize shell, prompt used by tests (don't use user's default shell.
   - [-] Configurable session width/height
   - [ ] Test: Basic session.
