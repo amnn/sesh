@@ -1930,6 +1930,7 @@ dependencies = [
  "tokio",
  "tokio-util",
  "tracing",
+ "unicode-segmentation",
  "which",
  "winnow",
 ]

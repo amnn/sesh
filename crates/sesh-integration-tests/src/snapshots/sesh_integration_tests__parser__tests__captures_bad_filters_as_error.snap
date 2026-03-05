@@ -18,19 +18,19 @@ Script {
         },
         Line {
             kind: Error {
-                message: "trailing content after replacement",
+                message: "replacement must be one grapheme",
             },
             raw: ":snap /foo/x/",
         },
         Line {
             kind: Error {
-                message: "trailing content after replacement",
+                message: "replacement must be one grapheme",
             },
             raw: ":snap /foo/bar",
         },
         Line {
             kind: Error {
-                message: "missing replacement character",
+                message: "missing replacement grapheme cluster",
             },
             raw: ":snap /foo/",
         },

@@ -12,6 +12,7 @@ use anyhow::bail;
 use anyhow::ensure;
 use nonempty::NonEmpty;
 use regex::Regex;
+use unicode_segmentation::UnicodeSegmentation;
 
 /// Entrypoint for the parsed representation of a test script.
 #[derive(Debug)]
@@ -82,7 +83,7 @@ pub(crate) enum KeyKind {
 #[derive(Debug)]
 pub(crate) struct Filter {
     pub(crate) patt: Regex,
-    pub(crate) paint: char,
+    pub(crate) paint: String,
 }
 
 impl<'s> Script<'s> {
@@ -314,7 +315,7 @@ fn parse_key_kind(input: &str) -> KeyKind {
 
 /// Parse a filter for `:snap` output.
 ///
-/// A filter is a regular expression pattern and a paint character, separated by a common delimiter
+/// A filter is a regular expression pattern and a paint grapheme, separated by a common delimiter
 /// character. For example, `/foo/x` or `|foo|x`.
 ///
 /// If the pattern has capture groups, only captured group contents are painted.
@@ -329,12 +330,15 @@ fn parse_filter(input: String) -> anyhow::Result<Filter> {
 
     ensure!(!patt.is_empty(), "missing pattern");
 
-    let mut chars = repl.chars();
-    let paint = chars.next().context("missing replacement character")?;
-    ensure!(chars.next().is_none(), "trailing content after replacement");
+    let mut gs = repl.graphemes(true);
+    let paint = gs.next().context("missing replacement grapheme cluster")?;
+    ensure!(gs.next().is_none(), "replacement must be one grapheme");
 
     let patt = Regex::new(patt).context("invalid regex pattern")?;
-    Ok(Filter { patt, paint })
+    Ok(Filter {
+        patt,
+        paint: paint.to_owned(),
+    })
 }
 
 #[cfg(test)]
@@ -407,6 +411,11 @@ mod tests {
     #[test]
     fn parses_snap_with_multiple_capture_groups() {
         insta::assert_debug_snapshot!(Script::parse(&[":snap /(a)(b)/x", ""].join("\n")));
+    }
+
+    #[test]
+    fn parses_snap_with_grapheme_replacement() {
+        insta::assert_debug_snapshot!(Script::parse(&[":snap /foo/👩🏽‍💻", ""].join("\n")));
     }
 
     #[test]

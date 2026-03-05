@@ -15,6 +15,7 @@ use textwrap::Options;
 use tokio::time;
 use tokio::time::MissedTickBehavior;
 use tracing::instrument;
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::env::Env;
 use crate::parser;
@@ -416,8 +417,8 @@ fn paint_filter(input: &str, filter: &parser::Filter) -> String {
     // Remove ranges that have been merged into a previous range.
     ranges.dedup_by_key(|r| r.start);
 
-    fn paint(text: &str, char: char) -> String {
-        std::iter::repeat_n(char, text.chars().count()).collect()
+    fn paint(text: &str, grapheme: &str) -> String {
+        grapheme.repeat(text.graphemes(true).count())
     }
 
     // Write output out, painting over matched captures.
@@ -425,7 +426,7 @@ fn paint_filter(input: &str, filter: &parser::Filter) -> String {
     let mut output = String::with_capacity(input.len());
     for r in ranges {
         output.push_str(&input[last..r.start]);
-        output.push_str(&paint(&input[r.clone()], filter.paint));
+        output.push_str(&paint(&input[r.clone()], &filter.paint));
         last = r.end;
     }
 

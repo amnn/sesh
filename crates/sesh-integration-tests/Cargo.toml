@@ -16,6 +16,7 @@ textwrap.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
 tracing.workspace = true
+unicode-segmentation.workspace = true
 which.workspace = true
 winnow.workspace = true
 

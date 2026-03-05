@@ -22,7 +22,7 @@ surrounding literal text should remain unchanged.
 :p 0:groups.0
 
 :t wait-for ready-groups
-:snap "/id=([0-9]+) user=([a-z]+)/X"
+:snap "/id=([0-9]+) user=([a-z]+)/👩🏽‍💻"
 
 ## Paints nested capture groups once
 
@@ -33,7 +33,7 @@ painted once.
 :p 0:nested.0
 
 :t wait-for ready-nested
-:snap /token=(a(bc)d)/X
+:snap /token=(a(bc)d)/👩🏽‍💻
 
 ## Warns for unstable pane content
 

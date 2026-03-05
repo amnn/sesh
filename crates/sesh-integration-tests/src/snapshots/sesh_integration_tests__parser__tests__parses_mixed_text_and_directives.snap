@@ -71,7 +71,7 @@ Script {
                         patt: Regex(
                             "foo",
                         ),
-                        paint: 'x',
+                        paint: "x",
                     },
                 ],
             },

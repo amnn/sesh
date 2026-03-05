@@ -1,6 +1,6 @@
 ---
 source: crates/sesh-integration-tests/src/parser.rs
-expression: "Script::parse(&[\":snap /foo/x  |baz|q\", \"\"].join(\"\\n\"))"
+expression: "Script::parse(&[\":snap /foo/👩🏽‍💻\", \"\"].join(\"\\n\"))"
 ---
 Script {
     lines: [
@@ -11,17 +11,11 @@ Script {
                         patt: Regex(
                             "foo",
                         ),
-                        paint: "x",
-                    },
-                    Filter {
-                        patt: Regex(
-                            "baz",
-                        ),
-                        paint: "q",
+                        paint: "👩🏽\u{200d}💻",
                     },
                 ],
             },
-            raw: ":snap /foo/x  |baz|q",
+            raw: ":snap /foo/👩🏽\u{200d}💻",
         },
     ],
 }

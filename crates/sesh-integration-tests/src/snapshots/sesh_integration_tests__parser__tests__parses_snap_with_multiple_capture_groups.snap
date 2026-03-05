@@ -11,7 +11,7 @@ Script {
                         patt: Regex(
                             "(a)(b)",
                         ),
-                        paint: 'x',
+                        paint: "x",
                     },
                 ],
             },
