@@ -4,9 +4,9 @@
 
 - [x] Validate nits subagent: It seems to always try to run a `nits` binary,
   rather than performing an analysis of touched files.
-- [-] Reflection skill: Learn from past sessions and pull request to update
+- [ ] Reflection skill: Learn from past sessions and pull requests to update
   context/skills/sub-agents available in repo.
-- [-] Truth seeking behaviour: Prompt the agent to not assume, validate
+- [x] Truth seeking behaviour: Prompt the agent to not assume, validate
   assumptions, cite sources.
 - [x] Kickoff skill: Add a `kickoff` skill that instructs the agent to check
   `TODO.md` and choose the next most appropriate task to work on.
@@ -19,7 +19,8 @@
   - [x] Snapshot filters paint pattern over with single character.
   - [x] Snapshot filters paint pattern supports grapheme clusters.
   - [x] Fix tmux control client leak.
-  - [x] Standardize shell, prompt used by tests (don't use user's default shell.
+  - [x] Standardize shell, prompt used by tests (don't use user's default
+    shell).
   - [x] Configurable session width/height
   - [ ] Test: Basic session.
   - [ ] Test: Session with repo attached.
