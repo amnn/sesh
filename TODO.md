@@ -8,7 +8,7 @@
   context/skills/sub-agents available in repo.
 - [-] Truth seeking behaviour: Prompt the agent to not assume, validate
   assumptions, cite sources.
-- [ ] Kickoff skill: Add a `kickoff` skill that instructs the agent to check
+- [x] Kickoff skill: Add a `kickoff` skill that instructs the agent to check
   `TODO.md` and choose the next most appropriate task to work on.
 
 ## Testing
