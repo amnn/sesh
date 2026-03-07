@@ -4,9 +4,9 @@
 
 - [x] Validate nits subagent: It seems to always try to run a `nits` binary,
   rather than performing an analysis of touched files.
-- [ ] Reflection skill: Learn from past sessions and pull requests to update
-  context/skills/sub-agents available in repo.
-- [x] Truth seeking behaviour: Prompt the agent to not assume, validate
+- [x] Reflection skill: Learn from past sessions and pull requests to update
+  repo context, skills, and subagent guidance.
+- [x] Truth seeking behavior: Prompt the agent to not assume, validate
   assumptions, cite sources.
 - [x] Kickoff skill: Add a `kickoff` skill that instructs the agent to check
   `TODO.md` and choose the next most appropriate task to work on.
@@ -58,7 +58,8 @@
 
 - [ ] Add `C-x` to close the selected session.
 
-- [ ] Add `C-d` to delete the selected session/workspace (destroys underlying workspace if applicable).
+- [ ] Add `C-d` to delete the selected session/workspace.
+  - Destroy the underlying workspace too, if applicable.
   - Confirm destructive behavior, if possible.
 
 - [ ] Add `C-t` to pick trunk (the commit used as the base for new workspaces).

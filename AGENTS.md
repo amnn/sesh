@@ -26,3 +26,8 @@ Default to verified claims over plausible guesses.
   is wrong.
 - Keep questions targeted and minimal: only ask when the missing fact would
   materially change the implementation or create risk.
+
+## Reflection
+
+After meaningful implementation work, use the `reflection` skill as the source
+of truth for capturing durable lessons in repo-local agent guidance.
