@@ -1,12 +1,5 @@
 # TODO
 
-## Testing
-
-- [ ] Add interaction tests for the UI.
-  - [ ] Test: Basic session.
-  - [ ] Test: Session with repo attached.
-  - [ ] Test: Session with multiple workspaces.
-
 ## Foundation
 
 - [ ] Colorize parts of item text (for example repo name and repo-prefix/glob
@@ -34,8 +27,8 @@
 - [ ] Ensure new tmux sessions created from repos store repo association via a
   tmux user option.
   - Keep the metadata contract stable for discovery and preview logic.
-
 - [ ] Add `C-r` to change repo context (or clear current repo context if
+
   already set).
   - This should work consistently whether a repo or session row is selected.
 
