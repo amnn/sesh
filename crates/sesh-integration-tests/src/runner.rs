@@ -1,3 +1,6 @@
+// Copyright (c) Ashok Menon
+// SPDX-License-Identifier: Apache-2.0
+
 //! Runtime for parsed markdown integration scripts.
 
 use std::collections::HashMap;

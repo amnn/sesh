@@ -1,3 +1,6 @@
+// Copyright (c) Ashok Menon
+// SPDX-License-Identifier: Apache-2.0
+
 //! A contained environment to run tests in.
 //!
 //! Each environment is set-up within its own temporary directory, under the cargo target temp

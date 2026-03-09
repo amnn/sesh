@@ -1,3 +1,6 @@
+// Copyright (c) Ashok Menon
+// SPDX-License-Identifier: Apache-2.0
+
 //! Helpers for interacting with `jj` repositories.
 
 use std::collections::BTreeSet;

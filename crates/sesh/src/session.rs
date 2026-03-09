@@ -1,3 +1,6 @@
+// Copyright (c) Ashok Menon
+// SPDX-License-Identifier: Apache-2.0
+
 //! Session model and skim item rendering.
 
 use std::borrow::Cow;

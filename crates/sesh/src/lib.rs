@@ -1,3 +1,6 @@
+// Copyright (c) Ashok Menon
+// SPDX-License-Identifier: Apache-2.0
+
 //! Core modules for the `sesh` CLI.
 
 pub mod jj;

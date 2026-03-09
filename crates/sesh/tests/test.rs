@@ -1,3 +1,6 @@
+// Copyright (c) Ashok Menon
+// SPDX-License-Identifier: Apache-2.0
+
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::LazyLock;

@@ -1,3 +1,6 @@
+// Copyright (c) Ashok Menon
+// SPDX-License-Identifier: Apache-2.0
+
 //! Parser for markdown-driven integration test scripts.
 //!
 //! Each input line is preserved verbatim in the AST (`Line::raw`) and classified into a structured

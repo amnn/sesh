@@ -27,6 +27,15 @@ Default to verified claims over plausible guesses.
 - Keep questions targeted and minimal: only ask when the missing fact would
   materially change the implementation or create risk.
 
+## Licensing
+
+Add the following comments to the top of every new source file:
+
+```rust
+// Copyright (c) Ashok Menon
+// SPDX-License-Identifier: Apache-2.0
+```
+
 ## Reflection
 
 After meaningful implementation work, use the `reflection` skill as the source
