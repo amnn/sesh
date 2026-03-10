@@ -17,7 +17,7 @@ then launches `sesh cli`.
 :t new-session -d -s gamma "cat" (success)
 :t new-session -d -s ui "sesh cli" (success)
 :t resize-window -t ui:0 -x 80 -y 10 (success)
-:$ sleep 0.5 (exit: 0)
+:$ sleep 1 (exit: 0)
 
 :pane ui:0.0
 
@@ -42,7 +42,7 @@ This snapshot shows the picker after typing `bet`, so the selection should move
 to the `beta` session.
 
 :k bet
-:$ sleep 0.5 (exit: 0)
+:$ sleep 1 (exit: 0)
 :snap
 ```terminal
 Session: bet                    │
