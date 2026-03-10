@@ -4,6 +4,7 @@
 //! CLI entrypoint for `sesh`.
 
 use std::collections::BTreeSet;
+use std::env;
 
 use anyhow::Context as _;
 use clap::Parser;
@@ -68,6 +69,8 @@ async fn main() -> anyhow::Result<()> {
             jj::ensure()?;
             tmux::ensure()?;
 
+            let current_repo = env::current_dir().ok().and_then(|cwd| jj::repo_root(&cwd));
+
             let mut sessions = vec![];
             let mut seen = BTreeSet::new();
 
@@ -86,7 +89,8 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
 
-            tokio::task::spawn_blocking(move || skim::run(sessions))
+            let state = skim::State::new(current_repo);
+            tokio::task::spawn_blocking(move || skim::run(sessions, state))
                 .await
                 .context("skim worker task failed to join")?;
 

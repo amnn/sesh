@@ -36,6 +36,17 @@ pub fn log(repo: &Path) -> anyhow::Result<String> {
     })
 }
 
+/// Discover the nearest enclosing jj repository for `path`.
+pub fn repo_root(path: &Path) -> Option<PathBuf> {
+    for ancestor in path.ancestors() {
+        if ancestor.join(".jj").is_dir() {
+            return Some(ancestor.to_path_buf());
+        }
+    }
+
+    None
+}
+
 /// Discover valid jj repositories from directories matching `globs`.
 pub fn repos(globs: &[String]) -> anyhow::Result<BTreeSet<PathBuf>> {
     let mut repos = BTreeSet::new();
@@ -50,4 +61,34 @@ pub fn repos(globs: &[String]) -> anyhow::Result<BTreeSet<PathBuf>> {
     }
 
     Ok(repos)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::fs;
+
+    use tempfile::tempdir;
+
+    use super::*;
+
+    #[test]
+    fn finds_repo_root_from_nested_directory() {
+        let temp = tempdir().unwrap();
+        let repo = temp.path().join("repo");
+        let nested = repo.join("src/nested");
+
+        fs::create_dir_all(repo.join(".jj")).unwrap();
+        fs::create_dir_all(&nested).unwrap();
+
+        assert_eq!(repo_root(&nested), Some(repo));
+    }
+
+    #[test]
+    fn returns_none_when_path_is_not_in_repo() {
+        let temp = tempdir().unwrap();
+        let path = temp.path().join("plain");
+        fs::create_dir_all(&path).unwrap();
+
+        assert_eq!(repo_root(&path), None);
+    }
 }

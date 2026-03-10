@@ -4,6 +4,8 @@
 //! Skim-based session selector UI.
 
 use std::borrow::Cow;
+use std::path::Path;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use dashmap::DashMap;
@@ -16,7 +18,14 @@ use skim::prelude::SkimOptionsBuilder;
 use skim::prelude::unbounded;
 use skim::tui::options::PreviewLayout;
 
+use crate::path::TruncatedExt as _;
 use crate::session::Session;
+
+/// Shared UI state for the skim session picker.
+#[derive(Clone, Debug, Default)]
+pub struct State {
+    current_repo: Option<PathBuf>,
+}
 
 /// Shared cache for skim preview content.
 #[derive(Clone, Default)]
@@ -31,18 +40,37 @@ struct CacheEntry {
     kind: CacheKind,
 }
 
-/// Wrapper that adds preview caching to any `SkimItem`.
-struct CachedItem<T> {
-    cache: Cache,
-    inner: T,
-}
-
 /// Cached representation of `ItemPreview` variants.
 enum CacheKind {
     Command(String, Option<PreviewPosition>),
     Text(String, Option<PreviewPosition>),
     AnsiText(String, Option<PreviewPosition>),
     Global,
+}
+
+/// Wrapper that adds preview caching to any `SkimItem`.
+struct CachedItem<T> {
+    cache: Cache,
+    inner: T,
+}
+
+impl State {
+    /// Construct state for a picker launched from `current_repo`.
+    pub fn new(current_repo: Option<PathBuf>) -> Self {
+        Self { current_repo }
+    }
+
+    /// Return the repository containing the current working directory, if any.
+    pub fn current_repo(&self) -> Option<&Path> {
+        self.current_repo.as_deref()
+    }
+
+    fn header(&self) -> String {
+        match self.current_repo() {
+            Some(repo) => format!("Current repo: {}", repo.truncated()),
+            None => "Current repo: none".to_owned(),
+        }
+    }
 }
 
 impl<T: SkimItem> CachedItem<T> {
@@ -108,9 +136,10 @@ impl<T: SkimItem> SkimItem for CachedItem<T> {
 }
 
 /// Run the interactive skim picker for discovered sessions.
-pub fn run(sessions: Vec<Session>) {
+pub fn run(sessions: Vec<Session>, state: State) {
     let options = SkimOptionsBuilder::default()
         .reverse(true)
+        .header(Some(state.header()))
         .preview(Some("".to_owned()))
         .preview_window(PreviewLayout::from("right:60%"))
         .prompt("Session: ".to_owned())
@@ -127,4 +156,25 @@ pub fn run(sessions: Vec<Session>) {
 
     drop(tx);
     let _ = Skim::run_with(options, Some(rx));
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::PathBuf;
+
+    use super::State;
+
+    #[test]
+    fn renders_header_with_current_repo() {
+        let state = State::new(Some(PathBuf::from("/tmp/repo")));
+
+        assert_eq!(state.header(), "Current repo: /tmp/repo");
+    }
+
+    #[test]
+    fn renders_header_without_current_repo() {
+        let state = State::default();
+
+        assert_eq!(state.header(), "Current repo: none");
+    }
 }
