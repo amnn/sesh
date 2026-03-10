@@ -4,6 +4,7 @@
 //! Core modules for the `sesh` CLI.
 
 pub mod jj;
+pub(crate) mod path;
 pub mod session;
 pub mod skim;
 pub mod tmux;

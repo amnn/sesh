@@ -4,7 +4,6 @@
 //! Session model and skim item rendering.
 
 use std::borrow::Cow;
-use std::env;
 use std::path::PathBuf;
 
 use anyhow::Context as _;
@@ -13,6 +12,7 @@ use skim::prelude::PreviewContext;
 use skim::prelude::SkimItem;
 
 use crate::jj;
+use crate::path::TruncatedExt as _;
 
 /// A tmux session and optional repo metadata.
 #[derive(Clone, Debug)]
@@ -75,12 +75,6 @@ impl SkimItem for Session {
             return self.name().into();
         };
 
-        if let Some(home) = env::home_dir()
-            && let Ok(repo) = repo.strip_prefix(&home)
-        {
-            format!("{:<40} ~/{}", self.name(), repo.display()).into()
-        } else {
-            format!("{:<40} {}", self.name(), repo.display()).into()
-        }
+        format!("{:<40} {}", self.name(), repo.truncated()).into()
     }
 }

@@ -1905,6 +1905,7 @@ dependencies = [
  "shlex",
  "skim",
  "telemetry-subscribers",
+ "tempfile",
  "tokio",
  "tokio-util",
  "tracing",

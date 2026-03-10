@@ -1,5 +1,6 @@
 ---
 source: crates/sesh/tests/test.rs
+assertion_line: 63
 expression: output
 ---
 # Mixed repo lifecycle
@@ -51,7 +52,7 @@ repo discovery enabled for `alpha`, `beta`, and `mono*`.
 :t set-option -t alpha-live @sesh.repo alpha (success)
 :t new-session -d -s ui "sesh cli -r 'alpha' -r 'beta' -r 'mono*'" (success)
 :t resize-window -t ui:0 -x 120 -y 12 (success)
-:$ sleep 0.5 (exit: 0)
+:$ sleep 1 (exit: 0)
 
 :pane ui:0.0
 
@@ -62,13 +63,13 @@ including the attached `alpha-live` session and the glob-discovered repos.
 ```terminal
 Session:                                        │@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
   6/6                                        0/0││  (empty) alpha commit
-> alpha-live                               alpha│◆  wwwwwwww root() hhhhhhhh
+  Current repo: /Users/ashokmenon/Code/sesh     │◆  wwwwwwww root() hhhhhhhh
+> alpha-live                               alpha│
   runner                                        │
   ui                                            │
   beta                                     beta │
   mono                                     mono │
   mono-ws                                  mon..│
-                                                │
                                                 │
                                                 │
                                                 │
@@ -79,13 +80,13 @@ move away from the initial attached-session result and onto the discovered
 `beta` repo.
 
 :k beta
-:$ sleep 0.5 (exit: 0)
+:$ sleep 1 (exit: 0)
 :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 ```terminal
 Session: beta                                   │@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
   1/6                                        0/0││  (empty) beta commit
-> beta                                     beta │◆  wwwwwwww root() hhhhhhhh
-                                                │
+  Current repo: /Users/ashokmenon/Code/sesh     │◆  wwwwwwww root() hhhhhhhh
+> beta                                     beta │
                                                 │
                                                 │
                                                 │
@@ -100,14 +101,14 @@ This snapshot shows the picker after clearing the query with `C-u` and typing
 `mono`, so the selection should switch to the discovered `mono` entries.
 
 :k C-u mono
-:$ sleep 0.5 (exit: 0)
+:$ sleep 1 (exit: 0)
 :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 ```terminal
 Session: mono                                   │@  wwwwwwww (no email set) ttttttttttttttttttt default@ hhhhhhhh
   2/6                                        0/0││  (empty) mono commit
-> mono                                     mono ││ ○  wwwwwwww (no email set) ttttttttttttttttttt mono-ws@ hhhhhhhh
-  mono-ws                                  mon..│├─╯  (empty) mono workspace commit
-                                                │◆  wwwwwwww root() hhhhhhhh
+  Current repo: /Users/ashokmenon/Code/sesh     ││ ○  wwwwwwww (no email set) ttttttttttttttttttt mono-ws@ hhhhhhhh
+> mono                                     mono │├─╯  (empty) mono workspace commit
+  mono-ws                                  mon..│◆  wwwwwwww root() hhhhhhhh
                                                 │
                                                 │
                                                 │

@@ -10,6 +10,14 @@ suggest changes. Report unresolved items with reasons.`
 > Invoke it as a subagent (`@nits`), not as a shell command -- **there is no
 > `nits` binary**.
 
+## Snapshots
+
+For UI changes covered by the markdown-driven tmux snapshots under
+`crates/sesh/tests/cases/ui/`, update the paired `.snap` files with `cargo
+insta test` to collect snapshot changes and `cargo insta accept` to write the
+accepted results back to the checked-in `.snap` files. Remove any leftover
+`.snap.new` artifacts before finishing.
+
 ## Truth Seeking
 
 Default to verified claims over plausible guesses.
