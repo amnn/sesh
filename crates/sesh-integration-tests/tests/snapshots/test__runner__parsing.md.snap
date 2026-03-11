@@ -28,13 +28,10 @@ Invalid regular expressions in `:snap` should become parser errors with diagnost
 
 :snap /(unterminated/x
 > [!WARNING]
-> Parser error: invalid regex pattern
->
-> Caused by:
->     regex parse error:
->         (unterminated
->         ^
->     error: unclosed group
+> Parser error: invalid regex pattern: regex parse error:
+>     (unterminated
+>     ^
+> error: unclosed group
 
 ## Invalid shift-modified text key
 

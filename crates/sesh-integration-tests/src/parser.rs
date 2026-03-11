@@ -55,6 +55,7 @@ pub(crate) enum KeyKind {
     Up,
 }
 
+/// Source line preserved alongside its parsed classification.
 #[derive(Debug)]
 pub(crate) struct Line<'s> {
     pub(crate) kind: LineKind,
@@ -152,7 +153,7 @@ impl<'s> Line<'s> {
         };
 
         let kind = LineKind::parse(rest.trim()).unwrap_or_else(|error| LineKind::Error {
-            message: format!("{error:?}"),
+            message: format!("{error:#}"),
         });
 
         Self { kind, raw }
