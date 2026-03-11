@@ -6,7 +6,7 @@ Script {
     lines: [
         Line {
             kind: Error {
-                message: "invalid regex pattern\n\nCaused by:\n    regex parse error:\n        (unterminated\n        ^\n    error: unclosed group",
+                message: "invalid regex pattern: regex parse error:\n    (unterminated\n    ^\nerror: unclosed group",
             },
             raw: ":snap /(unterminated/x",
         },
