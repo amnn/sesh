@@ -1,23 +1,23 @@
 ---
 source: crates/sesh-integration-tests/src/parser.rs
-expression: "Script::parse(&[\":snap /foo/👩🏽‍💻\", \"\"].join(\"\\n\"))"
+expression: "Script::parse(&[\":snap --duration 100ms /foo/x\", \"\"].join(\"\\n\"))"
 ---
 Script {
     lines: [
         Line {
             kind: Snap {
                 count: 5,
-                duration: 1s,
+                duration: 100ms,
                 filters: [
                     Filter {
                         patt: Regex(
                             "foo",
                         ),
-                        paint: "👩🏽\u{200d}💻",
+                        paint: "x",
                     },
                 ],
             },
-            raw: ":snap /foo/👩🏽\u{200d}💻",
+            raw: ":snap --duration 100ms /foo/x",
         },
     ],
 }

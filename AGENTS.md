@@ -16,11 +16,9 @@ nextest run` command that covers the desired cases.
 
 ## Snapshots
 
-For UI changes covered by the markdown-driven tmux snapshots under
-`crates/sesh/tests/cases/ui/`, update the paired `.snap` files with `cargo
-insta test` to collect snapshot changes and `cargo insta accept` to write the
-accepted results back to the checked-in `.snap` files. Remove any leftover
-`.snap.new` artifacts before finishing.
+For markdown-driven snapshot changes, refresh the checked-in `.snap` files with
+`cargo insta test --accept` using the appropriate package/test selection, and
+remove any leftover `.snap.new` artifacts before finishing.
 
 ## Truth Seeking
 

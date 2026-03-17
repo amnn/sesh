@@ -1,11 +1,5 @@
 # TODO
 
-## Testing
-
-- [ ] Make snap-settling duration configurable for markdown-driven tmux tests.
-  - Add a `:snap` flag or similar control for the settlement period so tests do
-    not need preceding `sleep` commands just to stabilize captures.
-
 ## Foundation
 
 - [ ] Colorize parts of item text (for example repo name and repo-prefix/glob

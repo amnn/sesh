@@ -6,7 +6,9 @@ publish = false
 
 [dependencies]
 anyhow.workspace = true
+clap.workspace = true
 futures.workspace = true
+humantime.workspace = true
 nonempty.workspace = true
 regex.workspace = true
 shlex.workspace = true

@@ -3,10 +3,10 @@
 
 //! Runtime for parsed markdown integration scripts.
 
-use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fmt;
 use std::fmt::Write as _;
+use std::num::NonZeroUsize;
 use std::time::Duration;
 
 use anyhow::Context as _;
@@ -14,7 +14,6 @@ use futures::future;
 use nonempty::NonEmpty;
 use textwrap::Options;
 use tokio::time;
-use tokio::time::MissedTickBehavior;
 use tracing::instrument;
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -27,10 +26,15 @@ use crate::tmux::Tmux;
 
 /// Integration-test runner state.
 pub struct Runner {
-    /// Client for managing the `tmux` server. Ordered before `env` so that it is dropped first and
-    /// clean up the server before the environment is cleaned up, deleting its socket file.
+    /// Client for managing the `tmux` server. Ordered before `env` so that it is
+    /// dropped first and cleans up the server before the environment is cleaned
+    /// up, deleting its socket file.
     tmux: Tmux,
+
+    /// Filesystem and process environment used for each test run.
     env: Env,
+
+    /// Active tmux pane identifier that receives subsequent commands.
     pane: String,
 }
 
@@ -61,6 +65,7 @@ impl Runner {
         Ok(())
     }
 
+    /// Evaluate a parsed script and write markdown output for each line.
     pub async fn run(
         &mut self,
         w: &mut impl fmt::Write,
@@ -79,6 +84,7 @@ impl Runner {
         Ok(())
     }
 
+    /// Capture the active pane and normalize dynamic spans with `filters`.
     async fn capture_pane(&self, filters: &[parser::Filter]) -> anyhow::Result<String> {
         let output = self
             .tmux
@@ -96,6 +102,7 @@ impl Runner {
         Ok(capture)
     }
 
+    /// Resolve requested binaries into the runner environment and report gaps.
     async fn eval_bins(&self, w: &mut impl fmt::Write, args: &[String]) -> fmt::Result {
         let futures = args.iter().map(|arg| self.env.bin(arg));
         let results = future::join_all(futures).await;
@@ -146,6 +153,7 @@ impl Runner {
         Ok(())
     }
 
+    /// Send parsed key presses to the active pane.
     async fn eval_keys(&self, w: &mut impl fmt::Write, raw: &str, keys: &[Key]) -> fmt::Result {
         writeln!(w, "{raw}")?;
 
@@ -170,6 +178,7 @@ impl Runner {
         Ok(())
     }
 
+    /// Evaluate one parsed line and append its rendered markdown output.
     #[instrument(level = "trace", skip(self, w, line), fields(raw = line.raw))]
     async fn eval_line(&mut self, w: &mut impl fmt::Write, line: &Line<'_>) -> fmt::Result {
         match &line.kind {
@@ -204,15 +213,20 @@ impl Runner {
                 self.eval_keys(w, line.raw, keys).await?;
             }
 
-            LineKind::Snap { filters } => {
+            LineKind::Snap {
+                count,
+                duration,
+                filters,
+            } => {
                 writeln!(w, "{}", line.raw)?;
-                self.eval_snap(w, filters).await?;
+                self.eval_snap(w, *count, *duration, filters).await?;
             }
         }
 
         Ok(())
     }
 
+    /// Switch the runner to a different active pane when the target exists.
     async fn eval_pane(&mut self, w: &mut impl fmt::Write, target: &str) -> fmt::Result {
         let pane = match self.target_to_pane_id(target).await {
             Ok(pane) => pane,
@@ -232,6 +246,7 @@ impl Runner {
         Ok(())
     }
 
+    /// Run a host command inside the runner environment and render its output.
     async fn eval_sh(
         &self,
         w: &mut impl fmt::Write,
@@ -267,30 +282,28 @@ impl Runner {
         Ok(())
     }
 
-    /// Capture the current pane repeatedly over a short duration, applying `filters` to each
-    /// capture to normalize dynamic content. If more than `SNAP_MIN_DOMINANCE` of the captures
-    /// stabilize to the same content, write that content as a fenced block, otherwise write a
-    /// warning callout.
-    async fn eval_snap(&self, w: &mut impl fmt::Write, filters: &[parser::Filter]) -> fmt::Result {
-        const SNAP_DURATION: Duration = Duration::from_millis(100);
-        const SNAP_INTERVAL: Duration = Duration::from_millis(10);
-        const SNAP_MIN_DOMINANCE: f64 = 0.75;
+    /// Capture the current pane in a settled state within `deadline`. Repeatedly takes snapshots
+    /// until `count` consecutive snapshots match. Initially snapshots are taken at a longer
+    /// interval, until a change is detected, at which point the interval is shortened.
+    async fn eval_snap(
+        &self,
+        w: &mut impl fmt::Write,
+        count: NonZeroUsize,
+        duration: Duration,
+        filters: &[parser::Filter],
+    ) -> fmt::Result {
+        const CHANGE_INTERVAL: Duration = Duration::from_millis(100);
+        const SETTLE_INTERVAL: Duration = Duration::from_millis(50);
 
-        let mut samples = HashMap::new();
-        let mut total = 0usize;
+        let deadline = time::Instant::now() + duration;
+        let mut interval = CHANGE_INTERVAL;
+        let mut capture = None;
+        let mut streak = 0;
+        let target = count.get();
 
-        let mut ticker = time::interval(SNAP_INTERVAL);
-        ticker.set_missed_tick_behavior(MissedTickBehavior::Skip);
-
-        let start = time::Instant::now();
         loop {
-            ticker.tick().await;
-            if start.elapsed() >= SNAP_DURATION {
-                break;
-            }
-
-            let capture = match self.capture_pane(filters).await {
-                Ok(capture) => capture,
+            let pane = match self.capture_pane(filters).await {
+                Ok(pane) => pane,
                 Err(error) => {
                     let message = format!("failed to capture pane '{}': {error:#}", self.pane);
                     write_callout(w, "WARNING", &[&message])?;
@@ -298,26 +311,40 @@ impl Runner {
                 }
             };
 
-            *samples.entry(capture).or_insert(0usize) += 1;
-            total += 1;
+            match &mut capture {
+                Some(prev) if prev == &pane => {
+                    streak += 1;
+                }
+
+                Some(prev) => {
+                    interval = SETTLE_INTERVAL;
+                    *prev = pane;
+                    streak = 1;
+                }
+
+                None => {
+                    capture = Some(pane);
+                    streak = 1;
+                }
+            }
+
+            if streak >= target {
+                write_fenced_block(w, "terminal", capture.as_deref().unwrap_or_default())?;
+                return Ok(());
+            }
+
+            time::sleep(interval).await;
+            if time::Instant::now() > deadline {
+                break;
+            }
         }
 
-        let Some((capture, count)) = samples.into_iter().max_by(|(_, l), (_, r)| l.cmp(r)) else {
-            write_callout(w, "WARNING", &["did not capture any pane samples"])?;
-            return Ok(());
-        };
-
-        let ratio = count as f64 / total as f64;
-        if ratio < SNAP_MIN_DOMINANCE {
-            let warning = format!("pane did not stabilize in {}ms", SNAP_DURATION.as_millis());
-            write_callout(w, "WARNING", &[&warning])?;
-            return Ok(());
-        }
-
-        write_fenced_block(w, "terminal", &capture)?;
+        let warning = format!("pane did not stabilize in {}ms", duration.as_millis());
+        write_callout(w, "WARNING", &[&warning])?;
         Ok(())
     }
 
+    /// Run a tmux command against the test server and render its outcome.
     async fn eval_tmux(
         &self,
         w: &mut impl fmt::Write,
@@ -352,6 +379,7 @@ impl Runner {
         Ok(())
     }
 
+    /// Resolve a user-facing pane target into a concrete tmux pane id.
     async fn target_to_pane_id(&self, target: &str) -> anyhow::Result<Option<String>> {
         let output = self
             .tmux
@@ -377,9 +405,10 @@ impl Runner {
     }
 }
 
+/// Paint regex matches or capture groups with the configured replacement grapheme.
 fn paint_filter(input: &str, filter: &parser::Filter) -> String {
-    // Convert regex captures to a list of ranges. If there are no groups, the entire match is
-    // treated as a single group.
+    // Convert regex captures to a list of ranges. If there are no groups, the
+    // entire match is treated as a single group.
     let mut ranges = vec![];
     for captures in filter.patt.captures_iter(input) {
         if captures.len() == 1 {
@@ -392,8 +421,8 @@ fn paint_filter(input: &str, filter: &parser::Filter) -> String {
         }
     }
 
-    // Sort ranges, and then merge overlapping ranges. All merged ranges will share the same start
-    // as the predecessor they were merged into.
+    // Sort ranges, and then merge overlapping ranges. All merged ranges will
+    // share the same start as the predecessor they were merged into.
     ranges.sort_by_key(|r| (r.start, r.end));
 
     let mut i = 0;
@@ -432,6 +461,8 @@ fn paint_filter(input: &str, filter: &parser::Filter) -> String {
     output
 }
 
+/// Write a GitHub-style markdown callout, wrapping content to the repo line
+/// width.
 fn write_callout<S: AsRef<str>>(w: &mut impl fmt::Write, kind: &str, lines: &[S]) -> fmt::Result {
     writeln!(w, "> [!{kind}]")?;
 
@@ -458,6 +489,8 @@ fn write_callout<S: AsRef<str>>(w: &mut impl fmt::Write, kind: &str, lines: &[S]
     Ok(())
 }
 
+/// Write a fenced code block, ensuring the block always ends with a trailing
+/// newline.
 fn write_fenced_block(w: &mut impl fmt::Write, label: &str, text: &str) -> fmt::Result {
     writeln!(w, "```{label}")?;
     write!(w, "{text}")?;

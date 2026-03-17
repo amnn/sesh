@@ -1,6 +1,5 @@
 ---
 source: crates/sesh/tests/test.rs
-assertion_line: 63
 expression: output
 ---
 # Basic session
@@ -8,9 +7,9 @@ expression: output
 This scenario creates several plain tmux sessions with no repo metadata and
 then launches `sesh cli`.
 
-:bins jj sleep cat
+:bins jj cat
 > [!NOTE]
-> 'jj', 'sleep', and 'cat' are available.
+> 'jj', and 'cat' are available.
 
 :t rename-session -t 0 runner (success)
 :t new-session -d -s alpha "cat" (success)
@@ -18,8 +17,6 @@ then launches `sesh cli`.
 :t new-session -d -s gamma "cat" (success)
 :t new-session -d -s ui "sesh cli" (success)
 :t resize-window -t ui:0 -x 80 -y 10 (success)
-:$ sleep 1.5 (exit: 0)
-
 :pane ui:0.0
 
 This snapshot shows the initial picker state before any query is typed, so it
@@ -43,7 +40,6 @@ This snapshot shows the picker after typing `bet`, so the selection should move
 to the `beta` session.
 
 :k bet
-:$ sleep 1.5 (exit: 0)
 :snap
 ```terminal
 Session: bet                    │
