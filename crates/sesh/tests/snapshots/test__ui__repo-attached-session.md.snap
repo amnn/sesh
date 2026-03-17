@@ -63,7 +63,7 @@ including the attached `alpha-live` session and the glob-discovered repos.
 ```terminal
 Session:                                        │@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
   6/6                                        0/0││  (empty) alpha commit
-  Current repo: /Users/ashokmenon/Code/sesh     │◆  wwwwwwww root() hhhhhhhh
+  Current repo: none                            │◆  wwwwwwww root() hhhhhhhh
 > alpha-live                               alpha│
   runner                                        │
   ui                                            │
@@ -85,7 +85,7 @@ move away from the initial attached-session result and onto the discovered
 ```terminal
 Session: beta                                   │@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
   1/6                                        0/0││  (empty) beta commit
-  Current repo: /Users/ashokmenon/Code/sesh     │◆  wwwwwwww root() hhhhhhhh
+  Current repo: none                            │◆  wwwwwwww root() hhhhhhhh
 > beta                                     beta │
                                                 │
                                                 │
@@ -106,7 +106,7 @@ This snapshot shows the picker after clearing the query with `C-u` and typing
 ```terminal
 Session: mono                                   │@  wwwwwwww (no email set) ttttttttttttttttttt default@ hhhhhhhh
   2/6                                        0/0││  (empty) mono commit
-  Current repo: /Users/ashokmenon/Code/sesh     ││ ○  wwwwwwww (no email set) ttttttttttttttttttt mono-ws@ hhhhhhhh
+  Current repo: none                            ││ ○  wwwwwwww (no email set) ttttttttttttttttttt mono-ws@ hhhhhhhh
 > mono                                     mono │├─╯  (empty) mono workspace commit
   mono-ws                                  mon..│◆  wwwwwwww root() hhhhhhhh
                                                 │

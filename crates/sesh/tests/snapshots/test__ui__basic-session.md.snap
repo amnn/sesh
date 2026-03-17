@@ -29,7 +29,7 @@ should list all discovered tmux sessions.
 ```terminal
 Session:                        │
   5/5                        0/0│
-  Current repo: /Users/ashokmeno│
+  Current repo: none            │
 > alpha                         │
   beta                          │
   gamma                         │
@@ -48,7 +48,7 @@ to the `beta` session.
 ```terminal
 Session: bet                    │
   1/5                        0/0│
-  Current repo: /Users/ashokmeno│
+  Current repo: none            │
 > beta                          │
                                 │
                                 │
