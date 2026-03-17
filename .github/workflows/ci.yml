@@ -45,4 +45,4 @@ jobs:
       - name: Compile tests
         run: cargo nextest run --workspace --locked --no-run
       - name: Run tests
-        run: cargo nextest run --workspace --locked --retries 2
+        run: cargo nextest run --workspace --locked --retries 2 --no-fail-fast
