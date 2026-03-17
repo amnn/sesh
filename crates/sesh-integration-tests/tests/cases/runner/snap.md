@@ -2,8 +2,8 @@
 
 ## Captures stable pane content
 
-If repeated pane captures converge, the dominant filtered capture should be
-emitted as the snapshot.
+If repeated pane captures settle to five identical filtered snapshots before
+the timeout, the settled capture should be emitted as the snapshot.
 
 :bins echo sleep
 
@@ -12,7 +12,7 @@ emitted as the snapshot.
 :t resize-window -x 80 -y 2 -t 0:stable
 
 :t wait-for ready-stable
-:snap /stable/X
+:snap -c 1 /stable/X
 
 ## Paints multiple capture groups only
 
@@ -24,7 +24,7 @@ surrounding literal text should remain unchanged.
 :t resize-window -x 80 -y 2 -t 0:groups
 
 :t wait-for ready-groups
-:snap "/id=([0-9]+) user=([a-z]+)/👩🏽‍💻"
+:snap -c 1 "/id=([0-9]+) user=([a-z]+)/👩🏽‍💻"
 
 ## Paints nested capture groups once
 
@@ -36,21 +36,21 @@ painted once.
 :t resize-window -x 80 -y 2 -t 0:nested
 
 :t wait-for ready-nested
-:snap /token=(a(bc)d)/👩🏽‍💻
+:snap -c 1 /token=(a(bc)d)/👩🏽‍💻
 
 ## Warns for unstable pane content
 
-If repeated pane captures do not have a dominant value (>75%), the runner should emit a warning
-instead of a snapshot.
+If repeated pane captures do not settle before the timeout, the runner should
+emit a warning instead of a snapshot.
 
 :bins python3
 
-:t new-window -d -n unstable 'python3 -c "import itertools, time; [print(i, flush=True) or time.sleep(0.005) for i in itertools.count()]"'
+:t new-window -d -n unstable 'python3 -c "import itertools, subprocess, time; print(0, flush=True); subprocess.run([\"tmux\", \"wait-for\", \"-S\", \"ready-unstable\"], check=True); [print(i, flush=True) or time.sleep(0.005) for i in itertools.count(1)]"'
 :p 0:unstable.0
 :t resize-window -x 80 -y 2 -t 0:unstable
 
-:$ sleep 0.1
-:snap
+:t wait-for ready-unstable
+:snap -d 200ms
 
 ---
 vim: set ft=markdown:

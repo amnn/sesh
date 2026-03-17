@@ -1,6 +1,5 @@
 ---
 source: crates/sesh/tests/test.rs
-assertion_line: 63
 expression: output
 ---
 # Mixed repo lifecycle
@@ -21,9 +20,9 @@ it obvious what was normalized:
 - `w` replaces `jj` change IDs that follow the preview graph markers.
 - `h` replaces short hexadecimal commit IDs.
 
-:bins jj git sleep cat
+:bins jj git cat
 > [!NOTE]
-> 'jj', 'git', 'sleep', and 'cat' are available.
+> 'jj', 'git', and 'cat' are available.
 
 Create an `alpha` repo that will be attached to a live tmux session.
 
@@ -52,8 +51,6 @@ repo discovery enabled for `alpha`, `beta`, and `mono*`.
 :t set-option -t alpha-live @sesh.repo alpha (success)
 :t new-session -d -s ui "sesh cli -r 'alpha' -r 'beta' -r 'mono*'" (success)
 :t resize-window -t ui:0 -x 120 -y 12 (success)
-:$ sleep 1 (exit: 0)
-
 :pane ui:0.0
 
 This snapshot shows the initial mixed picker state before any query is typed,
@@ -80,7 +77,6 @@ move away from the initial attached-session result and onto the discovered
 `beta` repo.
 
 :k beta
-:$ sleep 1 (exit: 0)
 :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 ```terminal
 Session: beta                                   │@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
@@ -101,7 +97,6 @@ This snapshot shows the picker after clearing the query with `C-u` and typing
 `mono`, so the selection should switch to the discovered `mono` entries.
 
 :k C-u mono
-:$ sleep 1 (exit: 0)
 :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 ```terminal
 Session: mono                                   │@  wwwwwwww (no email set) ttttttttttttttttttt default@ hhhhhhhh

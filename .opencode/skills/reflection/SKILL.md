@@ -72,9 +72,12 @@ Ignore one-off preferences unless they are likely to matter again.
    - `.opencode/agents/<name>.md` for subagent behavior.
    - `TODO.md` only for follow-up work that should happen later.
 6. Update the relevant files directly.
-7. If this was a pull request reflection pass, update this file's description so
+7. During local reflection, update `TODO.md` to match the finished work: tick
+   off items that are complete, and remove or clean up sections whose items are
+   all done.
+8. If this was a pull request reflection pass, update this file's description so
    the `latest PR analyzed` value matches the highest PR number reviewed.
-8. Summarize the evidence used, the lesson captured, and where it was encoded.
+9. Summarize the evidence used, the lesson captured, and where it was encoded.
 
 ## Output
 
@@ -91,6 +94,9 @@ Ignore one-off preferences unless they are likely to matter again.
 - Do not invent lessons without evidence from the repo, history, or PRs.
 - Prefer tightening existing guidance over adding redundant new documents.
 - Keep updates short, specific, and durable.
+- When updating repo guidance such as `AGENTS.md`, preserve the existing
+  section structure and formatting style; place new notes in the most specific
+  section and keep admonitions attached to the guidance they qualify.
 - Do not mix local-session reflection progress with pull request reflection
   progress; the tracked PR number applies only to PR analysis.
 - Do not mark TODO items complete unless the corresponding implementation is

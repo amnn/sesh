@@ -9,10 +9,13 @@
 
 use std::borrow::Cow;
 use std::fmt;
+use std::num::NonZeroUsize;
+use std::time::Duration;
 
 use anyhow::Context as _;
 use anyhow::bail;
 use anyhow::ensure;
+use clap::Parser as _;
 use nonempty::NonEmpty;
 use regex::Regex;
 use unicode_segmentation::UnicodeSegmentation;
@@ -84,10 +87,35 @@ pub(crate) enum LineKind {
     Keys { keys: Vec<Key> },
 
     /// Capture pane output and apply regex replacement filters.
-    Snap { filters: Vec<Filter> },
+    Snap {
+        count: NonZeroUsize,
+        duration: Duration,
+        filters: Vec<Filter>,
+    },
 
     /// The directive failed to parse.
     Error { message: String },
+}
+
+/// Parsed arguments for `:snap`.
+#[derive(clap::Parser)]
+struct SnapArgs {
+    /// Number of consecutive identical samples required before a snap settles.
+    #[arg(short = 'c', long = "count", default_value = "5")]
+    count: NonZeroUsize,
+
+    /// Maximum time to wait for pane output to settle.
+    #[arg(
+        short = 'd',
+        long = "duration",
+        default_value = "1s",
+        value_parser = parse_duration
+    )]
+    duration: Duration,
+
+    /// Regex replacement filters applied to each captured pane sample.
+    #[arg(value_name = "FILTER")]
+    filters: Vec<String>,
 }
 
 impl<'s> Script<'s> {
@@ -197,12 +225,18 @@ impl LineKind {
                     .collect::<anyhow::Result<_>>()?,
             },
 
-            "s" | "snap" => LineKind::Snap {
-                filters: args
-                    .into_iter()
-                    .map(parse_filter)
-                    .collect::<anyhow::Result<_>>()?,
-            },
+            "s" | "snap" => {
+                let args = parse_snap_args(args)?;
+                LineKind::Snap {
+                    count: args.count,
+                    duration: args.duration,
+                    filters: args
+                        .filters
+                        .into_iter()
+                        .map(parse_filter)
+                        .collect::<anyhow::Result<_>>()?,
+                }
+            }
 
             other => bail!("unknown directive ':{other}'"),
         })
@@ -251,10 +285,15 @@ impl fmt::Display for Key {
     }
 }
 
+/// Parse a human-readable duration accepted by `humantime`.
+fn parse_duration(input: &str) -> anyhow::Result<Duration> {
+    humantime::parse_duration(input).context("invalid duration")
+}
+
 /// Parse a filter for `:snap` output.
 ///
-/// A filter is a regular expression pattern and a paint grapheme, separated by a common delimiter
-/// character. For example, `/foo/x` or `|foo|x`.
+/// A filter is a regular expression pattern and a paint grapheme, separated by
+/// a common delimiter character. For example, `/foo/x` or `|foo|x`.
 ///
 /// If the pattern has capture groups, only captured group contents are painted.
 fn parse_filter(input: String) -> anyhow::Result<Filter> {
@@ -327,7 +366,9 @@ fn parse_key(input: String) -> anyhow::Result<Key> {
     })
 }
 
-/// Parse a key kind. Recognises a set of named keys, otherwise treats the input as literal text to
+/// Parse a key kind.
+///
+/// Recognises a set of named keys, otherwise treats the input as literal text to
 /// send.
 fn parse_key_kind(input: &str) -> KeyKind {
     match input {
@@ -343,6 +384,12 @@ fn parse_key_kind(input: &str) -> KeyKind {
         "up" => KeyKind::Up,
         _ => KeyKind::Text(input.to_owned()),
     }
+}
+
+/// Parse `:snap` arguments with Clap so diagnostics match real CLI parsing.
+fn parse_snap_args(args: Vec<String>) -> anyhow::Result<SnapArgs> {
+    let argv = std::iter::once(":snap".to_owned()).chain(args);
+    SnapArgs::try_parse_from(argv).map_err(|error| anyhow::anyhow!(error.render().to_string()))
 }
 
 #[cfg(test)]
@@ -420,6 +467,28 @@ mod tests {
     #[test]
     fn parses_snap_with_grapheme_replacement() {
         insta::assert_debug_snapshot!(Script::parse(&[":snap /foo/👩🏽‍💻", ""].join("\n")));
+    }
+
+    #[test]
+    fn parses_snap_with_duration_flag() {
+        insta::assert_debug_snapshot!(Script::parse(
+            &[":snap --duration 100ms /foo/x", ""].join("\n")
+        ));
+    }
+
+    #[test]
+    fn parses_snap_with_count_flag() {
+        insta::assert_debug_snapshot!(Script::parse(&[":snap --count 1 /foo/x", ""].join("\n")));
+    }
+
+    #[test]
+    fn captures_invalid_snap_duration_as_error() {
+        insta::assert_debug_snapshot!(Script::parse(&[":snap --duration soon", ""].join("\n")));
+    }
+
+    #[test]
+    fn captures_invalid_snap_count_as_error() {
+        insta::assert_debug_snapshot!(Script::parse(&[":snap --count 0", ""].join("\n")));
     }
 
     #[test]

@@ -6,6 +6,8 @@ Script {
     lines: [
         Line {
             kind: Snap {
+                count: 5,
+                duration: 1s,
                 filters: [
                     Filter {
                         patt: Regex(

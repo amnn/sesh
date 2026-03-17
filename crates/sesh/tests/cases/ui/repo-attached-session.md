@@ -16,7 +16,7 @@ it obvious what was normalized:
 - `w` replaces `jj` change IDs that follow the preview graph markers.
 - `h` replaces short hexadecimal commit IDs.
 
-:bins jj git sleep cat
+:bins jj git cat
 
 Create an `alpha` repo that will be attached to a live tmux session.
 
@@ -45,8 +45,6 @@ repo discovery enabled for `alpha`, `beta`, and `mono*`.
 :t set-option -t alpha-live @sesh.repo alpha
 :t new-session -d -s ui "sesh cli -r 'alpha' -r 'beta' -r 'mono*'"
 :t resize-window -t ui:0 -x 120 -y 12
-:$ sleep 1
-
 :pane ui:0.0
 
 This snapshot shows the initial mixed picker state before any query is typed,
@@ -59,14 +57,12 @@ move away from the initial attached-session result and onto the discovered
 `beta` repo.
 
 :k beta
-:$ sleep 1
 :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 This snapshot shows the picker after clearing the query with `C-u` and typing
 `mono`, so the selection should switch to the discovered `mono` entries.
 
 :k C-u mono
-:$ sleep 1
 :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 ---

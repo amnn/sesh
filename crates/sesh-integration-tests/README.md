@@ -26,11 +26,15 @@ Supported directives:
   - Modifiers are canonical uppercase only: `C-`, `M-`, `S-`.
   - `S-` only applies to arrow keys.
   - Anything that doesn't match the above is treated as a literal string to send.
-- `:s` / `:snap [dregexdgrapheme ...]`
+- `:s` / `:snap [-c <count>] [-d <duration>] [dregexdgrapheme ...]`
   - Capture current pane and append it in a fenced `terminal` code block.
+  - `-c` / `--count` sets the required consecutive matching captures and
+    defaults to `5`.
+  - `-d` / `--duration` sets the maximum settle time and defaults to `1s`.
+  - Durations use human-readable values such as `100ms` or `5s`.
   - Optional replacement rules are `dregexdgrapheme`, separated by whitespace.
   - Replacements are global and applied in order, painting over matches with the replacement
-    grapheme cluster.
+     grapheme cluster.
   - If the regex has capture groups, only those groups' contents are painted.
 
 ## Run tests
