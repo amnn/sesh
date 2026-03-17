@@ -10,6 +10,10 @@ suggest changes. Report unresolved items with reasons.`
 > Invoke it as a subagent (`@nits`), not as a shell command -- **there is no
 > `nits` binary**.
 
+When validating multiple Rust tests, avoid parallel `cargo test` invocations:
+they contend on Cargo's package and build locks. Prefer a single `cargo
+nextest run` command that covers the desired cases.
+
 ## Snapshots
 
 For UI changes covered by the markdown-driven tmux snapshots under
@@ -48,3 +52,7 @@ Add the following comments to the top of every new source file:
 
 After meaningful implementation work, use the `reflection` skill as the source
 of truth for capturing durable lessons in repo-local agent guidance.
+
+When updating repo guidance such as `AGENTS.md`, preserve the existing section
+structure and formatting style; place new notes in the most specific section
+and keep admonitions attached to the guidance they qualify.

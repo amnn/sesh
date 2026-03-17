@@ -7,7 +7,6 @@ use std::collections::HashMap;
 use std::ffi::OsStr;
 use std::fmt;
 use std::fmt::Write as _;
-use std::path::Path;
 use std::time::Duration;
 
 use anyhow::Context as _;
@@ -36,12 +35,9 @@ pub struct Runner {
 }
 
 impl Runner {
-    /// Construct a runner with an isolated environment and tmux server under `tmp`.
-    ///
-    /// `tmp` should point at a test-owned temporary root (for example,
-    /// `CARGO_TARGET_TMPDIR`) so all runner artifacts are scoped to the current test execution.
-    pub async fn new(tmp: &Path) -> anyhow::Result<Self> {
-        let env = Env::new(tmp).await?;
+    /// Construct a runner with an isolated environment and tmux server.
+    pub async fn new() -> anyhow::Result<Self> {
+        let env = Env::new().await?;
         let tmux = Tmux::new(&env).await?;
 
         let mut runner = Self {

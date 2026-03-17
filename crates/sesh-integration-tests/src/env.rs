@@ -29,10 +29,10 @@ pub(crate) struct Env {
 impl Env {
     /// Construct a new isolated environment rooted under `tmp`.
     ///
-    /// The caller provides `tmp` so test harnesses can decide where temporary artifacts live (for
-    /// example, under Cargo's per-test temporary directory).
-    pub(crate) async fn new(tmp: impl AsRef<Path>) -> anyhow::Result<Self> {
-        let dir = tempfile::tempdir_in(tmp).context("failed to create environment root")?;
+    /// All environment artifacts live under a single temporary root outside the repo checkout, so
+    /// commands and tmux panes can't inherit a repository-containing cwd from the test process.
+    pub(crate) async fn new() -> anyhow::Result<Self> {
+        let dir = tempfile::tempdir().context("failed to create environment root")?;
         let tmp = |rest: &[&str]| {
             let mut path = dir.path().to_path_buf();
             path.extend(rest);
