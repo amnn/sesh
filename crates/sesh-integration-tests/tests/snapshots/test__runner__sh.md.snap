@@ -32,13 +32,13 @@ isolated environment and produce a WARNING callout.
 Failing shell commands should append a non-zero exit annotation and then write stderr inside a
 fenced code block.
 
-:b ls
+:b sh
 > [!NOTE]
-> 'ls' is available.
+> 'sh' is available.
 
-:$ ls does-not-exist (exit: 1)
+:$ sh -c "printf 'hello from stderr\n' >&2; exit 1" (exit: 1)
 ```stderr
-ls: does-not-exist: No such file or directory
+hello from stderr
 ```
 
 ## Command writes both streams and fails

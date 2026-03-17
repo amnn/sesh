@@ -21,9 +21,9 @@ isolated environment and produce a WARNING callout.
 Failing shell commands should append a non-zero exit annotation and then write stderr inside a
 fenced code block.
 
-:b ls
+:b sh
 
-:$ ls does-not-exist
+:$ sh -c "printf 'hello from stderr\n' >&2; exit 1"
 
 ## Command writes both streams and fails
 
