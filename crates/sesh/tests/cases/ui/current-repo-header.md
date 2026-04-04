@@ -16,7 +16,7 @@ the picker header shows the repo inferred from the current working directory.
 This snapshot shows the initial picker state, including the current repo in the
 header.
 
-:snap
+:snap -d 2s
 
 ---
 vim: set ft=markdown:

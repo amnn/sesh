@@ -6,10 +6,13 @@ edition = "2024"
 [dependencies]
 anyhow.workspace = true
 clap.workspace = true
+crossterm.workspace = true
 dashmap.workspace = true
 futures.workspace = true
 glob.workspace = true
+interprocess.workspace = true
 once_cell.workspace = true
+ron.workspace = true
 shlex.workspace = true
 skim.workspace = true
 tokio.workspace = true

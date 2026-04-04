@@ -6,10 +6,11 @@
   segment).
   - Keep rendering constraints in mind while using Skim.
 
-- [ ] Detect and display the current repo from `cwd`.
+- [x] Detect and display the current repo from `cwd`.
   - Surface this in the UI state so repo-scoped actions can use it.
 
 - [ ] Add a static header that shows shortcuts and current state.
+  - `C-r` now sets repo context from the selected repo or repo-backed session.
   - Include active filters and key actions so behavior is discoverable.
 
 - [ ] Contract repo path prefixes to initials for compact display.
@@ -22,14 +23,16 @@
 - [ ] Switch to the selected active session.
   - Current selection behavior should prioritize fast session attach.
 
-- [ ] Create a session when selecting an inactive repo.
+- [!] Create a session when selecting an inactive repo.
 
-- [ ] Ensure new tmux sessions created from repos store repo association via a
+- [!] Ensure new tmux sessions created from repos store repo association via a
   tmux user option.
   - Keep the metadata contract stable for discovery and preview logic.
-- [ ] Add `C-r` to change repo context (or clear current repo context if
 
-  already set).
+- [x] Add `C-r` to set repo context from the selected repo or repo-backed
+  session.
+  - Set-only semantics: the current repo may begin empty, but `C-r` does not
+    clear it back to none.
   - This should work consistently whether a repo or session row is selected.
 
 - [ ] Add `C-n` to create a brand-new session/workspace.
@@ -49,6 +52,11 @@
   - The preview already shows a `jj log` summary for repo entries and
     repo-associated sessions.
 
+- [ ] Render previews asynchronously in the background.
+  - Avoid doing preview preparation on the row-selection interaction path.
+  - Warm previews ahead of selection so slower `jj log` previews are ready when
+    the cursor moves.
+
 - [ ] Add a tmux shortcut/entry point to launch this tool.
 
 - [ ] Investigate and improve debug-build performance.
@@ -60,3 +68,12 @@
 - [ ] Add a TOML-based config system.
   - Define config file location(s), defaults, and merge/override precedence.
   - Move hard-coded UI/runtime values (for example preview sizing) into config.
+
+# Appendix: Legend
+
+- [ ] TODO: No started
+- [/] DOING In progress
+- [-] DROP: No longer planned or desired
+- [x] DONE: Completed
+- [^] WAIT: Blocked by an external dependency or prerequisite
+- [!] PRIO: High priority or critical path

@@ -51,6 +51,11 @@ impl Session {
         &self.name
     }
 
+    /// Return the repository attached to this session, if any.
+    pub fn repo(&self) -> Option<&std::path::Path> {
+        self.repo.as_deref()
+    }
+
     /// Render a `jj log` preview for this session's attached repository.
     pub fn preview(&self, _width: usize) -> anyhow::Result<String> {
         let Some(repo) = &self.repo else {
