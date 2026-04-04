@@ -48,29 +48,22 @@ pub struct State {
     current_repo: Option<PathBuf>,
 }
 
-/// Cached fuzzy-match input derived from a session.
+/// Cached fuzzy-match input and visible row data derived from a session.
 #[derive(Clone, Debug)]
-struct PickerItem {
-    session: Session,
-    text: String,
-}
-
-/// Session row currently visible in the picker list.
-#[derive(Clone, Debug)]
-struct VisibleItem {
+struct Item {
     session: Session,
     text: String,
 }
 
 /// Session picker state, caches, and fuzzy matcher.
 struct App {
-    matcher: Nucleo<PickerItem>,
+    matcher: Nucleo<Item>,
     preview_cache: HashMap<Session, String>,
     query: String,
     selected: usize,
     scroll: usize,
     state: State,
-    visible_items: Vec<VisibleItem>,
+    visible_items: Vec<Item>,
 }
 
 /// Restores terminal state when the picker exits.
@@ -97,7 +90,7 @@ impl App {
         let matcher = Nucleo::new(Config::DEFAULT, Arc::new(|| {}), None, MATCH_COLUMNS);
         let injector = matcher.injector();
         for session in sessions {
-            let item = PickerItem {
+            let item = Item {
                 text: session.item(),
                 session,
             };
@@ -172,7 +165,7 @@ impl App {
         let matched = snapshot.matched_item_count();
         self.visible_items = snapshot
             .matched_items(0..matched)
-            .map(|item| VisibleItem {
+            .map(|item| Item {
                 session: item.data.session.clone(),
                 text: item.data.text.clone(),
             })
@@ -390,7 +383,7 @@ fn scroll_offset(current: usize, selected: usize, len: usize, height: usize) -> 
 }
 
 /// Preserve the previous selection when that session remains visible.
-fn selected_row(items: &[VisibleItem], previous: Option<&Session>, selected: usize) -> usize {
+fn selected_row(items: &[Item], previous: Option<&Session>, selected: usize) -> usize {
     if items.is_empty() {
         return 0;
     }
@@ -452,11 +445,11 @@ mod tests {
     fn preserves_selected_row_when_item_is_still_visible() {
         let previous = Session::from_repo(PathBuf::from("/tmp/beta")).unwrap();
         let items = vec![
-            VisibleItem {
+            Item {
                 session: Session::from_repo(PathBuf::from("/tmp/alpha")).unwrap(),
                 text: "alpha".to_owned(),
             },
-            VisibleItem {
+            Item {
                 session: previous.clone(),
                 text: "beta".to_owned(),
             },
