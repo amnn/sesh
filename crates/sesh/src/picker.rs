@@ -10,17 +10,12 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use crossterm::cursor;
 use crossterm::event;
 use crossterm::event::Event;
 use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
 use crossterm::event::KeyModifiers;
-use crossterm::execute;
-use crossterm::terminal;
-use crossterm::terminal::EnterAlternateScreen;
-use crossterm::terminal::LeaveAlternateScreen;
 use nucleo::Config;
 use nucleo::Nucleo;
 use nucleo::Utf32String;
@@ -37,6 +32,7 @@ use ratatui::widgets::Paragraph;
 
 use crate::path::TruncatedExt as _;
 use crate::session::Session;
+use crate::terminal::AlternateScreenGuard;
 
 const MATCH_COLUMNS: u32 = 1;
 const TICK_TIMEOUT_MS: u64 = 10;
@@ -65,9 +61,6 @@ struct App {
     state: State,
     visible_items: Vec<Item>,
 }
-
-/// Restores terminal state when the picker exits.
-struct TerminalGuard;
 
 impl State {
     /// Construct state for a picker launched from `current_repo`.
@@ -209,25 +202,9 @@ impl App {
     }
 }
 
-impl TerminalGuard {
-    /// Switch the terminal into alternate-screen raw mode.
-    fn new() -> anyhow::Result<Self> {
-        terminal::enable_raw_mode()?;
-        execute!(io::stdout(), EnterAlternateScreen, cursor::Hide)?;
-        Ok(Self)
-    }
-}
-
-impl Drop for TerminalGuard {
-    fn drop(&mut self) {
-        let _ = execute!(io::stdout(), LeaveAlternateScreen, cursor::Show);
-        let _ = terminal::disable_raw_mode();
-    }
-}
-
 /// Run the interactive picker for discovered sessions.
 pub fn run(sessions: Vec<Session>, state: State) -> anyhow::Result<()> {
-    let _guard = TerminalGuard::new()?;
+    let _guard = AlternateScreenGuard::new()?;
     let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
     let mut app = App::new(sessions, state);
 

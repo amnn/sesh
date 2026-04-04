@@ -7,4 +7,5 @@ pub mod jj;
 pub(crate) mod path;
 pub mod picker;
 pub mod session;
+pub mod terminal;
 pub mod tmux;
