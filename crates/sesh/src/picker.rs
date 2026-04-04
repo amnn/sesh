@@ -12,7 +12,6 @@ use nucleo::pattern::CaseMatching;
 use nucleo::pattern::Normalization;
 
 use crate::app::App;
-use crate::app::Item;
 use crate::session::Session;
 
 const MATCH_COLUMNS: u32 = 1;
@@ -20,7 +19,7 @@ const TICK_TIMEOUT_MS: u64 = 10;
 
 /// Fuzzy matcher state for the session picker.
 pub(crate) struct Picker {
-    matcher: Nucleo<Item>,
+    matcher: Nucleo<Session>,
 }
 
 impl Picker {
@@ -30,12 +29,8 @@ impl Picker {
         let injector = matcher.injector();
 
         for session in sessions {
-            let item = Item {
-                text: session.item(),
-                session,
-            };
-            injector.push(item, |item, columns| {
-                columns[0] = Utf32String::from(item.text.as_str())
+            injector.push(session, |session, columns| {
+                columns[0] = Utf32String::from(session.item().as_str())
             });
         }
 
@@ -53,10 +48,7 @@ impl Picker {
         let matched = snapshot.matched_item_count();
         let items = snapshot
             .matched_items(0..matched)
-            .map(|item| Item {
-                session: item.data.session.clone(),
-                text: item.data.text.clone(),
-            })
+            .map(|item| item.data.clone())
             .collect();
         app.replace_visible_items(items);
     }

@@ -31,13 +31,6 @@ use crate::terminal::AlternateScreenGuard;
 
 const POLL_TIMEOUT: Duration = Duration::from_millis(16);
 
-/// Cached fuzzy-match input and visible row data derived from a session.
-#[derive(Clone, Debug)]
-pub(crate) struct Item {
-    pub(crate) session: Session,
-    pub(crate) text: String,
-}
-
 /// Session picker state, caches, and UI behavior.
 pub struct App {
     current_repo: Option<PathBuf>,
@@ -45,7 +38,7 @@ pub struct App {
     query: String,
     selected: usize,
     scroll: usize,
-    visible_items: Vec<Item>,
+    visible_items: Vec<Session>,
 }
 
 impl App {
@@ -114,7 +107,7 @@ impl App {
     }
 
     /// Replace the visible rows after a matcher refresh and preserve selection when possible.
-    pub(crate) fn replace_visible_items(&mut self, items: Vec<Item>) {
+    pub(crate) fn replace_visible_items(&mut self, items: Vec<Session>) {
         let previous = self.selected_session().cloned();
         self.visible_items = items;
         self.selected = selected_row(&self.visible_items, previous.as_ref(), self.selected);
@@ -122,9 +115,7 @@ impl App {
 
     /// Return the currently selected session, if any.
     pub(crate) fn selected_session(&self) -> Option<&Session> {
-        self.visible_items
-            .get(self.selected)
-            .map(|item| &item.session)
+        self.visible_items.get(self.selected).map(|session| session)
     }
 
     /// Update the current repo context from the selected session.
@@ -181,9 +172,9 @@ impl App {
             .enumerate()
             .skip(self.scroll)
             .take(list_height)
-            .map(|(index, item)| {
+            .map(|(index, session)| {
                 let prefix = if index == self.selected { "> " } else { "  " };
-                Line::from(format!("{prefix}{}", item.text))
+                Line::from(format!("{prefix}{}", session.item()))
             })
             .collect::<Vec<_>>();
         frame.render_widget(Paragraph::new(Text::from(lines)), left[3]);
@@ -305,13 +296,13 @@ fn scroll_offset(current: usize, selected: usize, len: usize, height: usize) -> 
 }
 
 /// Preserve the previous selection when that session remains visible.
-fn selected_row(items: &[Item], previous: Option<&Session>, selected: usize) -> usize {
+fn selected_row(items: &[Session], previous: Option<&Session>, selected: usize) -> usize {
     if items.is_empty() {
         return 0;
     }
 
     previous
-        .and_then(|previous| items.iter().position(|item| &item.session == previous))
+        .and_then(|previous| items.iter().position(|session| session == previous))
         .unwrap_or_else(|| selected.min(items.len() - 1))
 }
 
@@ -367,14 +358,8 @@ mod tests {
     fn preserves_selected_row_when_item_is_still_visible() {
         let previous = Session::from_repo(PathBuf::from("/tmp/beta")).unwrap();
         let items = vec![
-            Item {
-                session: Session::from_repo(PathBuf::from("/tmp/alpha")).unwrap(),
-                text: "alpha".to_owned(),
-            },
-            Item {
-                session: previous.clone(),
-                text: "beta".to_owned(),
-            },
+            Session::from_repo(PathBuf::from("/tmp/alpha")).unwrap(),
+            previous.clone(),
         ];
 
         assert_eq!(selected_row(&items, Some(&previous), 0), 1);
