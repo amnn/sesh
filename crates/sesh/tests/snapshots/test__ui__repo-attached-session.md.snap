@@ -58,18 +58,18 @@ including the attached `alpha-live` session and the glob-discovered repos.
 
 :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 ```terminal
-Session:                                        │@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-  6/6                                        0/0││  (empty) alpha commit
-  Current repo: none                            │◆  wwwwwwww root() hhhhhhhh
-> alpha-live                               alpha│
-  runner                                        │
-  ui                                            │
-  beta                                     beta │
-  mono                                     mono │
-  mono-ws                                  mon..│
-                                                │
-                                                │
-                                                │
+Session:                                        @  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+  6/6                                        0/0│  (empty) alpha commit
+  Current repo: none                            ◆  wwwwwwww root() hhhhhhhh
+> alpha-live                               alpha
+  runner
+  ui
+  beta                                     beta
+  mono                                     mono
+  mono-ws                                  mono-
+
+
+
 ```
 
 This snapshot shows the picker after typing `beta`, so the selection should
@@ -79,18 +79,18 @@ move away from the initial attached-session result and onto the discovered
 :k beta
 :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 ```terminal
-Session: beta                                   │@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-  1/6                                        0/0││  (empty) beta commit
-  Current repo: none                            │◆  wwwwwwww root() hhhhhhhh
-> beta                                     beta │
-                                                │
-                                                │
-                                                │
-                                                │
-                                                │
-                                                │
-                                                │
-                                                │
+Session: beta                                   @  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+  1/6                                        0/0│  (empty) beta commit
+  Current repo: none                            ◆  wwwwwwww root() hhhhhhhh
+> beta                                     beta
+
+
+
+
+
+
+
+
 ```
 
 This snapshot shows the picker after clearing the query with `C-u` and typing
@@ -99,18 +99,18 @@ This snapshot shows the picker after clearing the query with `C-u` and typing
 :k C-u mono
 :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 ```terminal
-Session: mono                                   │@  wwwwwwww (no email set) ttttttttttttttttttt default@ hhhhhhhh
-  2/6                                        0/0││  (empty) mono commit
-  Current repo: none                            ││ ○  wwwwwwww (no email set) ttttttttttttttttttt mono-ws@ hhhhhhhh
-> mono                                     mono │├─╯  (empty) mono workspace commit
-  mono-ws                                  mon..│◆  wwwwwwww root() hhhhhhhh
-                                                │
-                                                │
-                                                │
-                                                │
-                                                │
-                                                │
-                                                │
+Session: mono                                   @  wwwwwwww (no email set) ttttttttttttttttttt mono-ws@ hhhhhhhh
+  2/6                                        0/0│  (empty) mono workspace commit
+  Current repo: none                            │ ○  wwwwwwww (no email set) ttttttttttttttttttt default@ hhhhhhhh
+  mono                                     mono ├─╯  (empty) mono commit
+> mono-ws                                  mono-◆  wwwwwwww root() hhhhhhhh
+
+
+
+
+
+
+
 ```
 
 ---

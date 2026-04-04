@@ -24,16 +24,16 @@ header.
 
 :snap -d 2s
 ```terminal
-Session:                        │
-  3/3                        0/0│
-  Current repo: ~/alpha         │
-> alpha-live                    │
-  runner                        │
-  ui                            │
-                                │
-                                │
-                                │
-                                │
+Session:
+  3/3                        0/0
+  Current repo: ~/alpha
+> alpha-live
+  runner
+  ui
+
+
+
+
 ```
 
 ---

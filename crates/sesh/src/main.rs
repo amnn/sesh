@@ -11,8 +11,8 @@ use clap::Parser;
 use clap::Subcommand;
 
 use sesh::jj;
+use sesh::picker;
 use sesh::session::Session;
-use sesh::skim;
 use sesh::tmux;
 
 #[derive(Debug, Parser)]
@@ -89,10 +89,10 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
 
-            let state = skim::State::new(current_repo);
-            tokio::task::spawn_blocking(move || skim::run(sessions, state))
+            let state = picker::State::new(current_repo);
+            tokio::task::spawn_blocking(move || picker::run(sessions, state))
                 .await
-                .context("skim worker task failed to join")?;
+                .context("picker worker task failed to join")??;
 
             Ok(())
         }

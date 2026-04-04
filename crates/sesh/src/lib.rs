@@ -5,6 +5,6 @@
 
 pub mod jj;
 pub(crate) mod path;
+pub mod picker;
 pub mod session;
-pub mod skim;
 pub mod tmux;
