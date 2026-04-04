@@ -11,25 +11,28 @@ use nucleo::Utf32String;
 use nucleo::pattern::CaseMatching;
 use nucleo::pattern::Normalization;
 
-use crate::session::Session;
-
 const MATCH_COLUMNS: u32 = 1;
 const TICK_TIMEOUT_MS: u64 = 10;
 
-/// Fuzzy matcher state for the session picker.
-pub(crate) struct Picker {
-    matcher: Nucleo<Session>,
+pub(crate) trait Item {
+    /// Return the text shown for this item in the picker list.
+    fn text(&self) -> String;
 }
 
-impl Picker {
+/// Fuzzy matcher state for the session picker.
+pub(crate) struct Picker<I: Send + Sync + 'static> {
+    matcher: Nucleo<I>,
+}
+
+impl<I: Item + Send + Sync + 'static> Picker<I> {
     /// Construct a fuzzy matcher for the provided sessions.
-    pub(crate) fn new(sessions: Vec<Session>) -> Self {
+    pub(crate) fn new(items: Vec<I>) -> Self {
         let matcher = Nucleo::new(Config::DEFAULT, Arc::new(|| {}), None, MATCH_COLUMNS);
         let injector = matcher.injector();
 
-        for session in sessions {
-            injector.push(session, |session, columns| {
-                columns[0] = Utf32String::from(session.item().as_str())
+        for item in items {
+            injector.push(item, |item, columns| {
+                columns[0] = Utf32String::from(item.text().as_str())
             });
         }
 
@@ -37,7 +40,7 @@ impl Picker {
     }
 
     /// Refresh fuzzy matches and return the currently visible rows.
-    pub(crate) fn refresh_matches(&mut self) -> Vec<Session> {
+    pub(crate) fn refresh_matches(&mut self) -> impl Iterator<Item = &'_ I> {
         let mut status = self.matcher.tick(TICK_TIMEOUT_MS);
         while self.matcher.snapshot().item_count() == 0 && status.running {
             status = self.matcher.tick(TICK_TIMEOUT_MS);
@@ -45,10 +48,8 @@ impl Picker {
 
         let snapshot = self.matcher.snapshot();
         let matched = snapshot.matched_item_count();
-        snapshot
-            .matched_items(0..matched)
-            .map(|item| item.data.clone())
-            .collect()
+
+        snapshot.matched_items(0..matched).map(|item| item.data)
     }
 
     /// Re-parse the current query string in the fuzzy matcher.

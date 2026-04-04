@@ -7,8 +7,10 @@ use std::path::PathBuf;
 
 use anyhow::Context as _;
 
+use crate::cache::Preview;
 use crate::jj;
 use crate::path::TruncatedExt as _;
+use crate::picker::Item;
 
 /// A tmux session and optional repo metadata.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -42,32 +44,72 @@ impl Session {
         Self { name, repo }
     }
 
-    /// Return the text shown for this session in the picker list.
-    pub fn item(&self) -> String {
+    /// Return the session name.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Return the repository attached to this session, if any.
+    pub fn repo(&self) -> Option<&std::path::Path> {
+        self.repo.as_deref()
+    }
+}
+
+impl Item for Session {
+    fn text(&self) -> String {
         let Some(repo) = &self.repo else {
             return self.name().to_owned();
         };
 
         format!("{:<40} {}", self.name(), repo.truncated())
     }
+}
 
-    /// Return the session name.
-    pub fn name(&self) -> &str {
-        &self.name
-    }
-
+impl Preview for Session {
     /// Render a `jj log` preview for this session's attached repository.
-    pub fn preview(&self, _width: usize) -> anyhow::Result<String> {
+    fn preview(&self) -> anyhow::Result<String> {
         let Some(repo) = &self.repo else {
             return Ok(String::new());
         };
 
-        jj::log(repo)
-            .with_context(|| format!("failed to build preview for repo '{}'", repo.display()))
+        let preview = jj::log(repo)
+            .with_context(|| format!("failed to build preview for repo '{}'", repo.display()))?;
+
+        Ok(strip_ansi(&preview))
+    }
+}
+
+/// Remove ANSI escape sequences from terminal output.
+fn strip_ansi(text: &str) -> String {
+    let mut stripped = String::with_capacity(text.len());
+    let mut chars = text.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if ch != '\u{1b}' {
+            stripped.push(ch);
+            continue;
+        }
+
+        if chars.next_if_eq(&'[').is_none() {
+            continue;
+        }
+
+        for next in chars.by_ref() {
+            if ('@'..='~').contains(&next) {
+                break;
+            }
+        }
     }
 
-    /// Return the repository attached to this session, if any.
-    pub fn repo(&self) -> Option<&std::path::Path> {
-        self.repo.as_deref()
+    stripped
+}
+
+#[cfg(test)]
+mod tests {
+    use super::strip_ansi;
+
+    #[test]
+    fn strips_ansi_escape_sequences() {
+        assert_eq!(strip_ansi("\u{1b}[31mhello\u{1b}[0m"), "hello");
     }
 }

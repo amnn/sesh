@@ -18,6 +18,11 @@
   - Apply consistently in list rows while preserving an unambiguous full path
     elsewhere.
 
+## Rendering
+
+- [ ] Add separator between selections and preview.
+- [ ] Highlight the matched portion of the item.
+
 ## Session and Repo Lifecycle
 
 - [ ] Switch to the selected active session.
@@ -52,7 +57,7 @@
   - The preview already shows a `jj log` summary for repo entries and
     repo-associated sessions.
 
-- [ ] Render previews asynchronously in the background.
+- [x] Render previews asynchronously in the background.
   - Avoid doing preview preparation on the row-selection interaction path.
   - Warm previews ahead of selection so slower `jj log` previews are ready when
     the cursor moves.

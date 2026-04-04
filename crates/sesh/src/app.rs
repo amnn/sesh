@@ -3,7 +3,6 @@
 
 //! Picker UI state, rendering, and input handling.
 
-use std::collections::HashMap;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
@@ -24,7 +23,9 @@ use ratatui::text::Line;
 use ratatui::text::Text;
 use ratatui::widgets::Paragraph;
 
+use crate::cache::PreviewCache;
 use crate::path::TruncatedExt as _;
+use crate::picker::Item as _;
 use crate::picker::Picker;
 use crate::session::Session;
 use crate::terminal::AlternateScreenGuard;
@@ -33,9 +34,9 @@ const POLL_TIMEOUT: Duration = Duration::from_millis(16);
 
 /// Session picker state, caches, and UI behavior.
 pub struct App {
-    current_repo: Option<PathBuf>,
-    picker: Picker,
-    preview_cache: HashMap<Session, String>,
+    repo: Option<PathBuf>,
+    picker: Picker<Session>,
+    cache: PreviewCache<Session>,
     query: String,
     selected: usize,
     scroll: usize,
@@ -44,11 +45,14 @@ pub struct App {
 
 impl App {
     /// Construct application state for the provided repo context.
-    pub(crate) fn new(sessions: Vec<Session>, current_repo: Option<PathBuf>) -> Self {
+    pub fn new(sessions: Vec<Session>, repo: Option<PathBuf>) -> Self {
+        let picker = Picker::new(sessions.clone());
+        let cache = PreviewCache::new(sessions);
+
         Self {
-            current_repo,
-            picker: Picker::new(sessions),
-            preview_cache: HashMap::new(),
+            repo,
+            picker,
+            cache,
             query: String::new(),
             selected: 0,
             scroll: 0,
@@ -56,82 +60,51 @@ impl App {
         }
     }
 
-    /// Build the header text shown above the picker.
-    pub(crate) fn header(&self) -> String {
-        match self.current_repo.as_deref() {
-            Some(repo) => format!("Current repo: {}", repo.truncated()),
-            None => "Current repo: none".to_owned(),
+    /// Run the interactive picker for discovered sessions.
+    pub fn run(mut self) -> anyhow::Result<()> {
+        let _guard = AlternateScreenGuard::new()?;
+        let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
+
+        loop {
+            let items = self.picker.refresh_matches().cloned().collect();
+            self.replace_visible_items(items);
+
+            let total_items = self.picker.total_items();
+            terminal.draw(|frame| self.draw(frame, total_items))?;
+
+            if !event::poll(POLL_TIMEOUT)? {
+                continue;
+            }
+
+            let Event::Key(key) = event::read()? else {
+                continue;
+            };
+
+            if key.kind != KeyEventKind::Press {
+                continue;
+            }
+
+            let previous_query = self.query().to_owned();
+            if self.handle_key(key) {
+                break;
+            }
+
+            if self.query() != previous_query {
+                let query = self.query().to_owned();
+                self.picker.set_query(&previous_query, &query);
+            }
         }
+
+        Ok(())
     }
 
-    pub(crate) fn query(&self) -> &str {
-        &self.query
-    }
-
+    /// Clear the active query string.
     pub(crate) fn clear_query(&mut self) {
         if self.query.is_empty() {
             return;
         }
 
         self.query.clear();
-    }
-
-    pub(crate) fn move_down(&mut self) {
-        if self.selected + 1 < self.visible_items.len() {
-            self.selected += 1;
-        }
-    }
-
-    pub(crate) fn move_up(&mut self) {
-        self.selected = self.selected.saturating_sub(1);
-    }
-
-    pub(crate) fn pop_query(&mut self) -> bool {
-        self.query.pop().is_some()
-    }
-
-    /// Return the preview for the selected session, populating the cache on demand.
-    pub(crate) fn preview_text(&mut self, width: usize) -> String {
-        let Some(session) = self.selected_session() else {
-            return String::new();
-        };
-
-        if let Some(preview) = self.preview_cache.get(session) {
-            return preview.clone();
-        }
-
-        let preview = match session.preview(width) {
-            Ok(preview) => strip_ansi(&preview),
-            Err(error) => format!("Failed to render preview: {error:?}"),
-        };
-        self.preview_cache.insert(session.clone(), preview.clone());
-        preview
-    }
-
-    /// Replace the visible rows after a matcher refresh and preserve selection when possible.
-    pub(crate) fn replace_visible_items(&mut self, items: Vec<Session>) {
-        let previous = self.selected_session().cloned();
-        self.visible_items = items;
-        self.selected = selected_row(&self.visible_items, previous.as_ref(), self.selected);
-    }
-
-    /// Return the currently selected session, if any.
-    pub(crate) fn selected_session(&self) -> Option<&Session> {
-        self.visible_items.get(self.selected).map(|session| session)
-    }
-
-    /// Update the current repo context from the selected session.
-    pub(crate) fn set_current_repo_from_selection(&mut self) {
-        let Some(repo) = self.selected_session().and_then(Session::repo) else {
-            return;
-        };
-
-        self.current_repo = Some(repo_context_path(repo));
-    }
-
-    /// Replace the current query string.
-    pub(crate) fn set_query(&mut self, query: String) {
-        self.query = query;
     }
 
     /// Render the picker UI for the current frame.
@@ -168,7 +141,8 @@ impl App {
             self.visible_items.len(),
             list_height,
         );
-        let lines = self
+
+        let lines: Vec<_> = self
             .visible_items
             .iter()
             .enumerate()
@@ -176,12 +150,13 @@ impl App {
             .take(list_height)
             .map(|(index, session)| {
                 let prefix = if index == self.selected { "> " } else { "  " };
-                Line::from(format!("{prefix}{}", session.item()))
+                Line::from(format!("{prefix}{}", session.text()))
             })
-            .collect::<Vec<_>>();
+            .collect();
+
         frame.render_widget(Paragraph::new(Text::from(lines)), left[3]);
 
-        let preview = self.preview_text(areas[1].width as usize);
+        let preview = self.preview_text();
         frame.render_widget(Paragraph::new(preview), areas[1]);
     }
 
@@ -231,39 +206,76 @@ impl App {
         }
     }
 
-    /// Run the interactive picker for discovered sessions.
-    pub fn run(sessions: Vec<Session>, current_repo: Option<PathBuf>) -> anyhow::Result<()> {
-        let _guard = AlternateScreenGuard::new()?;
-        let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
-        let mut app = App::new(sessions, current_repo);
-
-        loop {
-            let items = app.picker.refresh_matches();
-            app.replace_visible_items(items);
-            let total_items = app.picker.total_items();
-            terminal.draw(|frame| app.draw(frame, total_items))?;
-
-            if !event::poll(POLL_TIMEOUT)? {
-                continue;
-            }
-
-            match event::read()? {
-                Event::Key(key) if key.kind == KeyEventKind::Press => {
-                    let previous_query = app.query().to_owned();
-                    if app.handle_key(key) {
-                        break;
-                    }
-                    if app.query() != previous_query {
-                        let query = app.query().to_owned();
-                        app.picker.set_query(&previous_query, &query);
-                    }
-                }
-                Event::Resize(_, _) => {}
-                _ => {}
-            }
+    /// Build the header text shown above the picker.
+    pub(crate) fn header(&self) -> String {
+        match self.repo.as_deref() {
+            Some(repo) => format!("Current repo: {}", repo.truncated()),
+            None => "Current repo: none".to_owned(),
         }
+    }
 
-        Ok(())
+    /// Move the selection to the next visible item when possible.
+    pub(crate) fn move_down(&mut self) {
+        if self.selected + 1 < self.visible_items.len() {
+            self.selected += 1;
+        }
+    }
+
+    /// Move the selection to the previous visible item when possible.
+    pub(crate) fn move_up(&mut self) {
+        self.selected = self.selected.saturating_sub(1);
+    }
+
+    /// Remove the trailing query character and report whether one was removed.
+    pub(crate) fn pop_query(&mut self) -> bool {
+        self.query.pop().is_some()
+    }
+
+    /// Return the preview for the selected session from the background cache.
+    pub(crate) fn preview_text(&self) -> String {
+        let Some(session) = self.selected_session() else {
+            return String::new();
+        };
+
+        let Some(preview) = self.cache.get(&session.text()) else {
+            return "Loading preview...".to_owned();
+        };
+
+        match preview.as_ref() {
+            Ok(preview) => preview.clone(),
+            Err(e) => format!("Error loading preview: {e:?}"),
+        }
+    }
+
+    /// Return the active query string.
+    pub(crate) fn query(&self) -> &str {
+        &self.query
+    }
+
+    /// Replace the visible rows after a matcher refresh and preserve selection when possible.
+    pub(crate) fn replace_visible_items(&mut self, items: Vec<Session>) {
+        let previous = self.selected_session().cloned();
+        self.visible_items = items;
+        self.selected = selected_row(&self.visible_items, previous.as_ref(), self.selected);
+    }
+
+    /// Return the currently selected session, if any.
+    pub(crate) fn selected_session(&self) -> Option<&Session> {
+        self.visible_items.get(self.selected)
+    }
+
+    /// Update the current repo context from the selected session.
+    pub(crate) fn set_current_repo_from_selection(&mut self) {
+        let Some(repo) = self.selected_session().and_then(Session::repo) else {
+            return;
+        };
+
+        self.repo = Some(repo_context_path(repo));
+    }
+
+    /// Replace the current query string.
+    pub(crate) fn set_query(&mut self, query: String) {
+        self.query = query;
     }
 }
 
@@ -310,31 +322,6 @@ fn selected_row(items: &[Session], previous: Option<&Session>, selected: usize) 
         .unwrap_or_else(|| selected.min(items.len() - 1))
 }
 
-/// Remove ANSI escape sequences from terminal output.
-fn strip_ansi(text: &str) -> String {
-    let mut stripped = String::with_capacity(text.len());
-    let mut chars = text.chars().peekable();
-
-    while let Some(ch) = chars.next() {
-        if ch != '\u{1b}' {
-            stripped.push(ch);
-            continue;
-        }
-
-        if chars.next_if_eq(&'[').is_none() {
-            continue;
-        }
-
-        for next in chars.by_ref() {
-            if ('@'..='~').contains(&next) {
-                break;
-            }
-        }
-    }
-
-    stripped
-}
-
 #[cfg(test)]
 mod tests {
     use std::fs;
@@ -369,22 +356,17 @@ mod tests {
         assert_eq!(selected_row(&items, Some(&previous), 0), 1);
     }
 
-    #[test]
-    fn renders_header_with_current_repo() {
+    #[tokio::test]
+    async fn renders_header_with_current_repo() {
         let app = App::new(vec![], Some(PathBuf::from("/tmp/repo")));
 
         assert_eq!(app.header(), "Current repo: /tmp/repo");
     }
 
-    #[test]
-    fn renders_header_without_current_repo() {
+    #[tokio::test]
+    async fn renders_header_without_current_repo() {
         let app = App::new(vec![], None);
 
         assert_eq!(app.header(), "Current repo: none");
-    }
-
-    #[test]
-    fn strips_ansi_escape_sequences() {
-        assert_eq!(strip_ansi("\u{1b}[31mhello\u{1b}[0m"), "hello");
     }
 }

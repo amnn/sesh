@@ -11,6 +11,7 @@ sesh-integration-tests = { path = "crates/sesh-integration-tests" }
 anyhow = "1.0.100"
 clap = { version = "4.5", features = ["derive"] }
 crossterm = "0.29"
+dashmap = "6.1"
 humantime = "2.3"
 datatest-stable = "0.3"
 futures = "0.3.31"

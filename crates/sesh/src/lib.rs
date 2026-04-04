@@ -5,8 +5,10 @@
 
 pub mod app;
 pub mod jj;
-pub(crate) mod path;
 pub mod picker;
 pub mod session;
 pub mod terminal;
 pub mod tmux;
+
+pub(crate) mod cache;
+pub(crate) mod path;

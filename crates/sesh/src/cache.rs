@@ -1,0 +1,54 @@
+// Copyright (c) Ashok Menon
+// SPDX-License-Identifier: Apache-2.0
+
+//! Background preview generation and caching.
+
+use std::sync::Arc;
+
+use dashmap::DashMap;
+use tokio_util::task::AbortOnDropHandle;
+
+use crate::picker::Item;
+
+pub(crate) trait Preview: Item {
+    /// Render a preview for this item.
+    fn preview(&self) -> anyhow::Result<String>;
+}
+
+/// Shared preview cache populated by a background worker.
+pub(crate) struct PreviewCache<I> {
+    entries: Arc<DashMap<String, Arc<anyhow::Result<String>>>>,
+    _workers: Vec<AbortOnDropHandle<()>>,
+    _phantom: std::marker::PhantomData<fn(I)>,
+}
+
+impl<I: Preview + Send + 'static> PreviewCache<I> {
+    /// Start populating previews for the provided sessions in the background.
+    pub(crate) fn new(items: Vec<I>) -> Self {
+        let entries = Arc::new(DashMap::new());
+
+        let workers = items
+            .into_iter()
+            .map(|item| {
+                let entries = entries.clone();
+                let worker = tokio::task::spawn_blocking(move || {
+                    let preview = Arc::new(item.preview());
+                    entries.insert(item.text(), preview);
+                });
+
+                AbortOnDropHandle::new(worker)
+            })
+            .collect();
+
+        Self {
+            entries,
+            _workers: workers,
+            _phantom: std::marker::PhantomData,
+        }
+    }
+
+    /// Return the cached preview for `session`, if it has finished rendering.
+    pub(crate) fn get(&self, key: &str) -> Option<Arc<anyhow::Result<String>>> {
+        self.entries.get(key).as_deref().cloned()
+    }
+}

@@ -6,7 +6,6 @@
 use std::collections::BTreeSet;
 use std::env;
 
-use anyhow::Context as _;
 use clap::Parser;
 use clap::Subcommand;
 
@@ -89,9 +88,8 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
 
-            tokio::task::spawn_blocking(move || App::run(sessions, current_repo))
-                .await
-                .context("app worker task failed to join")??;
+            let app = App::new(sessions, current_repo);
+            app.run()?;
 
             Ok(())
         }
