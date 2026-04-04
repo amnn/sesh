@@ -10,8 +10,8 @@ use anyhow::Context as _;
 use clap::Parser;
 use clap::Subcommand;
 
+use sesh::app::App;
 use sesh::jj;
-use sesh::picker;
 use sesh::session::Session;
 use sesh::tmux;
 
@@ -89,9 +89,9 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
 
-            tokio::task::spawn_blocking(move || picker::run(sessions, current_repo))
+            tokio::task::spawn_blocking(move || App::run(sessions, current_repo))
                 .await
-                .context("picker worker task failed to join")??;
+                .context("app worker task failed to join")??;
 
             Ok(())
         }

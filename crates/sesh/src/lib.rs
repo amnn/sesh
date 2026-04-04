@@ -3,6 +3,7 @@
 
 //! Core modules for the `sesh` CLI.
 
+pub mod app;
 pub mod jj;
 pub(crate) mod path;
 pub mod picker;
