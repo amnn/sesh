@@ -34,6 +34,7 @@ const POLL_TIMEOUT: Duration = Duration::from_millis(16);
 /// Session picker state, caches, and UI behavior.
 pub struct App {
     current_repo: Option<PathBuf>,
+    picker: Picker,
     preview_cache: HashMap<Session, String>,
     query: String,
     selected: usize,
@@ -43,14 +44,15 @@ pub struct App {
 
 impl App {
     /// Construct application state for the provided repo context.
-    pub(crate) fn new(current_repo: Option<PathBuf>) -> Self {
+    pub(crate) fn new(sessions: Vec<Session>, current_repo: Option<PathBuf>) -> Self {
         Self {
             current_repo,
+            picker: Picker::new(sessions),
             preview_cache: HashMap::new(),
             query: String::new(),
             selected: 0,
             scroll: 0,
-            visible_items: Vec::new(),
+            visible_items: vec![],
         }
     }
 
@@ -233,12 +235,13 @@ impl App {
     pub fn run(sessions: Vec<Session>, current_repo: Option<PathBuf>) -> anyhow::Result<()> {
         let _guard = AlternateScreenGuard::new()?;
         let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
-        let mut app = App::new(current_repo);
-        let mut picker = Picker::new(sessions);
+        let mut app = App::new(sessions, current_repo);
 
         loop {
-            picker.refresh_matches(&mut app);
-            terminal.draw(|frame| app.draw(frame, picker.total_items()))?;
+            let items = app.picker.refresh_matches();
+            app.replace_visible_items(items);
+            let total_items = app.picker.total_items();
+            terminal.draw(|frame| app.draw(frame, total_items))?;
 
             if !event::poll(POLL_TIMEOUT)? {
                 continue;
@@ -251,7 +254,8 @@ impl App {
                         break;
                     }
                     if app.query() != previous_query {
-                        picker.set_query(&previous_query, app.query());
+                        let query = app.query().to_owned();
+                        app.picker.set_query(&previous_query, &query);
                     }
                 }
                 Event::Resize(_, _) => {}
@@ -367,14 +371,14 @@ mod tests {
 
     #[test]
     fn renders_header_with_current_repo() {
-        let app = App::new(Some(PathBuf::from("/tmp/repo")));
+        let app = App::new(vec![], Some(PathBuf::from("/tmp/repo")));
 
         assert_eq!(app.header(), "Current repo: /tmp/repo");
     }
 
     #[test]
     fn renders_header_without_current_repo() {
-        let app = App::new(None);
+        let app = App::new(vec![], None);
 
         assert_eq!(app.header(), "Current repo: none");
     }

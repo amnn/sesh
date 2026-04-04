@@ -11,7 +11,6 @@ use nucleo::Utf32String;
 use nucleo::pattern::CaseMatching;
 use nucleo::pattern::Normalization;
 
-use crate::app::App;
 use crate::session::Session;
 
 const MATCH_COLUMNS: u32 = 1;
@@ -37,8 +36,8 @@ impl Picker {
         Self { matcher }
     }
 
-    /// Refresh fuzzy matches into the app's currently visible rows.
-    pub(crate) fn refresh_matches(&mut self, app: &mut App) {
+    /// Refresh fuzzy matches and return the currently visible rows.
+    pub(crate) fn refresh_matches(&mut self) -> Vec<Session> {
         let mut status = self.matcher.tick(TICK_TIMEOUT_MS);
         while self.matcher.snapshot().item_count() == 0 && status.running {
             status = self.matcher.tick(TICK_TIMEOUT_MS);
@@ -46,11 +45,10 @@ impl Picker {
 
         let snapshot = self.matcher.snapshot();
         let matched = snapshot.matched_item_count();
-        let items = snapshot
+        snapshot
             .matched_items(0..matched)
             .map(|item| item.data.clone())
-            .collect();
-        app.replace_visible_items(items);
+            .collect()
     }
 
     /// Re-parse the current query string in the fuzzy matcher.
