@@ -34,15 +34,8 @@ use crate::path::TruncatedExt as _;
 use crate::session::Session;
 use crate::terminal::AlternateScreenGuard;
 
-const MATCH_COLUMNS: u32 = 1;
 const TICK_TIMEOUT_MS: u64 = 10;
 const POLL_TIMEOUT: Duration = Duration::from_millis(16);
-
-/// Shared UI state for the session picker.
-#[derive(Clone, Debug, Default)]
-pub struct State {
-    current_repo: Option<PathBuf>,
-}
 
 /// Cached fuzzy-match input and visible row data derived from a session.
 #[derive(Clone, Debug)]
@@ -53,21 +46,16 @@ struct Item {
 
 /// Session picker state, caches, and fuzzy matcher.
 struct App {
+    current_repo: Option<PathBuf>,
     matcher: Nucleo<Item>,
     preview_cache: HashMap<Session, String>,
     query: String,
     selected: usize,
     scroll: usize,
-    state: State,
     visible_items: Vec<Item>,
 }
 
-impl State {
-    /// Construct state for a picker launched from `current_repo`.
-    pub fn new(current_repo: Option<PathBuf>) -> Self {
-        Self { current_repo }
-    }
-
+impl App {
     /// Build the header text shown above the picker.
     fn header(&self) -> String {
         match self.current_repo.as_deref() {
@@ -75,13 +63,12 @@ impl State {
             None => "Current repo: none".to_owned(),
         }
     }
-}
 
-impl App {
     /// Construct application state for the provided sessions.
-    fn new(sessions: Vec<Session>, state: State) -> Self {
-        let matcher = Nucleo::new(Config::DEFAULT, Arc::new(|| {}), None, MATCH_COLUMNS);
+    fn new(sessions: Vec<Session>, current_repo: Option<PathBuf>) -> Self {
+        let matcher = Nucleo::new(Config::DEFAULT, Arc::new(|| {}), None, 1);
         let injector = matcher.injector();
+
         for session in sessions {
             let item = Item {
                 text: session.item(),
@@ -91,15 +78,14 @@ impl App {
                 columns[0] = Utf32String::from(item.text.as_str())
             });
         }
-        drop(injector);
 
         Self {
+            current_repo,
             matcher,
             preview_cache: HashMap::new(),
             query: String::new(),
             selected: 0,
             scroll: 0,
-            state,
             visible_items: Vec::new(),
         }
     }
@@ -191,7 +177,7 @@ impl App {
             return;
         };
 
-        self.state.current_repo = Some(repo_context_path(repo));
+        self.current_repo = Some(repo_context_path(repo));
     }
 
     /// Replace the current query string and update fuzzy matching state.
@@ -203,10 +189,10 @@ impl App {
 }
 
 /// Run the interactive picker for discovered sessions.
-pub fn run(sessions: Vec<Session>, state: State) -> anyhow::Result<()> {
+pub fn run(sessions: Vec<Session>, current_repo: Option<PathBuf>) -> anyhow::Result<()> {
     let _guard = AlternateScreenGuard::new()?;
     let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
-    let mut app = App::new(sessions, state);
+    let mut app = App::new(sessions, current_repo);
 
     loop {
         app.refresh_matches();
@@ -255,7 +241,7 @@ fn draw(frame: &mut ratatui::Frame<'_>, app: &mut App) {
         )),
         left[1],
     );
-    frame.render_widget(Paragraph::new(format!("  {}", app.state.header())), left[2]);
+    frame.render_widget(Paragraph::new(format!("  {}", app.header())), left[2]);
 
     let list_height = left[3].height as usize;
     app.scroll = scroll_offset(
@@ -437,16 +423,16 @@ mod tests {
 
     #[test]
     fn renders_header_with_current_repo() {
-        let state = State::new(Some(PathBuf::from("/tmp/repo")));
+        let app = App::new(Vec::new(), Some(PathBuf::from("/tmp/repo")));
 
-        assert_eq!(state.header(), "Current repo: /tmp/repo");
+        assert_eq!(app.header(), "Current repo: /tmp/repo");
     }
 
     #[test]
     fn renders_header_without_current_repo() {
-        let state = State::default();
+        let app = App::new(Vec::new(), None);
 
-        assert_eq!(state.header(), "Current repo: none");
+        assert_eq!(app.header(), "Current repo: none");
     }
 
     #[test]

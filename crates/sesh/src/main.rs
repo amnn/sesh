@@ -89,8 +89,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
 
-            let state = picker::State::new(current_repo);
-            tokio::task::spawn_blocking(move || picker::run(sessions, state))
+            tokio::task::spawn_blocking(move || picker::run(sessions, current_repo))
                 .await
                 .context("picker worker task failed to join")??;
 
