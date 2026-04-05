@@ -24,14 +24,14 @@ should list all discovered tmux sessions.
 
 :snap -d 2s
 ```terminal
-Session:
-  5/5                        0/0
-  Current repo: none
-> alpha
+>
+  5/5 | [C-r] repo: none
+  alpha
   beta
   gamma
   runner
   ui
+
 
 
 ```
@@ -42,10 +42,10 @@ to the `beta` session.
 :k bet
 :snap
 ```terminal
-Session: bet
-  1/5                        0/0
-  Current repo: none
-> beta
+> bet
+  1/5 | [C-r] repo: none
+  beta
+
 
 
 

@@ -12,3 +12,4 @@ pub mod tmux;
 
 pub(crate) mod cache;
 pub(crate) mod path;
+pub(crate) mod widget;

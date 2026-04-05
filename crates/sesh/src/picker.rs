@@ -7,13 +7,15 @@ use std::sync::Arc;
 
 use nucleo::Config;
 use nucleo::Nucleo;
+use nucleo::Snapshot;
+use nucleo::Status;
 use nucleo::Utf32String;
 use nucleo::pattern::CaseMatching;
 use nucleo::pattern::Normalization;
 
-const MATCH_COLUMNS: u32 = 1;
 const TICK_TIMEOUT_MS: u64 = 10;
 
+/// Items that can be displayed and matched in the picker.
 pub(crate) trait Item {
     /// Return the text shown for this item in the picker list.
     fn text(&self) -> String;
@@ -21,13 +23,14 @@ pub(crate) trait Item {
 
 /// Fuzzy matcher state for the session picker.
 pub(crate) struct Picker<I: Send + Sync + 'static> {
+    query: String,
     matcher: Nucleo<I>,
 }
 
 impl<I: Item + Send + Sync + 'static> Picker<I> {
     /// Construct a fuzzy matcher for the provided sessions.
     pub(crate) fn new(items: Vec<I>) -> Self {
-        let matcher = Nucleo::new(Config::DEFAULT, Arc::new(|| {}), None, MATCH_COLUMNS);
+        let matcher = Nucleo::new(Config::DEFAULT, Arc::new(|| {}), None, 1);
         let injector = matcher.injector();
 
         for item in items {
@@ -36,32 +39,56 @@ impl<I: Item + Send + Sync + 'static> Picker<I> {
             });
         }
 
-        Self { matcher }
+        Self {
+            query: String::new(),
+            matcher,
+        }
     }
 
     /// Refresh fuzzy matches and return the currently visible rows.
-    pub(crate) fn refresh_matches(&mut self) -> impl Iterator<Item = &'_ I> {
-        let mut status = self.matcher.tick(TICK_TIMEOUT_MS);
-        while self.matcher.snapshot().item_count() == 0 && status.running {
-            status = self.matcher.tick(TICK_TIMEOUT_MS);
-        }
-
-        let snapshot = self.matcher.snapshot();
-        let matched = snapshot.matched_item_count();
-
-        snapshot.matched_items(0..matched).map(|item| item.data)
+    pub(crate) fn refresh(&mut self) -> (Status, &Snapshot<I>, &str) {
+        let status = self.matcher.tick(TICK_TIMEOUT_MS);
+        (status, self.matcher.snapshot(), &self.query)
     }
 
-    /// Re-parse the current query string in the fuzzy matcher.
-    pub(crate) fn set_query(&mut self, previous: &str, query: &str) {
-        let append = query.starts_with(previous);
-        self.matcher
-            .pattern
-            .reparse(0, query, CaseMatching::Smart, Normalization::Smart, append);
+    /// Return the current snapshot of visible rows without refreshing against the matcher state.
+    pub(crate) fn snapshot(&self) -> &Snapshot<I> {
+        self.matcher.snapshot()
     }
 
-    /// Return the number of items known to the matcher.
-    pub(crate) fn total_items(&self) -> usize {
-        self.matcher.snapshot().item_count() as usize
+    /// Append one character to the active query string.
+    pub(crate) fn push(&mut self, ch: char) {
+        self.query.push(ch);
+        self.matcher.pattern.reparse(
+            0,
+            &self.query,
+            CaseMatching::Smart,
+            Normalization::Smart,
+            true,
+        );
+    }
+
+    /// Remove the trailing character from the active query string.
+    pub(crate) fn pop(&mut self) {
+        self.query.pop();
+        self.matcher.pattern.reparse(
+            0,
+            &self.query,
+            CaseMatching::Smart,
+            Normalization::Smart,
+            false,
+        );
+    }
+
+    /// Clear the active query string.
+    pub(crate) fn clear(&mut self) {
+        self.query.clear();
+        self.matcher.pattern.reparse(
+            0,
+            &self.query,
+            CaseMatching::Smart,
+            Normalization::Smart,
+            false,
+        );
     }
 }

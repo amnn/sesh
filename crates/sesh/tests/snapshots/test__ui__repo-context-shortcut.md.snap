@@ -28,14 +28,14 @@ from `cwd`.
 
 :snap -d 2s "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 ```terminal
-Session:
-  5/5                            0/0
-  Current repo: ~/alpha
-> runner
+>
+  5/5 | [C-r] repo: ~/alpha
+  runner
   ui
   alpha
   beta
   gamma
+
 
 
 ```
@@ -45,14 +45,14 @@ Move the cursor to the discovered `beta` repo row.
 :k down down down
 :snap -d 2s "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 ```terminal
-Session:                            @  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
-  5/5                            0/0│  (empty) beta commit
-  Current repo: ~/alpha             ◆  wwwwwwww root() hhhhhhhh
-  runner
+>                                   @  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
+  5/5 | [C-r] repo: ~/alpha         │  (empty) alpha commit
+  runner                            ◆  wwwwwwww root() hhhhhhhh
   ui
-  alpha
-> beta
+> alpha
+  beta
   gamma
+
 
 
 ```
@@ -63,14 +63,14 @@ to `beta` while the selected row stays on `beta` after the picker refreshes.
 :k C-r
 :snap -d 2s "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 ```terminal
-Session:                            @  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
-  5/5                            0/0│  (empty) beta commit
-  Current repo: ~/beta              ◆  wwwwwwww root() hhhhhhhh
-  runner
+>                                   @  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
+  5/5 | [C-r] repo: ../alpha        │  (empty) alpha commit
+  runner                            ◆  wwwwwwww root() hhhhhhhh
   ui
-  alpha
-> beta
+> alpha
+  beta
   gamma
+
 
 
 ```
@@ -82,12 +82,12 @@ filtered list.
 :k C-u a down down C-r
 :snap -d 2s "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 ```terminal
-Session: a                          @  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
-  3/5                            0/0│  (empty) gamma commit
-  Current repo: ~/gamma             ◆  wwwwwwww root() hhhhhhhh
-  alpha
+> a                                 @  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
+  3/5 | [C-r] repo: ../gamma        │  (empty) gamma commit
+  alpha                             ◆  wwwwwwww root() hhhhhhhh
   beta
 > gamma
+
 
 
 

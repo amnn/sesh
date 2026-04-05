@@ -3,6 +3,7 @@
 
 //! Picker UI state, rendering, and input handling.
 
+use std::fmt::Write as _;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
@@ -14,14 +15,18 @@ use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
 use crossterm::event::KeyModifiers;
+use nucleo::Snapshot;
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::Constraint;
 use ratatui::layout::Direction;
 use ratatui::layout::Layout;
-use ratatui::text::Line;
-use ratatui::text::Text;
+use ratatui::widgets::HighlightSpacing;
+use ratatui::widgets::List;
+use ratatui::widgets::ListState;
 use ratatui::widgets::Paragraph;
+use ratatui::widgets::StatefulWidget;
+use ratatui::widgets::Widget;
 
 use crate::cache::PreviewCache;
 use crate::path::TruncatedExt as _;
@@ -29,6 +34,8 @@ use crate::picker::Item as _;
 use crate::picker::Picker;
 use crate::session::Session;
 use crate::terminal::AlternateScreenGuard;
+use crate::widget::loading::Loading;
+use crate::widget::loading::LoadingState;
 
 const POLL_TIMEOUT: Duration = Duration::from_millis(16);
 
@@ -37,10 +44,8 @@ pub struct App {
     repo: Option<PathBuf>,
     picker: Picker<Session>,
     cache: PreviewCache<Session>,
-    query: String,
-    selected: usize,
-    scroll: usize,
-    visible_items: Vec<Session>,
+    list: ListState,
+    load: LoadingState,
 }
 
 impl App {
@@ -48,15 +53,15 @@ impl App {
     pub fn new(sessions: Vec<Session>, repo: Option<PathBuf>) -> Self {
         let picker = Picker::new(sessions.clone());
         let cache = PreviewCache::new(sessions);
+        let list = ListState::default();
+        let load = LoadingState::new();
 
         Self {
             repo,
             picker,
             cache,
-            query: String::new(),
-            selected: 0,
-            scroll: 0,
-            visible_items: vec![],
+            list,
+            load,
         }
     }
 
@@ -66,11 +71,7 @@ impl App {
         let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
 
         loop {
-            let items = self.picker.refresh_matches().cloned().collect();
-            self.replace_visible_items(items);
-
-            let total_items = self.picker.total_items();
-            terminal.draw(|frame| self.draw(frame, total_items))?;
+            terminal.draw(|frame| self.draw(frame))?;
 
             if !event::poll(POLL_TIMEOUT)? {
                 continue;
@@ -84,289 +85,170 @@ impl App {
                 continue;
             }
 
-            let previous_query = self.query().to_owned();
             if self.handle_key(key) {
                 break;
-            }
-
-            if self.query() != previous_query {
-                let query = self.query().to_owned();
-                self.picker.set_query(&previous_query, &query);
             }
         }
 
         Ok(())
     }
 
-    /// Clear the active query string.
-    pub(crate) fn clear_query(&mut self) {
-        if self.query.is_empty() {
-            return;
-        }
+    /// Draw the UI into the provided frame based on the current application state.
+    ///
+    /// The frame is split up into the following regions, each with its own widget:
+    ///
+    /// ```text
+    /// +-----------------+-----------------------------+
+    /// |> Prompt         | Preview                     |
+    /// +-+---------------+ ...                         |
+    /// |L| Header        |                             |
+    /// +-+---------------+                             |
+    /// | Session List    |                             |
+    /// | ...             |                             |
+    /// |                 |                             |
+    /// |                 |                             |
+    /// |                 |                             |
+    /// +-----------------+-----------------------------+
+    /// ```
+    fn draw(&mut self, f: &mut ratatui::Frame<'_>) {
+        use Constraint as C;
+        use Direction as D;
+        use Layout as L;
 
-        self.query.clear();
-    }
+        // Split the frame into regions
+        let cols = L::default()
+            .direction(D::Horizontal)
+            .constraints([C::Percentage(40), C::Percentage(60)])
+            .split(f.area());
 
-    /// Render the picker UI for the current frame.
-    pub(crate) fn draw(&mut self, frame: &mut ratatui::Frame<'_>, total_items: usize) {
-        let areas = Layout::default()
-            .direction(Direction::Horizontal)
-            .constraints([Constraint::Percentage(40), Constraint::Percentage(60)])
-            .split(frame.area());
-        let left = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Length(1),
-                Constraint::Length(1),
-                Constraint::Length(1),
-                Constraint::Min(0),
-            ])
-            .split(areas[0]);
+        let [sessions, preview] = &cols[..] else {
+            panic!("expected two columns in the layout")
+        };
 
-        frame.render_widget(Paragraph::new(format!("Session: {}", self.query)), left[0]);
-        frame.render_widget(
-            Paragraph::new(format_status_line(
-                left[1].width as usize,
-                self.visible_items.len(),
-                total_items,
-            )),
-            left[1],
-        );
-        frame.render_widget(Paragraph::new(format!("  {}", self.header())), left[2]);
+        let rows = L::default()
+            .direction(D::Vertical)
+            .constraints([C::Length(1), C::Length(1), C::Min(0)])
+            .split(*sessions);
 
-        let list_height = left[3].height as usize;
-        self.scroll = scroll_offset(
-            self.scroll,
-            self.selected,
-            self.visible_items.len(),
-            list_height,
-        );
+        let [prompt, header, sessions] = &rows[..] else {
+            panic!("expected three rows in the layout")
+        };
 
-        let lines: Vec<_> = self
-            .visible_items
-            .iter()
-            .enumerate()
-            .skip(self.scroll)
-            .take(list_height)
-            .map(|(index, session)| {
-                let prefix = if index == self.selected { "> " } else { "  " };
-                Line::from(format!("{prefix}{}", session.text()))
-            })
-            .collect();
+        let cols = L::default()
+            .direction(D::Horizontal)
+            .constraints([C::Length(1), C::Min(0)])
+            .split(*header);
 
-        frame.render_widget(Paragraph::new(Text::from(lines)), left[3]);
+        let [loading, header] = &cols[..] else {
+            panic!("expected two columns in header");
+        };
 
-        let preview = self.preview_text();
-        frame.render_widget(Paragraph::new(preview), areas[1]);
+        // Poll the picker for its latest state, and build the data model.
+        let (status, snapshot, query) = self.picker.refresh();
+        let items: Vec<_> = snapshot.matched_items(..).map(|i| i.data).collect();
+        let selected = self.list.selected().and_then(|s| {
+            if s < items.len() {
+                Some(items[s])
+            } else {
+                items.last().copied()
+            }
+        });
+
+        f.render_widget(prompt_widget(query), *prompt);
+        f.render_stateful_widget(Loading(status.running), *loading, &mut self.load);
+        f.render_widget(header_widget(snapshot, self.repo.as_deref()), *header);
+        f.render_stateful_widget(session_list_widget(snapshot), *sessions, &mut self.list);
+        f.render_widget(preview_widget(&self.cache, selected), *preview);
     }
 
     /// Handle a single keyboard event, returning `true` when the picker should exit.
-    pub(crate) fn handle_key(&mut self, key: KeyEvent) -> bool {
+    fn handle_key(&mut self, key: KeyEvent) -> bool {
+        use KeyCode as KC;
+        use KeyModifiers as KM;
+        const CTRL: KM = KM::CONTROL;
+
         match key.code {
-            KeyCode::Enter | KeyCode::Esc => true,
-            KeyCode::Up => {
-                self.move_up();
-                false
-            }
-            KeyCode::Down => {
-                self.move_down();
-                false
-            }
-            KeyCode::Backspace => {
-                self.pop_query();
-                false
-            }
-            KeyCode::Char('g') if key.modifiers.contains(KeyModifiers::CONTROL) => true,
-            KeyCode::Char('n') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.move_down();
-                false
-            }
-            KeyCode::Char('p') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.move_up();
-                false
-            }
-            KeyCode::Char('r') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.set_current_repo_from_selection();
-                false
-            }
-            KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                self.clear_query();
-                false
-            }
-            KeyCode::Char(c)
-                if !key.modifiers.contains(KeyModifiers::CONTROL)
-                    && !key.modifiers.contains(KeyModifiers::ALT) =>
-            {
-                let mut query = self.query.clone();
-                query.push(c);
-                self.set_query(query);
-                false
-            }
-            _ => false,
-        }
-    }
+            KC::Enter => return true,
 
-    /// Build the header text shown above the picker.
-    pub(crate) fn header(&self) -> String {
-        match self.repo.as_deref() {
-            Some(repo) => format!("Current repo: {}", repo.truncated()),
-            None => "Current repo: none".to_owned(),
-        }
-    }
+            KC::Esc => return true,
+            KC::Char('g' | 'c') if key.modifiers.contains(CTRL) => return true,
 
-    /// Move the selection to the next visible item when possible.
-    pub(crate) fn move_down(&mut self) {
-        if self.selected + 1 < self.visible_items.len() {
-            self.selected += 1;
-        }
-    }
+            KC::Up => self.list.select_previous(),
+            KC::Char('p') if key.modifiers.contains(CTRL) => self.list.select_previous(),
 
-    /// Move the selection to the previous visible item when possible.
-    pub(crate) fn move_up(&mut self) {
-        self.selected = self.selected.saturating_sub(1);
-    }
+            KC::Down => self.list.select_next(),
+            KC::Char('n') if key.modifiers.contains(CTRL) => self.list.select_next(),
 
-    /// Remove the trailing query character and report whether one was removed.
-    pub(crate) fn pop_query(&mut self) -> bool {
-        self.query.pop().is_some()
-    }
+            KC::Backspace => self.picker.pop(),
+            KC::Char('u') if key.modifiers.contains(CTRL) => self.picker.clear(),
 
-    /// Return the preview for the selected session from the background cache.
-    pub(crate) fn preview_text(&self) -> String {
-        let Some(session) = self.selected_session() else {
-            return String::new();
+            KC::Char('r') if key.modifiers.contains(CTRL) => self.set_current_repo(),
+
+            KC::Char(c) if key.modifiers.is_empty() => self.picker.push(c),
+            _ => {}
         };
 
-        let Some(preview) = self.cache.get(&session.text()) else {
-            return "Loading preview...".to_owned();
-        };
-
-        match preview.as_ref() {
-            Ok(preview) => preview.clone(),
-            Err(e) => format!("Error loading preview: {e:?}"),
-        }
+        false
     }
 
-    /// Return the active query string.
-    pub(crate) fn query(&self) -> &str {
-        &self.query
-    }
+    /// Set the current repo based on the repo associated with the currently selected session.
+    ///
+    /// If there is no selection, or the selected session has no associated repo, the current repo
+    /// is cleared.
+    fn set_current_repo(&mut self) {
+        let mut items = self.picker.snapshot().matched_items(..).map(|i| i.data);
+        let selected = self.list.selected().and_then(|s| {
+            if s < items.len() {
+                items.nth(s)
+            } else {
+                items.last()
+            }
+        });
 
-    /// Replace the visible rows after a matcher refresh and preserve selection when possible.
-    pub(crate) fn replace_visible_items(&mut self, items: Vec<Session>) {
-        let previous = self.selected_session().cloned();
-        self.visible_items = items;
-        self.selected = selected_row(&self.visible_items, previous.as_ref(), self.selected);
-    }
-
-    /// Return the currently selected session, if any.
-    pub(crate) fn selected_session(&self) -> Option<&Session> {
-        self.visible_items.get(self.selected)
-    }
-
-    /// Update the current repo context from the selected session.
-    pub(crate) fn set_current_repo_from_selection(&mut self) {
-        let Some(repo) = self.selected_session().and_then(Session::repo) else {
-            return;
-        };
-
-        self.repo = Some(repo_context_path(repo));
-    }
-
-    /// Replace the current query string.
-    pub(crate) fn set_query(&mut self, query: String) {
-        self.query = query;
+        self.repo = selected.and_then(|s| s.repo()).map(|p| p.to_owned());
     }
 }
 
-/// Format the matcher status line for the current terminal width.
-fn format_status_line(width: usize, matched: usize, total: usize) -> String {
-    let left = format!("  {matched}/{total}");
-    let right = "0/0";
-    if width <= left.len() + 1 + right.len() {
-        return format!("{left} {right}");
-    }
-
-    format!("{left}{:>padding$}", right, padding = width - left.len())
+fn prompt_widget(query: &str) -> impl Widget {
+    Paragraph::new(format!("> {query}"))
 }
 
-/// Normalize a selected repo path before storing it in the UI state.
-fn repo_context_path(repo: &Path) -> PathBuf {
-    repo.canonicalize().unwrap_or_else(|_| repo.to_path_buf())
-}
-
-/// Keep the selected row visible within a scrollable list viewport.
-fn scroll_offset(current: usize, selected: usize, len: usize, height: usize) -> usize {
-    if height == 0 || len == 0 {
-        return 0;
-    }
-
-    let max_offset = len.saturating_sub(height);
-    if selected < current {
-        selected
-    } else if selected >= current + height {
-        (selected + 1).saturating_sub(height).min(max_offset)
+fn header_widget(snapshot: &Snapshot<Session>, repo: Option<&Path>) -> impl Widget {
+    let found = snapshot.matched_items(..).count();
+    let total = snapshot.item_count();
+    let width = if total == 0 {
+        1
     } else {
-        current.min(max_offset)
+        total.ilog10() as usize + 1
+    };
+
+    let mut line = format!(" {found:>width$}/{total} | [C-r] repo: ");
+    if let Some(repo) = repo {
+        write!(line, "{}", repo.truncated()).unwrap();
+    } else {
+        line.push_str("none");
     }
+
+    Paragraph::new(line)
 }
 
-/// Preserve the previous selection when that session remains visible.
-fn selected_row(items: &[Session], previous: Option<&Session>, selected: usize) -> usize {
-    if items.is_empty() {
-        return 0;
-    }
-
-    previous
-        .and_then(|previous| items.iter().position(|session| session == previous))
-        .unwrap_or_else(|| selected.min(items.len() - 1))
+fn session_list_widget(snapshot: &Snapshot<Session>) -> impl StatefulWidget<State = ListState> {
+    List::new(snapshot.matched_items(..).map(|i| i.data))
+        .highlight_symbol("> ")
+        .highlight_spacing(HighlightSpacing::Always)
 }
 
-#[cfg(test)]
-mod tests {
-    use std::fs;
+fn preview_widget(cache: &PreviewCache<Session>, selected: Option<&Session>) -> impl Widget {
+    let Some(session) = selected else {
+        return Paragraph::new("");
+    };
 
-    use tempfile::tempdir;
+    let Some(preview) = cache.get(&session.text()) else {
+        return Paragraph::new("Loading...");
+    };
 
-    use super::*;
-
-    #[test]
-    fn canonicalizes_repo_context_path() {
-        let temp = tempdir().unwrap();
-        let repo = temp.path().join("repo");
-        fs::create_dir(&repo).unwrap();
-
-        let relative = repo.strip_prefix(temp.path()).unwrap();
-        let cwd = std::env::current_dir().unwrap();
-        std::env::set_current_dir(temp.path()).unwrap();
-
-        assert_eq!(repo_context_path(relative), repo.canonicalize().unwrap());
-
-        std::env::set_current_dir(cwd).unwrap();
-    }
-
-    #[test]
-    fn preserves_selected_row_when_item_is_still_visible() {
-        let previous = Session::from_repo(PathBuf::from("/tmp/beta")).unwrap();
-        let items = vec![
-            Session::from_repo(PathBuf::from("/tmp/alpha")).unwrap(),
-            previous.clone(),
-        ];
-
-        assert_eq!(selected_row(&items, Some(&previous), 0), 1);
-    }
-
-    #[tokio::test]
-    async fn renders_header_with_current_repo() {
-        let app = App::new(vec![], Some(PathBuf::from("/tmp/repo")));
-
-        assert_eq!(app.header(), "Current repo: /tmp/repo");
-    }
-
-    #[tokio::test]
-    async fn renders_header_without_current_repo() {
-        let app = App::new(vec![], None);
-
-        assert_eq!(app.header(), "Current repo: none");
+    match preview.as_ref() {
+        Ok(preview) => Paragraph::new(preview.clone()),
+        Err(err) => Paragraph::new(format!("Error: {err}")),
     }
 }

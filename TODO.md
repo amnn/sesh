@@ -2,6 +2,14 @@
 
 ## Foundation
 
+- [x] Switch to Nucleo and Ratatui based renderer
+
+- [ ] `PreviewCache` uses `Utf32String` to store cache keys, to avoid
+  re-computing item text to fetch previews.
+
+- [ ] Lock down modules: Make all modules in `lib.rs` private, and re-export
+  relevant items at the top level.
+
 - [ ] Colorize parts of item text (for example repo name and repo-prefix/glob
   segment).
   - Keep rendering constraints in mind while using Skim.
@@ -9,18 +17,26 @@
 - [x] Detect and display the current repo from `cwd`.
   - Surface this in the UI state so repo-scoped actions can use it.
 
-- [ ] Add a static header that shows shortcuts and current state.
-  - `C-r` now sets repo context from the selected repo or repo-backed session.
-  - Include active filters and key actions so behavior is discoverable.
+- [/] Add a static header that shows shortcuts and current state.
+  - [x] `C-r` now sets repo context from the selected repo or repo-backed session.
+  - [ ] Include active filters and key actions so behavior is discoverable.
 
 - [ ] Contract repo path prefixes to initials for compact display.
   - Example: `~/Code/foo/bar` -> `~/C/f/bar`.
   - Apply consistently in list rows while preserving an unambiguous full path
     elsewhere.
 
+- [ ] Tune performance of tests.
+  The custom Nucleo + Ratatui renderer is faster than the skim-based one, so we
+  should be able to improve test performance as well (particularly for tests
+  that currently take ~2s).
+
 ## Rendering
 
-- [ ] Add separator between selections and preview.
+- [ ] Separate the session list and the preview with a scroll bar.
+
+- [ ] Scroll bar for preview window
+
 - [ ] Highlight the matched portion of the item.
 
 ## Session and Repo Lifecycle
@@ -76,7 +92,7 @@
 
 # Appendix: Legend
 
-- [ ] TODO: No started
+- [ ] TODO: Not started
 - [/] DOING In progress
 - [-] DROP: No longer planned or desired
 - [x] DONE: Completed

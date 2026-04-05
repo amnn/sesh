@@ -6,6 +6,7 @@
 use std::path::PathBuf;
 
 use anyhow::Context as _;
+use ratatui::widgets::ListItem;
 
 use crate::cache::Preview;
 use crate::jj;
@@ -76,6 +77,12 @@ impl Preview for Session {
             .with_context(|| format!("failed to build preview for repo '{}'", repo.display()))?;
 
         Ok(strip_ansi(&preview))
+    }
+}
+
+impl<'a> From<&'a Session> for ListItem<'a> {
+    fn from(session: &'a Session) -> Self {
+        ListItem::new(session.text())
     }
 }
 
