@@ -15,6 +15,7 @@ use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
 use crossterm::event::KeyModifiers;
+use nucleo::Item;
 use nucleo::Snapshot;
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
@@ -30,7 +31,6 @@ use ratatui::widgets::Widget;
 
 use crate::cache::PreviewCache;
 use crate::path::TruncatedExt as _;
-use crate::picker::Item as _;
 use crate::picker::Picker;
 use crate::session::Session;
 use crate::terminal::AlternateScreenGuard;
@@ -145,12 +145,12 @@ impl App {
 
         // Poll the picker for its latest state, and build the data model.
         let (status, snapshot, query) = self.picker.refresh();
-        let items: Vec<_> = snapshot.matched_items(..).map(|i| i.data).collect();
+        let items: Vec<_> = snapshot.matched_items(..).collect();
         let selected = self.list.selected().and_then(|s| {
             if s < items.len() {
-                Some(items[s])
+                items.get(s)
             } else {
-                items.last().copied()
+                items.last()
             }
         });
 
@@ -191,7 +191,7 @@ impl App {
         false
     }
 
-    /// Set the current repo based on the repo associated with the currently selected session.
+    /// Set the current repo from the currently selected session.
     ///
     /// If there is no selection, or the selected session has no associated repo, the current repo
     /// is cleared.
@@ -201,7 +201,7 @@ impl App {
             if s < items.len() {
                 items.nth(s)
             } else {
-                items.last()
+                items.next_back()
             }
         });
 
@@ -209,10 +209,12 @@ impl App {
     }
 }
 
+/// Build the prompt widget for the active query string.
 fn prompt_widget(query: &str) -> impl Widget {
     Paragraph::new(format!("> {query}"))
 }
 
+/// Build the header widget with match counts and current repo context.
 fn header_widget(snapshot: &Snapshot<Session>, repo: Option<&Path>) -> impl Widget {
     let found = snapshot.matched_items(..).count();
     let total = snapshot.item_count();
@@ -232,18 +234,23 @@ fn header_widget(snapshot: &Snapshot<Session>, repo: Option<&Path>) -> impl Widg
     Paragraph::new(line)
 }
 
+/// Build the session list widget for the current fuzzy-match snapshot.
 fn session_list_widget(snapshot: &Snapshot<Session>) -> impl StatefulWidget<State = ListState> {
     List::new(snapshot.matched_items(..).map(|i| i.data))
         .highlight_symbol("> ")
         .highlight_spacing(HighlightSpacing::Always)
 }
 
-fn preview_widget(cache: &PreviewCache<Session>, selected: Option<&Session>) -> impl Widget {
+/// Build the preview widget for the currently selected session.
+fn preview_widget(
+    cache: &PreviewCache<Session>,
+    selected: Option<&Item<'_, Session>>,
+) -> impl Widget {
     let Some(session) = selected else {
         return Paragraph::new("");
     };
 
-    let Some(preview) = cache.get(&session.text()) else {
+    let Some(preview) = cache.get(&session.matcher_columns[0]) else {
         return Paragraph::new("Loading...");
     };
 

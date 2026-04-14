@@ -35,7 +35,7 @@ impl<I: Item + Send + Sync + 'static> Picker<I> {
 
         for item in items {
             injector.push(item, |item, columns| {
-                columns[0] = Utf32String::from(item.text().as_str())
+                columns[0] = Utf32String::from(item.text())
             });
         }
 

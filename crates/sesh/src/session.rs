@@ -3,6 +3,7 @@
 
 //! Session model and picker rendering.
 
+use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Context as _;
@@ -51,7 +52,7 @@ impl Session {
     }
 
     /// Return the repository attached to this session, if any.
-    pub fn repo(&self) -> Option<&std::path::Path> {
+    pub fn repo(&self) -> Option<&Path> {
         self.repo.as_deref()
     }
 }

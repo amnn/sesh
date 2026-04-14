@@ -4,7 +4,7 @@
 
 - [x] Switch to Nucleo and Ratatui based renderer
 
-- [ ] `PreviewCache` uses `Utf32String` to store cache keys, to avoid
+- [x] `PreviewCache` uses `Utf32String` to store cache keys, to avoid
   re-computing item text to fetch previews.
 
 - [ ] Lock down modules: Make all modules in `lib.rs` private, and re-export
@@ -12,7 +12,11 @@
 
 - [ ] Colorize parts of item text (for example repo name and repo-prefix/glob
   segment).
-  - Keep rendering constraints in mind while using Skim.
+  - [ ] Repo name
+  - [ ] Shortcut keys
+  - [ ] Preview text
+  - [ ] Selected line symbol
+  - [ ] Prompt
 
 - [x] Detect and display the current repo from `cwd`.
   - Surface this in the UI state so repo-scoped actions can use it.
