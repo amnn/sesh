@@ -40,8 +40,8 @@ impl Session {
 
     /// Construct a potential session from information extracted from `tmux`.
     ///
-    /// `name` is a tmux session name and `repo` is an optional path to a jj repository attached
-    /// as a user-option on the tmux session.
+    /// `name` is a tmux session name and `repo` is an optional path to a jj repository attached as
+    /// a user-option on the tmux session.
     pub fn from_tmux(name: String, repo: Option<PathBuf>) -> Self {
         Self { name, repo }
     }

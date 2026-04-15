@@ -7,7 +7,7 @@
 - [x] `PreviewCache` uses `Utf32String` to store cache keys, to avoid
   re-computing item text to fetch previews.
 
-- [ ] Lock down modules: Make all modules in `lib.rs` private, and re-export
+- [x] Lock down modules: Make all modules in `lib.rs` private, and re-export
   relevant items at the top level.
 
 - [ ] Colorize parts of item text (for example repo name and repo-prefix/glob

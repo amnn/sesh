@@ -9,9 +9,9 @@ use std::env;
 use clap::Parser;
 use clap::Subcommand;
 
-use sesh::app::App;
+use sesh::App;
+use sesh::Session;
 use sesh::jj;
-use sesh::session::Session;
 use sesh::tmux;
 
 #[derive(Debug, Parser)]
@@ -49,6 +49,7 @@ enum Command {
 
     /// Run `sesh` in the current terminal.
     Cli {
+        /// Additional repository globs to surface alongside existing tmux sessions.
         #[arg(short = 'r', long = "repo", value_name = "GLOB", action = clap::ArgAction::Append)]
         repos: Vec<String>,
     },

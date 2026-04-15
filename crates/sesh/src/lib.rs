@@ -3,13 +3,16 @@
 
 //! Core modules for the `sesh` CLI.
 
-pub mod app;
 pub mod jj;
-pub mod picker;
-pub mod session;
-pub mod terminal;
 pub mod tmux;
 
-pub(crate) mod cache;
-pub(crate) mod path;
-pub(crate) mod widget;
+mod app;
+mod cache;
+mod path;
+mod picker;
+mod session;
+mod terminal;
+mod widget;
+
+pub use app::App;
+pub use session::Session;

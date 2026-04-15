@@ -34,8 +34,8 @@ use crate::path::TruncatedExt as _;
 use crate::picker::Picker;
 use crate::session::Session;
 use crate::terminal::AlternateScreenGuard;
-use crate::widget::loading::Loading;
-use crate::widget::loading::LoadingState;
+use crate::widget::Loading;
+use crate::widget::LoadingState;
 
 const POLL_TIMEOUT: Duration = Duration::from_millis(16);
 

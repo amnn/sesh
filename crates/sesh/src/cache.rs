@@ -11,6 +11,7 @@ use tokio_util::task::AbortOnDropHandle;
 
 use crate::picker::Item;
 
+/// Item extension for rendering asynchronously cached previews.
 pub(crate) trait Preview: Item {
     /// Render a preview for this item.
     fn preview(&self) -> anyhow::Result<String>;
@@ -49,7 +50,7 @@ impl<I: Preview + Send + 'static> PreviewCache<I> {
         }
     }
 
-    /// Return the cached preview for `session`, if it has finished rendering.
+    /// Return the cached preview for `key`, if it has finished rendering.
     pub(crate) fn get(&self, key: &Utf32String) -> Option<Arc<anyhow::Result<String>>> {
         self.entries.get(key).as_deref().cloned()
     }
