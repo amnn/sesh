@@ -26,6 +26,9 @@ use ratatui::widgets::HighlightSpacing;
 use ratatui::widgets::List;
 use ratatui::widgets::ListState;
 use ratatui::widgets::Paragraph;
+use ratatui::widgets::Scrollbar;
+use ratatui::widgets::ScrollbarOrientation;
+use ratatui::widgets::ScrollbarState;
 use ratatui::widgets::StatefulWidget;
 use ratatui::widgets::Widget;
 
@@ -46,6 +49,7 @@ pub struct App {
     cache: PreviewCache<Session>,
     list: ListState,
     load: LoadingState,
+    session_scroll: ScrollbarState,
 }
 
 impl App {
@@ -55,6 +59,7 @@ impl App {
         let cache = PreviewCache::new(sessions);
         let list = ListState::default();
         let load = LoadingState::new();
+        let session_scroll = ScrollbarState::default();
 
         Self {
             repo,
@@ -62,6 +67,7 @@ impl App {
             cache,
             list,
             load,
+            session_scroll,
         }
     }
 
@@ -98,17 +104,17 @@ impl App {
     /// The frame is split up into the following regions, each with its own widget:
     ///
     /// ```text
-    /// +-----------------+-----------------------------+
-    /// |> Prompt         | Preview                     |
-    /// +-+---------------+ ...                         |
-    /// |L| Header        |                             |
-    /// +-+---------------+                             |
-    /// | Session List    |                             |
-    /// | ...             |                             |
-    /// |                 |                             |
-    /// |                 |                             |
-    /// |                 |                             |
-    /// +-----------------+-----------------------------+
+    /// +-----------------+-+---------------------------+
+    /// |> Prompt         |S| Preview                   |
+    /// +-+---------------+c| ...                       |
+    /// |L| Header        |r|                           |
+    /// +-+---------------+o|                           |
+    /// | Session List    |l|                           |
+    /// | ...             |l|                           |
+    /// |                 | |                           |
+    /// |                 | |                           |
+    /// |                 | |                           |
+    /// +-----------------+-+---------------------------+
     /// ```
     fn draw(&mut self, f: &mut ratatui::Frame<'_>) {
         use Constraint as C;
@@ -118,11 +124,11 @@ impl App {
         // Split the frame into regions
         let cols = L::default()
             .direction(D::Horizontal)
-            .constraints([C::Percentage(40), C::Percentage(60)])
+            .constraints([C::Percentage(40), C::Length(1), C::Percentage(60)])
             .split(f.area());
 
-        let [sessions, preview] = &cols[..] else {
-            panic!("expected two columns in the layout")
+        let [sessions, scroll, preview] = &cols[..] else {
+            panic!("expected three columns in the layout")
         };
 
         let rows = L::default()
@@ -154,10 +160,17 @@ impl App {
             }
         });
 
+        self.session_scroll = self
+            .session_scroll
+            .content_length(items.len())
+            .viewport_content_length(sessions.height as usize)
+            .position(self.list.offset());
+
         f.render_widget(prompt_widget(query), *prompt);
         f.render_stateful_widget(Loading(status.running), *loading, &mut self.load);
         f.render_widget(header_widget(snapshot, self.repo.as_deref()), *header);
         f.render_stateful_widget(session_list_widget(snapshot), *sessions, &mut self.list);
+        f.render_stateful_widget(session_list_scrollbar(), *scroll, &mut self.session_scroll);
         f.render_widget(preview_widget(&self.cache, selected), *preview);
     }
 
@@ -239,6 +252,16 @@ fn session_list_widget(snapshot: &Snapshot<Session>) -> impl StatefulWidget<Stat
     List::new(snapshot.matched_items(..).map(|i| i.data))
         .highlight_symbol("> ")
         .highlight_spacing(HighlightSpacing::Always)
+}
+
+/// Build the scrollbar widget that visually separates the session list from the
+/// preview.
+fn session_list_scrollbar() -> impl StatefulWidget<State = ScrollbarState> {
+    Scrollbar::new(ScrollbarOrientation::VerticalRight)
+        .begin_symbol(None)
+        .end_symbol(None)
+        .track_symbol(Some("│"))
+        .thumb_symbol("┃")
 }
 
 /// Build the preview widget for the currently selected session.

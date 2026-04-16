@@ -37,7 +37,7 @@
 
 ## Rendering
 
-- [ ] Separate the session list and the preview with a scroll bar.
+- [x] Separate the session list and the preview with a scroll bar.
 
 - [ ] Scroll bar for preview window
 

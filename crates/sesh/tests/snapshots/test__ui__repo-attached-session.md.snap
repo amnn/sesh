@@ -58,18 +58,18 @@ including the attached `alpha-live` session and the glob-discovered repos.
 
 :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 ```terminal
->
-  6/6 | [C-r] repo: none
-  alpha-live                               alpha
-  runner
-  ui
-  beta                                     beta
-  mono                                     mono
-  mono-ws                                  mono-
-
-
-
-
+>                                              ┃
+  6/6 | [C-r] repo: none                       ┃
+  alpha-live                               alph┃
+  runner                                       ┃
+  ui                                           ┃
+  beta                                     beta┃
+  mono                                     mono┃
+  mono-ws                                  mono┃
+                                               │
+                                               │
+                                               │
+                                               │
 ```
 
 This snapshot shows the picker after typing `beta`, so the selection should
@@ -79,18 +79,18 @@ move away from the initial attached-session result and onto the discovered
 :k beta
 :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 ```terminal
-> beta
-  1/6 | [C-r] repo: none
-  beta                                     beta
-
-
-
-
-
-
-
-
-
+> beta                                         ┃
+  1/6 | [C-r] repo: none                       ┃
+  beta                                     beta┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
 ```
 
 This snapshot shows the picker after clearing the query with `C-u` and typing
@@ -99,18 +99,18 @@ This snapshot shows the picker after clearing the query with `C-u` and typing
 :k C-u mono
 :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 ```terminal
-> mono
-  2/6 | [C-r] repo: none
-  mono                                     mono
-  mono-ws                                  mono-
-
-
-
-
-
-
-
-
+> mono                                         ┃
+  2/6 | [C-r] repo: none                       ┃
+  mono                                     mono┃
+  mono-ws                                  mono┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               │
 ```
 
 ---
