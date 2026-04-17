@@ -31,9 +31,9 @@ should list all discovered tmux sessions.
   gamma                        ┃
   runner                       ┃
   ui                           ┃
-                               │
-                               │
-                               │
+                               ┃
+                               ┃
+                               ┃
 ```
 
 This snapshot shows the picker after typing `bet`, so the selection should move

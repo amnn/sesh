@@ -66,10 +66,10 @@ including the attached `alpha-live` session and the glob-discovered repos.
   beta                                     beta┃
   mono                                     mono┃
   mono-ws                                  mono┃
-                                               │
-                                               │
-                                               │
-                                               │
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
 ```
 
 This snapshot shows the picker after typing `beta`, so the selection should
@@ -110,7 +110,7 @@ This snapshot shows the picker after clearing the query with `C-u` and typing
                                                ┃
                                                ┃
                                                ┃
-                                               │
+                                               ┃
 ```
 
 ---

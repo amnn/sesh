@@ -39,7 +39,7 @@
 
 - [x] Separate the session list and the preview with a scroll bar.
 
-- [ ] Scroll bar for preview window
+- [x] Scroll bar for preview window
 
 - [ ] Highlight the matched portion of the item.
 

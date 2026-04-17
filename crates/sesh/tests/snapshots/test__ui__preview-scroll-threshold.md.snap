@@ -1,0 +1,95 @@
+---
+source: crates/sesh/tests/test.rs
+expression: output
+---
+# Preview scroll threshold
+
+This scenario verifies the preview scrollbar threshold. In this fixture, `jj`
+still renders the graph markers, so the viewport-fitting case uses 11 content
+lines plus the trailing root marker line:
+
+- when the preview height exactly matches the viewport, no scrollbar is shown,
+- when the preview is one line longer, a scrollbar appears,
+- and once it appears, the preview can scroll.
+
+The test configures `jj log` to show only commit descriptions so the preview is
+easy to read in snapshots.
+
+:bins jj cat sh
+> [!NOTE]
+> 'jj', 'cat', and 'sh' are available.
+
+:t rename-session -t 0 runner (success)
+:$ jj git init exact (exit: 0)
+:$ jj config set --repo -R exact templates.log 'description' (exit: 0)
+:$ sh -c 'msg=$(i=1; while [ "$i" -le 11 ]; do printf "exact %02d\n" "$i"; i=$((i+1)); done) && jj describe -R exact -m "$msg"' (exit: 0)
+:$ jj git init overflow (exit: 0)
+:$ jj config set --repo -R overflow templates.log 'description' (exit: 0)
+:$ sh -c 'msg=$(i=1; while [ "$i" -le 12 ]; do printf "overflow %02d\n" "$i"; i=$((i+1)); done) && jj describe -R overflow -m "$msg"' (exit: 0)
+:t new-session -d -s plain "cat" (success)
+:t new-session -d -s ui "sesh cli -r exact -r overflow" (success)
+:t resize-window -t ui:0 -x 120 -y 12 (success)
+:pane ui:0.0
+
+This snapshot shows a preview that exactly fits the viewport, so no preview
+scrollbar should be visible.
+
+:k exact down
+:snap -d 2s
+```terminal
+> exact                                        ┃@  exact 01
+  1/5 | [C-r] repo: none                       ┃│  exact 02
+> exact                                    exac┃│  exact 03
+                                               ┃│  exact 04
+                                               ┃│  exact 05
+                                               ┃│  exact 06
+                                               ┃│  exact 07
+                                               ┃│  exact 08
+                                               ┃│  exact 09
+                                               ┃│  exact 10
+                                               ┃│  exact 11
+                                               ┃◆
+```
+
+This snapshot shows a preview that is one line taller than the viewport, so the
+preview scrollbar should now be visible.
+
+:k C-u overflow down
+:snap
+```terminal
+> overflow                                     ┃@  overflow 01                                                         ┃
+  1/5 | [C-r] repo: none                       ┃│  overflow 02                                                         ┃
+> overflow                                 over┃│  overflow 03                                                         ┃
+                                               ┃│  overflow 04                                                         ┃
+                                               ┃│  overflow 05                                                         ┃
+                                               ┃│  overflow 06                                                         ┃
+                                               ┃│  overflow 07                                                         ┃
+                                               ┃│  overflow 08                                                         ┃
+                                               ┃│  overflow 09                                                         ┃
+                                               ┃│  overflow 10                                                         ┃
+                                               ┃│  overflow 11                                                         ┃
+                                               ┃│  overflow 12                                                         │
+```
+
+This snapshot shows that once the scrollbar appears, `S-down` scrolls the
+preview content by one line.
+
+:k S-down
+:snap
+```terminal
+> overflow                                     ┃│  overflow 02                                                         │
+  1/5 | [C-r] repo: none                       ┃│  overflow 03                                                         ┃
+> overflow                                 over┃│  overflow 04                                                         ┃
+                                               ┃│  overflow 05                                                         ┃
+                                               ┃│  overflow 06                                                         ┃
+                                               ┃│  overflow 07                                                         ┃
+                                               ┃│  overflow 08                                                         ┃
+                                               ┃│  overflow 09                                                         ┃
+                                               ┃│  overflow 10                                                         ┃
+                                               ┃│  overflow 11                                                         ┃
+                                               ┃│  overflow 12                                                         ┃
+                                               ┃◆                                                                      ┃
+```
+
+---
+vim: set ft=markdown:

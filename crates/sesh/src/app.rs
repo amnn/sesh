@@ -22,6 +22,8 @@ use ratatui::backend::CrosstermBackend;
 use ratatui::layout::Constraint;
 use ratatui::layout::Direction;
 use ratatui::layout::Layout;
+use ratatui::text::Line;
+use ratatui::text::Text;
 use ratatui::widgets::HighlightSpacing;
 use ratatui::widgets::List;
 use ratatui::widgets::ListState;
@@ -49,7 +51,7 @@ pub struct App {
     cache: PreviewCache<Session>,
     list: ListState,
     load: LoadingState,
-    session_scroll: ScrollbarState,
+    preview_scroll: usize,
 }
 
 impl App {
@@ -59,7 +61,7 @@ impl App {
         let cache = PreviewCache::new(sessions);
         let list = ListState::default();
         let load = LoadingState::new();
-        let session_scroll = ScrollbarState::default();
+        let preview_scroll = 0;
 
         Self {
             repo,
@@ -67,7 +69,7 @@ impl App {
             cache,
             list,
             load,
-            session_scroll,
+            preview_scroll,
         }
     }
 
@@ -104,17 +106,17 @@ impl App {
     /// The frame is split up into the following regions, each with its own widget:
     ///
     /// ```text
-    /// +-----------------+-+---------------------------+
-    /// |> Prompt         |S| Preview                   |
-    /// +-+---------------+c| ...                       |
-    /// |L| Header        |r|                           |
-    /// +-+---------------+o|                           |
-    /// | Session List    |l|                           |
-    /// | ...             |l|                           |
-    /// |                 | |                           |
-    /// |                 | |                           |
-    /// |                 | |                           |
-    /// +-----------------+-+---------------------------+
+    /// +-----------------+-+-------------------------+-+
+    /// |> Prompt         |S| Preview                 |S|
+    /// +-+---------------+c| ...                     |c|
+    /// |L| Header        |r|                         |r|
+    /// +-+---------------+o|                         |o|
+    /// | Session List    |l|                         |l|
+    /// | ...             |l|                         |l|
+    /// |                 | |                         | |
+    /// |                 | |                         | |
+    /// |                 | |                         | |
+    /// +-----------------+-+-------------------------+-+
     /// ```
     fn draw(&mut self, f: &mut ratatui::Frame<'_>) {
         use Constraint as C;
@@ -152,26 +154,42 @@ impl App {
         // Poll the picker for its latest state, and build the data model.
         let (status, snapshot, query) = self.picker.refresh();
         let items: Vec<_> = snapshot.matched_items(..).collect();
-        let selected = self.list.selected().and_then(|s| {
-            if s < items.len() {
-                items.get(s)
-            } else {
-                items.last()
-            }
-        });
 
-        self.session_scroll = self
-            .session_scroll
-            .content_length(items.len())
-            .viewport_content_length(sessions.height as usize)
-            .position(self.list.offset());
-
+        // Render the header and session list.
         f.render_widget(prompt_widget(query), *prompt);
         f.render_stateful_widget(Loading(status.running), *loading, &mut self.load);
         f.render_widget(header_widget(snapshot, self.repo.as_deref()), *header);
         f.render_stateful_widget(session_list_widget(snapshot), *sessions, &mut self.list);
-        f.render_stateful_widget(session_list_scrollbar(), *scroll, &mut self.session_scroll);
-        f.render_widget(preview_widget(&self.cache, selected), *preview);
+
+        // Rendering corrects the list's selected index, so we find the selected item.
+        let selected = self.list.selected().and_then(|s| items.get(s));
+        let text = preview_widget(&self.cache, selected);
+
+        // Sync scroll states
+        let mut session_scroll = ScrollbarState::default()
+            .content_length(items.len().saturating_sub(sessions.height as usize).max(1))
+            .viewport_content_length(sessions.height as usize)
+            .position(self.list.offset());
+
+        self.preview_scroll = self
+            .preview_scroll
+            .clamp(0, text.height().saturating_sub(preview.height as usize));
+
+        let preview_content_length = text
+            .height()
+            .checked_sub(preview.height as usize + 1)
+            .map_or(0, |n| n + 2);
+
+        let mut preview_scroll = ScrollbarState::default()
+            .content_length(preview_content_length)
+            .viewport_content_length(preview.height as usize)
+            .position(self.preview_scroll);
+
+        f.render_stateful_widget(scrollbar_widget(), *scroll, &mut session_scroll);
+        f.render_stateful_widget(scrollbar_widget(), *preview, &mut preview_scroll);
+
+        let preview_para = Paragraph::new(text).scroll((self.preview_scroll as u16, 0));
+        f.render_widget(preview_para, *preview);
     }
 
     /// Handle a single keyboard event, returning `true` when the picker should exit.
@@ -181,17 +199,38 @@ impl App {
         const CTRL: KM = KM::CONTROL;
 
         match key.code {
+            // Quit successfully
             KC::Enter => return true,
 
+            // Cancel
             KC::Esc => return true,
             KC::Char('g' | 'c') if key.modifiers.contains(CTRL) => return true,
 
+            // Scroll preview
+            KC::Char('p') if key.modifiers.contains(KM::ALT) => {
+                self.preview_scroll = self.preview_scroll.saturating_sub(1);
+            }
+
+            KC::Up if key.modifiers.contains(KM::SHIFT) => {
+                self.preview_scroll = self.preview_scroll.saturating_sub(1);
+            }
+
+            KC::Char('n') if key.modifiers.contains(KM::ALT) => {
+                self.preview_scroll = self.preview_scroll.saturating_add(1);
+            }
+
+            KC::Down if key.modifiers.contains(KM::SHIFT) => {
+                self.preview_scroll = self.preview_scroll.saturating_add(1);
+            }
+
+            // Session list selection
             KC::Up => self.list.select_previous(),
             KC::Char('p') if key.modifiers.contains(CTRL) => self.list.select_previous(),
 
             KC::Down => self.list.select_next(),
             KC::Char('n') if key.modifiers.contains(CTRL) => self.list.select_next(),
 
+            // Edit query
             KC::Backspace => self.picker.pop(),
             KC::Char('u') if key.modifiers.contains(CTRL) => self.picker.clear(),
 
@@ -222,11 +261,6 @@ impl App {
     }
 }
 
-/// Build the prompt widget for the active query string.
-fn prompt_widget(query: &str) -> impl Widget {
-    Paragraph::new(format!("> {query}"))
-}
-
 /// Build the header widget with match counts and current repo context.
 fn header_widget(snapshot: &Snapshot<Session>, repo: Option<&Path>) -> impl Widget {
     let found = snapshot.matched_items(..).count();
@@ -244,19 +278,36 @@ fn header_widget(snapshot: &Snapshot<Session>, repo: Option<&Path>) -> impl Widg
         line.push_str("none");
     }
 
-    Paragraph::new(line)
+    Line::from(line)
 }
 
-/// Build the session list widget for the current fuzzy-match snapshot.
-fn session_list_widget(snapshot: &Snapshot<Session>) -> impl StatefulWidget<State = ListState> {
-    List::new(snapshot.matched_items(..).map(|i| i.data))
-        .highlight_symbol("> ")
-        .highlight_spacing(HighlightSpacing::Always)
+/// Build the preview widget for the currently selected session.
+fn preview_widget(
+    cache: &PreviewCache<Session>,
+    selected: Option<&Item<'_, Session>>,
+) -> Text<'static> {
+    let Some(session) = selected else {
+        return Text::from("");
+    };
+
+    let Some(preview) = cache.get(&session.matcher_columns[0]) else {
+        return Text::from("Loading...");
+    };
+
+    match preview.as_ref() {
+        Ok(preview) => Text::from(preview.clone()),
+        Err(err) => Text::from(format!("Error: {err}")),
+    }
+}
+
+/// Build the prompt widget for the active query string.
+fn prompt_widget(query: &str) -> impl Widget {
+    Line::from(format!("> {query}"))
 }
 
 /// Build the scrollbar widget that visually separates the session list from the
 /// preview.
-fn session_list_scrollbar() -> impl StatefulWidget<State = ScrollbarState> {
+fn scrollbar_widget() -> impl StatefulWidget<State = ScrollbarState> {
     Scrollbar::new(ScrollbarOrientation::VerticalRight)
         .begin_symbol(None)
         .end_symbol(None)
@@ -264,21 +315,9 @@ fn session_list_scrollbar() -> impl StatefulWidget<State = ScrollbarState> {
         .thumb_symbol("┃")
 }
 
-/// Build the preview widget for the currently selected session.
-fn preview_widget(
-    cache: &PreviewCache<Session>,
-    selected: Option<&Item<'_, Session>>,
-) -> impl Widget {
-    let Some(session) = selected else {
-        return Paragraph::new("");
-    };
-
-    let Some(preview) = cache.get(&session.matcher_columns[0]) else {
-        return Paragraph::new("Loading...");
-    };
-
-    match preview.as_ref() {
-        Ok(preview) => Paragraph::new(preview.clone()),
-        Err(err) => Paragraph::new(format!("Error: {err}")),
-    }
+/// Build the session list widget for the current fuzzy-match snapshot.
+fn session_list_widget(snapshot: &Snapshot<Session>) -> impl StatefulWidget<State = ListState> {
+    List::new(snapshot.matched_items(..).map(|i| i.data))
+        .highlight_symbol("> ")
+        .highlight_spacing(HighlightSpacing::Always)
 }
