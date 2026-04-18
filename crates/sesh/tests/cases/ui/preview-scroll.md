@@ -17,19 +17,10 @@ these long-preview fixtures stay compact and readable.
 from subprocess import run
 from sys import argv
 
-
-def main() -> None:
-    if len(argv) != 4:
-        raise SystemExit("usage: mklog.py <repo> <prefix> <count>")
-
-    repo, prefix, count_text = argv[1:]
-    count = int(count_text)
-    message = "\n".join(f"{prefix} {i:02d}" for i in range(1, count + 1))
-    run(["jj", "describe", "-R", repo, "-m", message], check=True)
-
-
-if __name__ == "__main__":
-    main()
+repo, prefix, count_text = argv[1:]
+count = int(count_text)
+message = "\n".join(f"{prefix} {i:02d}" for i in range(1, count + 1))
+run(["jj", "describe", "-R", repo, "-m", message], check=True)
 ```
 
     :t rename-session -t 0 runner

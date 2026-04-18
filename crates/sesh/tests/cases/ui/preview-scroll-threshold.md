@@ -52,7 +52,7 @@ This snapshot shows a preview that exactly fits the viewport, so no preview
 scrollbar should be visible.
 
     :k exact down
-    :snap -d 2s
+    :snap
 
 This snapshot shows a preview that is one line taller than the viewport, so the
 preview scrollbar should now be visible.

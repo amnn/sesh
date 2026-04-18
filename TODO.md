@@ -10,7 +10,7 @@
     runner's `:snap` stabilization loop rather than the picker itself.
   - [x] Lower settle counts for later post-input UI snapshots where the traces
     show stable output after the first render.
-- [ ] See if fixture setup (repo creation / `jj describe`) can be reduced
+- [x] See if fixture setup (repo creation / `jj describe`) can be reduced
   further without making the tests harder to read.
 - [x] Move snapshot files to be colocated with the test source files.
 

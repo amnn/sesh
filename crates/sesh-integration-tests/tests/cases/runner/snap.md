@@ -45,7 +45,20 @@ emit a warning instead of a snapshot.
 
     :bins python3
 
-    :t new-window -d -n unstable 'python3 -c "import itertools, subprocess, time; print(0, flush=True); subprocess.run([\"tmux\", \"wait-for\", \"-S\", \"ready-unstable\"], check=True); [print(i, flush=True) or time.sleep(0.005) for i in itertools.count(1)]"'
+    :w scripts/unstable.py
+
+```python
+from subprocess import run
+from time import sleep
+
+run(["tmux", "wait-for", "-S", "ready-unstable"], check=True)
+for i in range(1000000):
+    print(i, flush=True)
+    sleep(0.005)
+```
+
+
+    :t new-window -d -n unstable 'python3 scripts/unstable.py'
     :p 0:unstable.0
     :t resize-window -x 80 -y 2 -t 0:unstable
 

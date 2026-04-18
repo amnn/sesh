@@ -20,7 +20,7 @@ an unfiltered repo row and on a row selected from a multi-match query.
 This snapshot shows the initial picker state with the current repo inferred
 from `cwd`.
 
-    :snap -d 2s "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
 Move the cursor to the discovered `beta` repo row.
 

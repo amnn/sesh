@@ -60,7 +60,7 @@ This snapshot shows a preview that exactly fits the viewport, so no preview
 scrollbar should be visible.
 
     :k exact down
-    :snap -d 2s
+    :snap
 
 ```terminal
 > exact                                        ┃@  exact 01

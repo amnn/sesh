@@ -17,3 +17,6 @@ Options:
   -?, --help     
   -V, --version  Print version
 ```
+
+---
+vim: set ft=markdown:
