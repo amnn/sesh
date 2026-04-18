@@ -9,7 +9,7 @@ expression: output
 Successful tmux commands should append an exit annotation and then write stdout inside a fenced
 code block.
 
-:tmux list-sessions -F '#S' (success)
+    :tmux list-sessions -F '#S' (success)
 ```
 0
 ```
@@ -19,14 +19,14 @@ code block.
 Commands run via `:tmux` should operate on the same runner-managed tmux server/socket across
 multiple invocations.
 
-:tmux new-session -d -s socket-check (success)
-:tmux list-sessions -F '#S' (success)
+    :tmux new-session -d -s socket-check (success)
+    :tmux list-sessions -F '#S' (success)
 ```
 0
 socket-check
 ```
-:tmux kill-session -t socket-check (success)
-:tmux has-session -t socket-check (failure)
+    :tmux kill-session -t socket-check (success)
+    :tmux has-session -t socket-check (failure)
 ```
 can't find session: socket-check
 ```

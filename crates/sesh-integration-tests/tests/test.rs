@@ -35,7 +35,7 @@ fn test(path: &Path) -> datatest_stable::Result<()> {
     let mut output = String::new();
 
     runtime.block_on(async {
-        let mut runner = Runner::new().await?;
+        let mut runner = Runner::new(env!("CARGO_MANIFEST_DIR")).await?;
 
         let res = runner
             .run(&mut output, &script)

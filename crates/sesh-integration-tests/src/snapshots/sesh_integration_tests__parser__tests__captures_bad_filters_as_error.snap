@@ -1,6 +1,6 @@
 ---
 source: crates/sesh-integration-tests/src/parser.rs
-expression: "Script::parse(&[r#\":snap \"\"\"#, r#\":snap /foo\"#, r#\":snap /foo/x/\"#,\nr#\":snap /foo/bar\"#, r#\":snap /foo/\"#,].join(\"\\n\"))"
+expression: "Script::parse(&[r#\"    :snap \"\"\"#, r#\"    :snap /foo\"#,\nr#\"    :snap /foo/x/\"#, r#\"    :snap /foo/bar\"#,\nr#\"    :snap /foo/\"#,].join(\"\\n\"))"
 ---
 Script {
     lines: [
@@ -8,31 +8,31 @@ Script {
             kind: Error {
                 message: "empty filter string",
             },
-            raw: ":snap \"\"",
+            raw: "    :snap \"\"",
         },
         Line {
             kind: Error {
                 message: "missing separator delimiter",
             },
-            raw: ":snap /foo",
+            raw: "    :snap /foo",
         },
         Line {
             kind: Error {
                 message: "replacement must be one grapheme",
             },
-            raw: ":snap /foo/x/",
+            raw: "    :snap /foo/x/",
         },
         Line {
             kind: Error {
                 message: "replacement must be one grapheme",
             },
-            raw: ":snap /foo/bar",
+            raw: "    :snap /foo/bar",
         },
         Line {
             kind: Error {
                 message: "missing replacement grapheme cluster",
             },
-            raw: ":snap /foo/",
+            raw: "    :snap /foo/",
         },
     ],
 }

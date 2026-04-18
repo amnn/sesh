@@ -1,6 +1,6 @@
 ---
 source: crates/sesh-integration-tests/src/parser.rs
-expression: "Script::parse(&[r#\":k C-ab\"#, r#\":k M-é\"#, r#\":k S-\"\"\"#, r#\"\"#,].join(\"\\n\"))"
+expression: "Script::parse(&[r#\"    :k C-ab\"#, r#\"    :k M-é\"#, r#\"    :k S-\"\"\"#,\nr#\"\"#,].join(\"\\n\"))"
 ---
 Script {
     lines: [
@@ -8,19 +8,19 @@ Script {
             kind: Error {
                 message: "modifiers only apply to single ASCII key codes",
             },
-            raw: ":k C-ab",
+            raw: "    :k C-ab",
         },
         Line {
             kind: Error {
                 message: "modifiers only apply to single ASCII key codes",
             },
-            raw: ":k M-é",
+            raw: "    :k M-é",
         },
         Line {
             kind: Error {
                 message: "'S-' only applies to arrow keys",
             },
-            raw: ":k S-\"\"",
+            raw: "    :k S-\"\"",
         },
     ],
 }

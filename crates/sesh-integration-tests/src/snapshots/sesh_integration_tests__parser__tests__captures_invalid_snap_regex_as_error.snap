@@ -1,6 +1,6 @@
 ---
 source: crates/sesh-integration-tests/src/parser.rs
-expression: "Script::parse(&[\":snap /(unterminated/x\", \"\"].join(\"\\n\"))"
+expression: "Script::parse(&[\"    :snap /(unterminated/x\", \"\"].join(\"\\n\"))"
 ---
 Script {
     lines: [
@@ -8,7 +8,7 @@ Script {
             kind: Error {
                 message: "invalid regex pattern: regex parse error:\n    (unterminated\n    ^\nerror: unclosed group",
             },
-            raw: ":snap /(unterminated/x",
+            raw: "    :snap /(unterminated/x",
         },
     ],
 }

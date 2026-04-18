@@ -15,27 +15,27 @@ lines plus the trailing root marker line:
 The test configures `jj log` to show only commit descriptions so the preview is
 easy to read in snapshots.
 
-:bins jj cat sh
+    :bins jj cat sh
 > [!NOTE]
 > 'jj', 'cat', and 'sh' are available.
 
-:t rename-session -t 0 runner (success)
-:$ jj git init exact (exit: 0)
-:$ jj config set --repo -R exact templates.log 'description' (exit: 0)
-:$ sh -c 'msg=$(i=1; while [ "$i" -le 11 ]; do printf "exact %02d\n" "$i"; i=$((i+1)); done) && jj describe -R exact -m "$msg"' (exit: 0)
-:$ jj git init overflow (exit: 0)
-:$ jj config set --repo -R overflow templates.log 'description' (exit: 0)
-:$ sh -c 'msg=$(i=1; while [ "$i" -le 12 ]; do printf "overflow %02d\n" "$i"; i=$((i+1)); done) && jj describe -R overflow -m "$msg"' (exit: 0)
-:t new-session -d -s plain "cat" (success)
-:t new-session -d -s ui "sesh cli -r exact -r overflow" (success)
-:t resize-window -t ui:0 -x 120 -y 12 (success)
-:pane ui:0.0
+    :t rename-session -t 0 runner (success)
+    :$ jj git init exact (exit: 0)
+    :$ jj config set --repo -R exact templates.log 'description' (exit: 0)
+    :$ sh -c 'msg=$(i=1; while [ "$i" -le 11 ]; do printf "exact %02d\n" "$i"; i=$((i+1)); done) && jj describe -R exact -m "$msg"' (exit: 0)
+    :$ jj git init overflow (exit: 0)
+    :$ jj config set --repo -R overflow templates.log 'description' (exit: 0)
+    :$ sh -c 'msg=$(i=1; while [ "$i" -le 12 ]; do printf "overflow %02d\n" "$i"; i=$((i+1)); done) && jj describe -R overflow -m "$msg"' (exit: 0)
+    :t new-session -d -s plain "cat" (success)
+    :t new-session -d -s ui "sesh cli -r exact -r overflow" (success)
+    :t resize-window -t ui:0 -x 120 -y 12 (success)
+    :pane ui:0.0
 
 This snapshot shows a preview that exactly fits the viewport, so no preview
 scrollbar should be visible.
 
-:k exact down
-:snap -d 2s
+    :k exact down
+    :snap -d 2s
 ```terminal
 > exact                                        ┃@  exact 01
   1/5 | [C-r] repo: none                       ┃│  exact 02
@@ -54,8 +54,8 @@ scrollbar should be visible.
 This snapshot shows a preview that is one line taller than the viewport, so the
 preview scrollbar should now be visible.
 
-:k C-u overflow down
-:snap
+    :k C-u overflow down
+    :snap
 ```terminal
 > overflow                                     ┃@  overflow 01                                                         ┃
   1/5 | [C-r] repo: none                       ┃│  overflow 02                                                         ┃
@@ -74,8 +74,8 @@ preview scrollbar should now be visible.
 This snapshot shows that once the scrollbar appears, `S-down` scrolls the
 preview content by one line.
 
-:k S-down
-:snap
+    :k S-down
+    :snap
 ```terminal
 > overflow                                     ┃│  overflow 02                                                         │
   1/5 | [C-r] repo: none                       ┃│  overflow 03                                                         ┃

@@ -1,0 +1,41 @@
+---
+source: crates/sesh-integration-tests/tests/test.rs
+expression: output
+---
+# Runner file directives
+
+## Write stores the following fenced block in the test home directory
+
+The `:write` directive should write the next fenced block into the sandbox so later commands can
+read it.
+
+    :bins cat python3
+> [!NOTE]
+> 'cat', and 'python3' are available.
+
+    :write nested/hello.txt (written)
+```text
+hello
+from write
+```
+
+    :$ cat nested/hello.txt (exit: 0)
+```stdout
+hello
+from write
+```
+
+## Copy imports a manifest-relative file into the test home directory
+
+The `:copy` directive should make it easy to bring a repo fixture into the sandbox without shelling
+out.
+
+    :copy scripts/tmcap nested/tmcap (copied)
+
+    :$ python3 -c "print(open('nested/tmcap').readline().strip())" (exit: 0)
+```stdout
+#!/usr/bin/env python3
+```
+
+---
+vim: set ft=markdown:

@@ -10,6 +10,7 @@
 use std::borrow::Cow;
 use std::fmt;
 use std::num::NonZeroUsize;
+use std::path::PathBuf;
 use std::time::Duration;
 
 use anyhow::Context as _;
@@ -76,6 +77,12 @@ pub(crate) enum LineKind {
 
     /// Run a host command.
     Sh { args: NonEmpty<String> },
+
+    /// Write a file beneath the test home directory from the following fenced block.
+    Write { path: PathBuf },
+
+    /// Copy a manifest-relative file into the test home directory.
+    Copy { source: PathBuf, path: PathBuf },
 
     /// Run a tmux command on the test socket.
     Tmux { args: NonEmpty<String> },
@@ -173,7 +180,10 @@ impl<'s> Line<'s> {
     /// text. A failure to parse a command yields a `LineKind::Error` which can be rendered inline
     /// instead of failing the whole script parse.
     fn parse(raw: &'s str) -> Self {
-        let Some(rest) = raw.strip_prefix(':') else {
+        let Some(rest) = raw
+            .strip_prefix("    :")
+            .or_else(|| raw.strip_prefix("\t:"))
+        else {
             return Self {
                 kind: LineKind::Text,
                 raw,
@@ -205,6 +215,21 @@ impl LineKind {
 
             "$" | "sh" => LineKind::Sh {
                 args: NonEmpty::from_vec(args).context("':sh' expects at least one argument")?,
+            },
+
+            "w" | "write" => LineKind::Write {
+                path: {
+                    ensure!(args.len() == 1, "':write' expects exactly one argument");
+                    PathBuf::from(args.into_iter().next().unwrap())
+                },
+            },
+
+            "cp" | "copy" => LineKind::Copy {
+                source: {
+                    ensure!(args.len() == 2, "':copy' expects exactly two arguments");
+                    PathBuf::from(args[0].clone())
+                },
+                path: PathBuf::from(args[1].clone()),
             },
 
             "t" | "tmux" => LineKind::Tmux {
@@ -402,11 +427,16 @@ mod tests {
             &[
                 r#"# Scenario"#,
                 r#""#,
-                r#":$ cargo --version"#,
-                r#":t new-session -d -s fixture "sleep 3600""#,
-                r#":p runner:0.0"#,
-                r#":k down "abc""#,
-                r#":s /foo/x"#,
+                r#"    :$ cargo --version"#,
+                r#"    :w tmp/hello.txt"#,
+                r#"```text"#,
+                r#"hello"#,
+                r#"```"#,
+                r#"    :cp fixtures/source.txt tmp/source.txt"#,
+                r#"    :t new-session -d -s fixture "sleep 3600""#,
+                r#"    :p runner:0.0"#,
+                r#"    :k down "abc""#,
+                r#"    :s /foo/x"#,
                 r#""#,
                 r#"Notes."#,
                 r#""#,
@@ -422,28 +452,32 @@ mod tests {
 
     #[test]
     fn captures_unknown_directive_as_error() {
-        insta::assert_debug_snapshot!(Script::parse(&[":unknown abc", ""].join("\n")));
+        insta::assert_debug_snapshot!(Script::parse(&["    :unknown abc", ""].join("\n")));
     }
 
     #[test]
     fn captures_bad_shlex_as_error() {
-        insta::assert_debug_snapshot!(Script::parse(&[r#":sh "unterminated"#, r#""#].join("\n")));
+        insta::assert_debug_snapshot!(Script::parse(
+            &[r#"    :sh "unterminated"#, r#""#].join("\n")
+        ));
     }
 
     #[test]
     fn captures_unterminated_keys_string_as_error() {
-        insta::assert_debug_snapshot!(Script::parse(&[r#":k "unterminated"#, r#""#].join("\n")));
+        insta::assert_debug_snapshot!(Script::parse(
+            &[r#"    :k "unterminated"#, r#""#].join("\n")
+        ));
     }
 
     #[test]
     fn captures_bad_filters_as_error() {
         insta::assert_debug_snapshot!(Script::parse(
             &[
-                r#":snap """#,
-                r#":snap /foo"#,
-                r#":snap /foo/x/"#,
-                r#":snap /foo/bar"#,
-                r#":snap /foo/"#,
+                r#"    :snap """#,
+                r#"    :snap /foo"#,
+                r#"    :snap /foo/x/"#,
+                r#"    :snap /foo/bar"#,
+                r#"    :snap /foo/"#,
             ]
             .join("\n")
         ));
@@ -451,80 +485,101 @@ mod tests {
 
     #[test]
     fn captures_invalid_snap_regex_as_error() {
-        insta::assert_debug_snapshot!(Script::parse(&[":snap /(unterminated/x", ""].join("\n")));
+        insta::assert_debug_snapshot!(Script::parse(
+            &["    :snap /(unterminated/x", ""].join("\n")
+        ));
     }
 
     #[test]
     fn parses_snap_with_multiple_filters() {
-        insta::assert_debug_snapshot!(Script::parse(&[":snap /foo/x  |baz|q", ""].join("\n")));
+        insta::assert_debug_snapshot!(Script::parse(&["    :snap /foo/x  |baz|q", ""].join("\n")));
     }
 
     #[test]
     fn parses_snap_with_multiple_capture_groups() {
-        insta::assert_debug_snapshot!(Script::parse(&[":snap /(a)(b)/x", ""].join("\n")));
+        insta::assert_debug_snapshot!(Script::parse(&["    :snap /(a)(b)/x", ""].join("\n")));
     }
 
     #[test]
     fn parses_snap_with_grapheme_replacement() {
-        insta::assert_debug_snapshot!(Script::parse(&[":snap /foo/👩🏽‍💻", ""].join("\n")));
+        insta::assert_debug_snapshot!(Script::parse(&["    :snap /foo/👩🏽‍💻", ""].join("\n")));
     }
 
     #[test]
     fn parses_snap_with_duration_flag() {
         insta::assert_debug_snapshot!(Script::parse(
-            &[":snap --duration 100ms /foo/x", ""].join("\n")
+            &["    :snap --duration 100ms /foo/x", ""].join("\n")
         ));
     }
 
     #[test]
     fn parses_snap_with_count_flag() {
-        insta::assert_debug_snapshot!(Script::parse(&[":snap --count 1 /foo/x", ""].join("\n")));
+        insta::assert_debug_snapshot!(Script::parse(
+            &["    :snap --count 1 /foo/x", ""].join("\n")
+        ));
     }
 
     #[test]
     fn captures_invalid_snap_duration_as_error() {
-        insta::assert_debug_snapshot!(Script::parse(&[":snap --duration soon", ""].join("\n")));
+        insta::assert_debug_snapshot!(Script::parse(&["    :snap --duration soon", ""].join("\n")));
     }
 
     #[test]
     fn captures_invalid_snap_count_as_error() {
-        insta::assert_debug_snapshot!(Script::parse(&[":snap --count 0", ""].join("\n")));
+        insta::assert_debug_snapshot!(Script::parse(&["    :snap --count 0", ""].join("\n")));
     }
 
     #[test]
     fn parses_keys_with_escaped_quote_text() {
-        insta::assert_debug_snapshot!(Script::parse(&[r#":k "a\"b""#, r#""#].join("\n")));
+        insta::assert_debug_snapshot!(Script::parse(&[r#"    :k "a\"b""#, r#""#].join("\n")));
     }
 
     #[test]
     fn parses_keys_with_escaped_backslash_text() {
-        insta::assert_debug_snapshot!(Script::parse(&[r#":k "a\\b""#, r#""#].join("\n")));
+        insta::assert_debug_snapshot!(Script::parse(&[r#"    :k "a\\b""#, r#""#].join("\n")));
     }
 
     #[test]
     fn parses_keys_with_escaped_backslash_followed_by_escaped_quote() {
-        insta::assert_debug_snapshot!(Script::parse(&[r#":k "a\\\"b""#, r#""#].join("\n")));
+        insta::assert_debug_snapshot!(Script::parse(&[r#"    :k "a\\\"b""#, r#""#].join("\n")));
     }
 
     #[test]
     fn parses_keys_with_escaped_backslash_followed_by_quote() {
-        insta::assert_debug_snapshot!(Script::parse(&[r#":k "a\\""#, r#""#].join("\n")));
+        insta::assert_debug_snapshot!(Script::parse(&[r#"    :k "a\\""#, r#""#].join("\n")));
     }
 
     #[test]
     fn parses_keys_with_single_modifier() {
-        insta::assert_debug_snapshot!(Script::parse(&[r#":k C-a"#, r#""#].join("\n")));
+        insta::assert_debug_snapshot!(Script::parse(&[r#"    :k C-a"#, r#""#].join("\n")));
     }
 
     #[test]
     fn parses_keys_with_stacked_modifiers() {
-        insta::assert_debug_snapshot!(Script::parse(&[r#":k C-M-S-up"#, r#""#].join("\n")));
+        insta::assert_debug_snapshot!(Script::parse(&[r#"    :k C-M-S-up"#, r#""#].join("\n")));
     }
 
     #[test]
     fn captures_invalid_modified_text_keys_as_error() {
         insta::assert_debug_snapshot!(Script::parse(
-            &[r#":k C-ab"#, r#":k M-é"#, r#":k S-"""#, r#""#,].join("\n")
+            &[r#"    :k C-ab"#, r#"    :k M-é"#, r#"    :k S-"""#, r#""#,].join("\n")
         ));
+    }
+
+    #[test]
+    fn parses_write_directive() {
+        insta::assert_debug_snapshot!(Script::parse(&["    :write tmp/hello.txt", ""].join("\n")));
+    }
+
+    #[test]
+    fn parses_copy_directive() {
+        insta::assert_debug_snapshot!(Script::parse(
+            &["    :copy scripts/tmcap tmp/tmcap", ""].join("\n")
+        ));
+    }
+
+    #[test]
+    fn leaves_unindented_colon_lines_as_text() {
+        insta::assert_debug_snapshot!(Script::parse(&[":sh echo nope", ""].join("\n")));
     }
 }

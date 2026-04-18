@@ -1,0 +1,14 @@
+---
+source: crates/sesh-integration-tests/src/parser.rs
+expression: "Script::parse(&[\"    :write tmp/hello.txt\", \"\"].join(\"\\n\"))"
+---
+Script {
+    lines: [
+        Line {
+            kind: Write {
+                path: "tmp/hello.txt",
+            },
+            raw: "    :write tmp/hello.txt",
+        },
+    ],
+}

@@ -9,7 +9,7 @@ expression: output
 Shlex failures should be preserved as parser errors and emitted as WARNING callouts by the
 runner.
 
-:sh "unterminated
+    :sh "unterminated
 > [!WARNING]
 > Parser error: invalid shell arguments
 
@@ -18,7 +18,7 @@ runner.
 Unknown directives should be surfaced as parser errors in transcript output, rather than being
 silently ignored.
 
-:unknown abc
+    :unknown abc
 > [!WARNING]
 > Parser error: unknown directive ':unknown'
 
@@ -26,7 +26,7 @@ silently ignored.
 
 Invalid regular expressions in `:snap` should become parser errors with diagnostic detail.
 
-:snap /(unterminated/x
+    :snap /(unterminated/x
 > [!WARNING]
 > Parser error: invalid regex pattern: regex parse error:
 >     (unterminated
@@ -37,7 +37,7 @@ Invalid regular expressions in `:snap` should become parser errors with diagnost
 
 Shift modifier should not apply directly to text keys.
 
-:keys S-a
+    :keys S-a
 > [!WARNING]
 > Parser error: 'S-' only applies to arrow keys
 
@@ -45,10 +45,10 @@ Shift modifier should not apply directly to text keys.
 
 Shift modifier should only apply to arrow keys.
 
-:keys S-enter
+    :keys S-enter
 > [!WARNING]
 > Parser error: 'S-' only applies to arrow keys
-:keys S-tab
+    :keys S-tab
 > [!WARNING]
 > Parser error: 'S-' only applies to arrow keys
 

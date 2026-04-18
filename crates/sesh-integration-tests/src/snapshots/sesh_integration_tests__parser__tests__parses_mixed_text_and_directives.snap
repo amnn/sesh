@@ -1,6 +1,6 @@
 ---
 source: crates/sesh-integration-tests/src/parser.rs
-expression: "Script::parse(&[r#\"# Scenario\"#, r#\"\"#, r#\":$ cargo --version\"#,\nr#\":t new-session -d -s fixture \"sleep 3600\"\"#, r#\":p runner:0.0\"#,\nr#\":k down \"abc\"\"#, r#\":s /foo/x\"#, r#\"\"#, r#\"Notes.\"#, r#\"\"#,].join(\"\\n\"))"
+expression: "Script::parse(&[r#\"# Scenario\"#, r#\"\"#, r#\"    :$ cargo --version\"#,\nr#\"    :w tmp/hello.txt\"#, r#\"```text\"#, r#\"hello\"#, r#\"```\"#,\nr#\"    :cp fixtures/source.txt tmp/source.txt\"#,\nr#\"    :t new-session -d -s fixture \"sleep 3600\"\"#, r#\"    :p runner:0.0\"#,\nr#\"    :k down \"abc\"\"#, r#\"    :s /foo/x\"#, r#\"\"#, r#\"Notes.\"#,\nr#\"\"#,].join(\"\\n\"))"
 ---
 Script {
     lines: [
@@ -21,7 +21,32 @@ Script {
                     ],
                 },
             },
-            raw: ":$ cargo --version",
+            raw: "    :$ cargo --version",
+        },
+        Line {
+            kind: Write {
+                path: "tmp/hello.txt",
+            },
+            raw: "    :w tmp/hello.txt",
+        },
+        Line {
+            kind: Text,
+            raw: "```text",
+        },
+        Line {
+            kind: Text,
+            raw: "hello",
+        },
+        Line {
+            kind: Text,
+            raw: "```",
+        },
+        Line {
+            kind: Copy {
+                source: "fixtures/source.txt",
+                path: "tmp/source.txt",
+            },
+            raw: "    :cp fixtures/source.txt tmp/source.txt",
         },
         Line {
             kind: Tmux {
@@ -35,13 +60,13 @@ Script {
                     ],
                 },
             },
-            raw: ":t new-session -d -s fixture \"sleep 3600\"",
+            raw: "    :t new-session -d -s fixture \"sleep 3600\"",
         },
         Line {
             kind: Pane {
                 target: "runner:0.0",
             },
-            raw: ":p runner:0.0",
+            raw: "    :p runner:0.0",
         },
         Line {
             kind: Keys {
@@ -62,7 +87,7 @@ Script {
                     },
                 ],
             },
-            raw: ":k down \"abc\"",
+            raw: "    :k down \"abc\"",
         },
         Line {
             kind: Snap {
@@ -77,7 +102,7 @@ Script {
                     },
                 ],
             },
-            raw: ":s /foo/x",
+            raw: "    :s /foo/x",
         },
         Line {
             kind: Text,

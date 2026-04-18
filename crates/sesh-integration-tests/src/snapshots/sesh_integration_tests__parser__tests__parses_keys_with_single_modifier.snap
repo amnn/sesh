@@ -1,6 +1,6 @@
 ---
 source: crates/sesh-integration-tests/src/parser.rs
-expression: "Script::parse(&[r#\":k C-a\"#, r#\"\"#].join(\"\\n\"))"
+expression: "Script::parse(&[r#\"    :k C-a\"#, r#\"\"#].join(\"\\n\"))"
 ---
 Script {
     lines: [
@@ -17,7 +17,7 @@ Script {
                     },
                 ],
             },
-            raw: ":k C-a",
+            raw: "    :k C-a",
         },
     ],
 }

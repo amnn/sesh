@@ -1,0 +1,15 @@
+---
+source: crates/sesh-integration-tests/src/parser.rs
+expression: "Script::parse(&[\"    :copy scripts/tmcap tmp/tmcap\", \"\"].join(\"\\n\"))"
+---
+Script {
+    lines: [
+        Line {
+            kind: Copy {
+                source: "scripts/tmcap",
+                path: "tmp/tmcap",
+            },
+            raw: "    :copy scripts/tmcap tmp/tmcap",
+        },
+    ],
+}

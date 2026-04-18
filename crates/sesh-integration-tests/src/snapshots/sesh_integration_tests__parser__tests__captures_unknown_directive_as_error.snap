@@ -1,6 +1,6 @@
 ---
 source: crates/sesh-integration-tests/src/parser.rs
-expression: "Script::parse(&[\":unknown abc\", \"\"].join(\"\\n\"))"
+expression: "Script::parse(&[\"    :unknown abc\", \"\"].join(\"\\n\"))"
 ---
 Script {
     lines: [
@@ -8,7 +8,7 @@ Script {
             kind: Error {
                 message: "unknown directive ':unknown'",
             },
-            raw: ":unknown abc",
+            raw: "    :unknown abc",
         },
     ],
 }

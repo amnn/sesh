@@ -1,6 +1,6 @@
 ---
 source: crates/sesh-integration-tests/src/parser.rs
-expression: "Script::parse(&[\":snap /(a)(b)/x\", \"\"].join(\"\\n\"))"
+expression: "Script::parse(&[\"    :snap /(a)(b)/x\", \"\"].join(\"\\n\"))"
 ---
 Script {
     lines: [
@@ -17,7 +17,7 @@ Script {
                     },
                 ],
             },
-            raw: ":snap /(a)(b)/x",
+            raw: "    :snap /(a)(b)/x",
         },
     ],
 }

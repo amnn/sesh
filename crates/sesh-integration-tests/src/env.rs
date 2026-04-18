@@ -17,13 +17,16 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Context as _;
+use anyhow::ensure;
 use tokio::fs;
 use tokio::join;
 use tokio::process::Command;
 use which::which;
 
+/// Sandboxed filesystem and process environment for one integration test run.
 pub(crate) struct Env {
-    _dir: tempfile::TempDir,
+    dir: tempfile::TempDir,
+    manifest_dir: PathBuf,
 }
 
 impl Env {
@@ -31,7 +34,7 @@ impl Env {
     ///
     /// All environment artifacts live under a single temporary root outside the repo checkout, so
     /// commands and tmux panes can't inherit a repository-containing cwd from the test process.
-    pub(crate) async fn new() -> anyhow::Result<Self> {
+    pub(crate) async fn new(manifest_dir: PathBuf) -> anyhow::Result<Self> {
         let dir = tempfile::tempdir().context("failed to create environment root")?;
         let tmp = |rest: &[&str]| {
             let mut path = dir.path().to_path_buf();
@@ -51,7 +54,7 @@ impl Env {
             .await
             .context("failed to write sh startup config")?;
 
-        let env = Self { _dir: dir };
+        let env = Self { dir, manifest_dir };
         env.bin("sh").await?;
 
         Ok(env)
@@ -92,9 +95,65 @@ impl Env {
         command
     }
 
+    /// Copy a manifest-relative file into the sandboxed home directory.
+    pub(crate) async fn copy_file(
+        &self,
+        src: impl AsRef<Path>,
+        dst: impl AsRef<Path>,
+    ) -> anyhow::Result<()> {
+        let src = src.as_ref();
+        let dst = dst.as_ref();
+
+        ensure!(
+            src.is_relative(),
+            "source must be relative to manifest directory"
+        );
+        ensure!(
+            dst.is_relative(),
+            "destination must be relative to test's $HOME"
+        );
+
+        let src = self.manifest_dir.join(src);
+        let dst = self.path("home").join(dst);
+        let parent = dst.parent().context("file path must have a parent")?;
+
+        fs::create_dir_all(parent)
+            .await
+            .with_context(|| format!("failed to create '{}'", parent.display()))?;
+
+        fs::copy(src, &dst)
+            .await
+            .with_context(|| format!("failed to copy '{}'", dst.display()))?;
+
+        Ok(())
+    }
+
     /// Relativize `path` in this environment's context.
     pub(crate) fn path(&self, path: impl AsRef<Path>) -> PathBuf {
-        self._dir.path().join(path)
+        self.dir.path().join(path)
+    }
+
+    /// Write a file relative to the sandboxed home directory, creating parents as needed.
+    pub(crate) async fn write_file(
+        &self,
+        relative: impl AsRef<Path>,
+        contents: &str,
+    ) -> anyhow::Result<()> {
+        let relative = relative.as_ref();
+        ensure!(relative.is_relative(), "file path must be relative");
+
+        let path = self.path("home").join(relative);
+        let parent = path.parent().context("file path must have a parent")?;
+
+        fs::create_dir_all(parent)
+            .await
+            .with_context(|| format!("failed to create '{}'", parent.display()))?;
+
+        fs::write(&path, contents)
+            .await
+            .with_context(|| format!("failed to write '{}'", path.display()))?;
+
+        Ok(())
     }
 
     async fn bin_(&self, bin: &OsStr) -> anyhow::Result<PathBuf> {

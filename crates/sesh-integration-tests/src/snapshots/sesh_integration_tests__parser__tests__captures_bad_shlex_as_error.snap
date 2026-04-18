@@ -1,6 +1,6 @@
 ---
 source: crates/sesh-integration-tests/src/parser.rs
-expression: "Script::parse(&[r#\":sh \"unterminated\"#, r#\"\"#].join(\"\\n\"))"
+expression: "Script::parse(&[r#\"    :sh \"unterminated\"#, r#\"\"#].join(\"\\n\"))"
 ---
 Script {
     lines: [
@@ -8,7 +8,7 @@ Script {
             kind: Error {
                 message: "invalid shell arguments",
             },
-            raw: ":sh \"unterminated",
+            raw: "    :sh \"unterminated",
         },
     ],
 }

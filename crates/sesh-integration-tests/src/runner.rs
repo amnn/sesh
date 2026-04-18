@@ -7,6 +7,8 @@ use std::ffi::OsStr;
 use std::fmt;
 use std::fmt::Write as _;
 use std::num::NonZeroUsize;
+use std::path::Path;
+use std::slice;
 use std::time::Duration;
 
 use anyhow::Context as _;
@@ -40,8 +42,8 @@ pub struct Runner {
 
 impl Runner {
     /// Construct a runner with an isolated environment and tmux server.
-    pub async fn new() -> anyhow::Result<Self> {
-        let env = Env::new().await?;
+    pub async fn new(manifest_dir: impl AsRef<Path>) -> anyhow::Result<Self> {
+        let env = Env::new(manifest_dir.as_ref().to_path_buf()).await?;
         let tmux = Tmux::new(&env).await?;
 
         let mut runner = Self {
@@ -71,8 +73,14 @@ impl Runner {
         w: &mut impl fmt::Write,
         script: &parser::Script<'_>,
     ) -> fmt::Result {
-        for line in &script.lines {
+        let mut lines = script.lines.iter();
+        while let Some(line) = lines.next() {
+            let remaining = lines.clone();
             self.eval_line(w, line).await?;
+
+            if let LineKind::Write { path } = &line.kind {
+                self.eval_write(w, line.raw, path, remaining).await?;
+            }
         }
 
         Ok(())
@@ -153,6 +161,27 @@ impl Runner {
         Ok(())
     }
 
+    /// Copy a fixture file into the sandboxed home directory.
+    async fn eval_copy(
+        &self,
+        w: &mut impl fmt::Write,
+        raw: &str,
+        source: &Path,
+        path: &Path,
+    ) -> fmt::Result {
+        write!(w, "{raw}")?;
+
+        if let Err(error) = self.env.copy_file(source, path).await {
+            writeln!(w, "\n")?;
+            let msg = format!("failed to copy test file: {error:#}");
+            write_callout(w, "WARNING", &[&msg])?;
+        } else {
+            writeln!(w, " (copied)")?;
+        }
+
+        Ok(())
+    }
+
     /// Send parsed key presses to the active pane.
     async fn eval_keys(&self, w: &mut impl fmt::Write, raw: &str, keys: &[Key]) -> fmt::Result {
         writeln!(w, "{raw}")?;
@@ -198,6 +227,12 @@ impl Runner {
 
             LineKind::Sh { args } => {
                 self.eval_sh(w, line.raw, args).await?;
+            }
+
+            LineKind::Write { .. } => {}
+
+            LineKind::Copy { source, path } => {
+                self.eval_copy(w, line.raw, source, path).await?;
             }
 
             LineKind::Tmux { args } => {
@@ -376,6 +411,65 @@ impl Runner {
             }
         }
 
+        Ok(())
+    }
+
+    /// Write a fenced block into the sandboxed home directory.
+    async fn eval_write(
+        &self,
+        w: &mut impl fmt::Write,
+        raw: &str,
+        path: &Path,
+        mut lines: slice::Iter<'_, Line<'_>>,
+    ) -> fmt::Result {
+        write!(w, "{raw}")?;
+
+        for line in &mut lines {
+            if let LineKind::Text = line.kind {
+                if line.raw.trim().is_empty() {
+                    continue;
+                }
+
+                if line.raw.starts_with("```") {
+                    break;
+                }
+            }
+
+            let msg = "Parser error: ':write' expects to be followed by a fenced code block";
+            writeln!(w, "\n")?;
+            return write_callout(w, "WARNING", &[msg]);
+        }
+
+        let mut contents = String::new();
+        loop {
+            let Some(line) = lines.next() else {
+                writeln!(w, "\n")?;
+                let msg = "Parser error: unexpected end of input in ':write' block";
+                return write_callout(w, "WARNING", &[msg]);
+            };
+
+            let LineKind::Text = line.kind else {
+                let msg = "Parser error: ':write' expects a fenced code block with text content";
+                writeln!(w, "\n")?;
+                return write_callout(w, "WARNING", &[msg]);
+            };
+
+            if line.raw.starts_with("```") {
+                break;
+            }
+
+            contents.push_str(line.raw);
+            contents.push('\n');
+        }
+
+        if let Err(error) = self.env.write_file(path, &contents).await {
+            writeln!(w, "\n")?;
+            let msg = format!("failed to write file: {error:#}");
+            write_callout(w, "WARNING", &[&msg])?;
+            return Ok(());
+        }
+
+        writeln!(w, " (written)")?;
         Ok(())
     }
 

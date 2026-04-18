@@ -8,25 +8,25 @@ This scenario launches `sesh cli` from inside the `alpha` repository so the
 picker starts with a repo context inferred from `cwd`, then uses `C-r` both on
 an unfiltered repo row and on a row selected from a multi-match query.
 
-:bins jj cat
+    :bins jj cat
 > [!NOTE]
 > 'jj', and 'cat' are available.
 
-:t rename-session -t 0 runner (success)
-:$ jj git init alpha (exit: 0)
-:$ jj describe -R alpha -m "alpha commit" (exit: 0)
-:$ jj git init beta (exit: 0)
-:$ jj describe -R beta -m "beta commit" (exit: 0)
-:$ jj git init gamma (exit: 0)
-:$ jj describe -R gamma -m "gamma commit" (exit: 0)
-:t new-session -d -s ui "cd alpha && sesh cli -r '../alpha' -r '../beta' -r '../gamma'" (success)
-:t resize-window -t ui:0 -x 90 -y 10 (success)
-:pane ui:0.0
+    :t rename-session -t 0 runner (success)
+    :$ jj git init alpha (exit: 0)
+    :$ jj describe -R alpha -m "alpha commit" (exit: 0)
+    :$ jj git init beta (exit: 0)
+    :$ jj describe -R beta -m "beta commit" (exit: 0)
+    :$ jj git init gamma (exit: 0)
+    :$ jj describe -R gamma -m "gamma commit" (exit: 0)
+    :t new-session -d -s ui "cd alpha && sesh cli -r '../alpha' -r '../beta' -r '../gamma'" (success)
+    :t resize-window -t ui:0 -x 90 -y 10 (success)
+    :pane ui:0.0
 
 This snapshot shows the initial picker state with the current repo inferred
 from `cwd`.
 
-:snap -d 2s "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+    :snap -d 2s "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 ```terminal
 >                                  ┃
   5/5 | [C-r] repo: ~/alpha        ┃
@@ -42,8 +42,8 @@ from `cwd`.
 
 Move the cursor to the discovered `beta` repo row.
 
-:k down down down
-:snap -d 2s "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+    :k down down down
+    :snap -d 2s "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 ```terminal
 >                                  ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
   5/5 | [C-r] repo: ~/alpha        ┃│  (empty) alpha commit
@@ -60,8 +60,8 @@ Move the cursor to the discovered `beta` repo row.
 Press `C-r` to set repo context from the selected row. The header should update
 to `beta` while the selected row stays on `beta` after the picker refreshes.
 
-:k C-r
-:snap -d 2s "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+    :k C-r
+    :snap -d 2s "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 ```terminal
 >                                  ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
   5/5 | [C-r] repo: ../alpha       ┃│  (empty) alpha commit
@@ -79,8 +79,8 @@ This snapshot applies the query `a`, which still matches multiple repo rows,
 moves to `gamma`, and then uses `C-r` to update the current repo from the
 filtered list.
 
-:k C-u a down down C-r
-:snap -d 2s "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+    :k C-u a down down C-r
+    :snap -d 2s "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 ```terminal
 > a                                ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
   3/5 | [C-r] repo: ../gamma       ┃│  (empty) gamma commit

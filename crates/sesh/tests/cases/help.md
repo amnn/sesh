@@ -1,1 +1,1 @@
-:$ sesh --help
+    :$ sesh --help

@@ -1,6 +1,6 @@
 ---
 source: crates/sesh-integration-tests/src/parser.rs
-expression: "Script::parse(&[\":snap --duration soon\", \"\"].join(\"\\n\"))"
+expression: "Script::parse(&[\"    :snap --duration soon\", \"\"].join(\"\\n\"))"
 ---
 Script {
     lines: [
@@ -8,7 +8,7 @@ Script {
             kind: Error {
                 message: "error: invalid value 'soon' for '--duration <DURATION>': invalid duration\n\nFor more information, try '--help'.\n",
             },
-            raw: ":snap --duration soon",
+            raw: "    :snap --duration soon",
         },
     ],
 }

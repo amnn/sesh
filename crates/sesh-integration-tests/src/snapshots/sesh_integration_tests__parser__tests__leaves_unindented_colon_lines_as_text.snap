@@ -1,0 +1,12 @@
+---
+source: crates/sesh-integration-tests/src/parser.rs
+expression: "Script::parse(&[\":sh echo nope\", \"\"].join(\"\\n\"))"
+---
+Script {
+    lines: [
+        Line {
+            kind: Text,
+            raw: ":sh echo nope",
+        },
+    ],
+}

@@ -11,24 +11,24 @@ The test configures `jj log` to show only commit descriptions, and uses a
 single commit with a multiline description. That keeps the preview stable while
 making the scrollbar movement easy to read in snapshots.
 
-:bins jj cat sh
+    :bins jj cat sh
 > [!NOTE]
 > 'jj', 'cat', and 'sh' are available.
 
-:t rename-session -t 0 runner (success)
-:$ jj git init long (exit: 0)
-:$ jj config set --repo -R long templates.log 'description' (exit: 0)
-:$ sh -c 'msg=$(i=1; while [ "$i" -le 18 ]; do printf "line %02d\n" "$i"; i=$((i+1)); done) && jj describe -R long -m "$msg"' (exit: 0)
-:t new-session -d -s plain "cat" (success)
-:t new-session -d -s ui "sesh cli -r long" (success)
-:t resize-window -t ui:0 -x 120 -y 12 (success)
-:pane ui:0.0
+    :t rename-session -t 0 runner (success)
+    :$ jj git init long (exit: 0)
+    :$ jj config set --repo -R long templates.log 'description' (exit: 0)
+    :$ sh -c 'msg=$(i=1; while [ "$i" -le 18 ]; do printf "line %02d\n" "$i"; i=$((i+1)); done) && jj describe -R long -m "$msg"' (exit: 0)
+    :t new-session -d -s plain "cat" (success)
+    :t new-session -d -s ui "sesh cli -r long" (success)
+    :t resize-window -t ui:0 -x 120 -y 12 (success)
+    :pane ui:0.0
 
 This snapshot shows the long preview at its initial position. The preview
 scrollbar thumb should start at the top of the scroll area.
 
-:k long down
-:snap -d 2s
+    :k long down
+    :snap -d 2s
 ```terminal
 > long                                         ┃@  line 01                                                             ┃
   1/4 | [C-r] repo: none                       ┃│  line 02                                                             ┃
@@ -47,8 +47,8 @@ scrollbar thumb should start at the top of the scroll area.
 This snapshot shows the preview after repeated `S-down` presses. The preview
 scrollbar thumb should reach the bottom of the scroll area.
 
-:k S-down S-down S-down S-down S-down S-down S-down S-down S-down S-down S-down S-down S-down S-down S-down
-:snap
+    :k S-down S-down S-down S-down S-down S-down S-down S-down S-down S-down S-down S-down S-down S-down S-down
+    :snap
 ```terminal
 > long                                         ┃│  line 08                                                             │
   1/4 | [C-r] repo: none                       ┃│  line 09                                                             │

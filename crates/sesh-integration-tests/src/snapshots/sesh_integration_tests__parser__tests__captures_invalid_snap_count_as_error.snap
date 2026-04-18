@@ -1,6 +1,6 @@
 ---
 source: crates/sesh-integration-tests/src/parser.rs
-expression: "Script::parse(&[\":snap --count 0\", \"\"].join(\"\\n\"))"
+expression: "Script::parse(&[\"    :snap --count 0\", \"\"].join(\"\\n\"))"
 ---
 Script {
     lines: [
@@ -8,7 +8,7 @@ Script {
             kind: Error {
                 message: "error: invalid value '0' for '--count <COUNT>': number would be zero for non-zero type\n\nFor more information, try '--help'.\n",
             },
-            raw: ":snap --count 0",
+            raw: "    :snap --count 0",
         },
     ],
 }

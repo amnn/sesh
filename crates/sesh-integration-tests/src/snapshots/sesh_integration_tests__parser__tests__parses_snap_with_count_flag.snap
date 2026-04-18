@@ -1,6 +1,6 @@
 ---
 source: crates/sesh-integration-tests/src/parser.rs
-expression: "Script::parse(&[\":snap --count 1 /foo/x\", \"\"].join(\"\\n\"))"
+expression: "Script::parse(&[\"    :snap --count 1 /foo/x\", \"\"].join(\"\\n\"))"
 ---
 Script {
     lines: [
@@ -17,7 +17,7 @@ Script {
                     },
                 ],
             },
-            raw: ":snap --count 1 /foo/x",
+            raw: "    :snap --count 1 /foo/x",
         },
     ],
 }

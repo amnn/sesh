@@ -20,43 +20,43 @@ it obvious what was normalized:
 - `w` replaces `jj` change IDs that follow the preview graph markers.
 - `h` replaces short hexadecimal commit IDs.
 
-:bins jj git cat
+    :bins jj git cat
 > [!NOTE]
 > 'jj', 'git', and 'cat' are available.
 
 Create an `alpha` repo that will be attached to a live tmux session.
 
-:t rename-session -t 0 runner (success)
-:$ jj git init alpha (exit: 0)
-:$ jj describe -R alpha -m "alpha commit" (exit: 0)
+    :t rename-session -t 0 runner (success)
+    :$ jj git init alpha (exit: 0)
+    :$ jj describe -R alpha -m "alpha commit" (exit: 0)
 
 Create a `beta` repo that is only discoverable via the glob passed to `sesh
 cli`.
 
-:$ jj git init beta (exit: 0)
-:$ jj describe -R beta -m "beta commit" (exit: 0)
+    :$ jj git init beta (exit: 0)
+    :$ jj describe -R beta -m "beta commit" (exit: 0)
 
 Create a `mono` repo plus a `mono-ws` workspace so the picker can show multiple
 entries from the same underlying repo.
 
-:$ jj git init mono (exit: 0)
-:$ jj describe -R mono -m "mono commit" (exit: 0)
-:$ jj workspace add mono-ws -R mono (exit: 0)
-:$ jj describe -R mono-ws -m "mono workspace commit" (exit: 0)
+    :$ jj git init mono (exit: 0)
+    :$ jj describe -R mono -m "mono commit" (exit: 0)
+    :$ jj workspace add mono-ws -R mono (exit: 0)
+    :$ jj describe -R mono-ws -m "mono workspace commit" (exit: 0)
 
 Launch one attached session for `alpha` and then open the picker with globbed
 repo discovery enabled for `alpha`, `beta`, and `mono*`.
 
-:t new-session -d -s alpha-live "cat" (success)
-:t set-option -t alpha-live @sesh.repo alpha (success)
-:t new-session -d -s ui "sesh cli -r 'alpha' -r 'beta' -r 'mono*'" (success)
-:t resize-window -t ui:0 -x 120 -y 12 (success)
-:pane ui:0.0
+    :t new-session -d -s alpha-live "cat" (success)
+    :t set-option -t alpha-live @sesh.repo alpha (success)
+    :t new-session -d -s ui "sesh cli -r 'alpha' -r 'beta' -r 'mono*'" (success)
+    :t resize-window -t ui:0 -x 120 -y 12 (success)
+    :pane ui:0.0
 
 This snapshot shows the initial mixed picker state before any query is typed,
 including the attached `alpha-live` session and the glob-discovered repos.
 
-:snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 ```terminal
 >                                              ┃
   6/6 | [C-r] repo: none                       ┃
@@ -76,8 +76,8 @@ This snapshot shows the picker after typing `beta`, so the selection should
 move away from the initial attached-session result and onto the discovered
 `beta` repo.
 
-:k beta
-:snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+    :k beta
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 ```terminal
 > beta                                         ┃
   1/6 | [C-r] repo: none                       ┃
@@ -96,8 +96,8 @@ move away from the initial attached-session result and onto the discovered
 This snapshot shows the picker after clearing the query with `C-u` and typing
 `mono`, so the selection should switch to the discovered `mono` entries.
 
-:k C-u mono
-:snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+    :k C-u mono
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 ```terminal
 > mono                                         ┃
   2/6 | [C-r] repo: none                       ┃
