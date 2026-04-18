@@ -31,6 +31,7 @@ Shift modifier should not apply directly to text keys.
 Shift modifier should only apply to arrow keys.
 
     :keys S-enter
+
     :keys S-tab
 
 ---

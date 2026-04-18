@@ -105,6 +105,7 @@ If `:pane` fails, key input should still go to the last successfully selected pa
     :p 0:c.0
 
     :pane does-not-exist
+
 > [!WARNING]
 > No such pane.
 
@@ -127,6 +128,7 @@ Sending keys to a removed pane should emit a warning.
     :t kill-pane -t 0:d.0 (success)
 
     :k "boom"
+
 > [!WARNING]
 > failed to send keys to pane '%7': can't find pane: %7
 

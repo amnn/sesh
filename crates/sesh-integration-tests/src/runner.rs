@@ -201,6 +201,8 @@ impl Runner {
             } else {
                 format!("failed to send keys to pane '{}'", self.pane)
             };
+
+            writeln!(w)?;
             write_callout(w, "WARNING", &[&msg])?;
         }
 
@@ -217,6 +219,7 @@ impl Runner {
 
             LineKind::Error { message } => {
                 writeln!(w, "{}", line.raw)?;
+                writeln!(w)?;
                 write_callout(w, "WARNING", &[&format!("Parser error: {message}")])?;
             }
 
@@ -230,6 +233,8 @@ impl Runner {
                 self.eval_sh(w, line.raw, args).await?;
             }
 
+            // Handled in the main loop (this function's caller), so it can gather the file
+            // contents from the following fenced code block.
             LineKind::Write { .. } => {}
 
             LineKind::Copy { source, path } => {
@@ -268,6 +273,7 @@ impl Runner {
         let pane = match self.target_to_pane_id(target).await {
             Ok(pane) => pane,
             Err(e) => {
+                writeln!(w)?;
                 let message = format!("failed to validate pane target '{target}': {e}");
                 write_callout(w, "WARNING", &[&message])?;
                 return Ok(());
@@ -277,6 +283,7 @@ impl Runner {
         if let Some(pane) = pane {
             self.pane = pane;
         } else {
+            writeln!(w)?;
             write_callout(w, "WARNING", &["No such pane."])?;
         }
 
@@ -312,7 +319,7 @@ impl Runner {
             }
 
             Err(e) => {
-                writeln!(w)?;
+                writeln!(w, "\n")?;
                 let msg = format!("failed to execute command: {e}");
                 write_callout(w, "WARNING", &[&msg])?;
             }
@@ -457,8 +464,8 @@ impl Runner {
             };
 
             let LineKind::Text = line.kind else {
-                let msg = "Parser error: ':write' expects a fenced code block with text content";
                 writeln!(w, "\n")?;
+                let msg = "Parser error: ':write' expects a fenced code block with text content";
                 return write_callout(w, "WARNING", &[msg]);
             };
 

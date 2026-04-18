@@ -27,6 +27,7 @@ A command that exists on the host but has not been added via `:b` should fail to
 isolated environment and produce a WARNING callout.
 
     :$ cat
+
 > [!WARNING]
 > failed to execute command: No such file or directory (os error 2)
 

@@ -17,6 +17,7 @@ warning.
 A target that does not exist should produce a warning with error details from tmux.
 
     :pane does-not-exist
+
 > [!WARNING]
 > No such pane.
 
@@ -45,6 +46,7 @@ After removing a pane, selecting that removed pane id should fail with a warning
 
     :tmux kill-pane -t 0.1 (success)
     :pane %1
+
 > [!WARNING]
 > No such pane.
 

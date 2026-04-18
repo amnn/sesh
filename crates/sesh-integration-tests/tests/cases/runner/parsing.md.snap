@@ -11,6 +11,7 @@ Shlex failures should be preserved as parser errors and emitted as WARNING callo
 runner.
 
     :sh "unterminated
+
 > [!WARNING]
 > Parser error: invalid shell arguments
 
@@ -20,6 +21,7 @@ Unknown directives should be surfaced as parser errors in transcript output, rat
 silently ignored.
 
     :unknown abc
+
 > [!WARNING]
 > Parser error: unknown directive ':unknown'
 
@@ -28,6 +30,7 @@ silently ignored.
 Invalid regular expressions in `:snap` should become parser errors with diagnostic detail.
 
     :snap /(unterminated/x
+
 > [!WARNING]
 > Parser error: invalid regex pattern: regex parse error:
 >     (unterminated
@@ -39,6 +42,7 @@ Invalid regular expressions in `:snap` should become parser errors with diagnost
 Shift modifier should not apply directly to text keys.
 
     :keys S-a
+
 > [!WARNING]
 > Parser error: 'S-' only applies to arrow keys
 
@@ -47,9 +51,12 @@ Shift modifier should not apply directly to text keys.
 Shift modifier should only apply to arrow keys.
 
     :keys S-enter
+
 > [!WARNING]
 > Parser error: 'S-' only applies to arrow keys
+
     :keys S-tab
+
 > [!WARNING]
 > Parser error: 'S-' only applies to arrow keys
 
