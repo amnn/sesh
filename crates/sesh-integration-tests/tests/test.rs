@@ -1,8 +1,9 @@
 // Copyright (c) Ashok Menon
 // SPDX-License-Identifier: Apache-2.0
 
+//! Runs markdown-driven integration snapshot cases for the shared test runner.
+
 use std::path::Path;
-use std::path::PathBuf;
 use std::sync::LazyLock;
 
 use anyhow::Context as _;
@@ -21,10 +22,13 @@ static TRACE: LazyLock<TelemetryGuards> = LazyLock::new(|| {
     guards
 });
 
+/// Executes one markdown case and snapshots the resulting runner transcript.
 fn test(path: &Path) -> datatest_stable::Result<()> {
     LazyLock::force(&TRACE);
 
-    let input = std::fs::read_to_string(path)?;
+    let case = Path::new(env!("CARGO_MANIFEST_DIR")).join(path);
+
+    let input = std::fs::read_to_string(&case)?;
     let script = Script::parse(&input);
 
     let runtime = Builder::new_multi_thread()
@@ -47,20 +51,21 @@ fn test(path: &Path) -> datatest_stable::Result<()> {
         res
     })?;
 
-    let mut snapshots = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    snapshots.extend(["tests", "snapshots"]);
+    let snapshot_name = case
+        .file_name()
+        .and_then(|name| name.to_str())
+        .context("invalid snapshot name")?
+        .to_owned();
 
-    let snapshot_components: anyhow::Result<Vec<_>> = path
-        .strip_prefix(ROOT)?
-        .components()
-        .map(|component| component.as_os_str().to_str().context("invalid test name"))
-        .collect();
+    let snapshot_path = case
+        .parent()
+        .context("test case must have a parent directory")?;
 
-    let snapshot_name = snapshot_components?.join("__");
-    let snapshot_name = format!("test__{snapshot_name}");
-    insta::with_settings!({ prepend_module_to_snapshot => false, snapshot_path => snapshots }, {
-        insta::assert_snapshot!(snapshot_name, output);
-    });
+    let mut settings = insta::Settings::clone_current();
+    settings.set_prepend_module_to_snapshot(false);
+    settings.set_snapshot_path(snapshot_path);
+    settings.set_input_file(case);
+    settings.bind(|| insta::assert_snapshot!(snapshot_name, output));
 
     Ok(())
 }

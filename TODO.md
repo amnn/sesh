@@ -12,7 +12,7 @@
     show stable output after the first render.
 - [ ] See if fixture setup (repo creation / `jj describe`) can be reduced
   further without making the tests harder to read.
-- [ ] Move snapshot files to be colocated with the test source files.
+- [x] Move snapshot files to be colocated with the test source files.
 
 ## Foundation
 

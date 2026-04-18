@@ -1,6 +1,7 @@
 ---
 source: crates/sesh-integration-tests/tests/test.rs
 expression: output
+input_file: crates/sesh-integration-tests/tests/cases/runner/sh.md
 ---
 # Runner shell directive behavior
 

@@ -1,6 +1,7 @@
 ---
 source: crates/sesh/tests/test.rs
 expression: output
+input_file: crates/sesh/tests/cases/ui/preview-scroll-threshold.md
 ---
 # Preview scroll threshold
 
