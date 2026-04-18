@@ -1,5 +1,19 @@
 # TODO
 
+## Testing
+
+- [/] Tune performance of tests.
+  The custom Nucleo + Ratatui renderer is faster than the skim-based one, so we
+  should be able to improve test performance as well (particularly for tests
+  that currently take ~2s).
+  - [x] Trace slow UI fixtures and confirm most of the wall time is in the
+    runner's `:snap` stabilization loop rather than the picker itself.
+  - [x] Lower settle counts for later post-input UI snapshots where the traces
+    show stable output after the first render.
+- [ ] See if fixture setup (repo creation / `jj describe`) can be reduced
+  further without making the tests harder to read.
+- [ ] Move snapshot files to be colocated with the test source files.
+
 ## Foundation
 
 - [x] Switch to Nucleo and Ratatui based renderer
@@ -29,11 +43,6 @@
   - Example: `~/Code/foo/bar` -> `~/C/f/bar`.
   - Apply consistently in list rows while preserving an unambiguous full path
     elsewhere.
-
-- [ ] Tune performance of tests.
-  The custom Nucleo + Ratatui renderer is faster than the skim-based one, so we
-  should be able to improve test performance as well (particularly for tests
-  that currently take ~2s).
 
 ## Rendering
 

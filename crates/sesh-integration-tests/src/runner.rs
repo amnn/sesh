@@ -327,11 +327,9 @@ impl Runner {
         duration: Duration,
         filters: &[parser::Filter],
     ) -> fmt::Result {
-        const CHANGE_INTERVAL: Duration = Duration::from_millis(100);
-        const SETTLE_INTERVAL: Duration = Duration::from_millis(50);
+        const INTERVAL: Duration = Duration::from_millis(25);
 
         let deadline = time::Instant::now() + duration;
-        let mut interval = CHANGE_INTERVAL;
         let mut capture = None;
         let mut streak = 0;
         let target = count.get();
@@ -347,12 +345,16 @@ impl Runner {
             };
 
             match &mut capture {
+                _ if pane.trim().is_empty() => {
+                    // ignore empty captures, they usually indicate that tmux hasn't initialized
+                    // the pane yet.
+                }
+
                 Some(prev) if prev == &pane => {
                     streak += 1;
                 }
 
                 Some(prev) => {
-                    interval = SETTLE_INTERVAL;
                     *prev = pane;
                     streak = 1;
                 }
@@ -368,7 +370,7 @@ impl Runner {
                 return Ok(());
             }
 
-            time::sleep(interval).await;
+            time::sleep(INTERVAL).await;
             if time::Instant::now() > deadline {
                 break;
             }

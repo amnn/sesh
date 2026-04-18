@@ -43,7 +43,7 @@ from `cwd`.
 Move the cursor to the discovered `beta` repo row.
 
     :k down down down
-    :snap -d 2s "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 ```terminal
 >                                  ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
   5/5 | [C-r] repo: ~/alpha        ┃│  (empty) alpha commit
@@ -61,7 +61,7 @@ Press `C-r` to set repo context from the selected row. The header should update
 to `beta` while the selected row stays on `beta` after the picker refreshes.
 
     :k C-r
-    :snap -d 2s "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 ```terminal
 >                                  ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
   5/5 | [C-r] repo: ../alpha       ┃│  (empty) alpha commit
@@ -80,7 +80,7 @@ moves to `gamma`, and then uses `C-r` to update the current repo from the
 filtered list.
 
     :k C-u a down down C-r
-    :snap -d 2s "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 ```terminal
 > a                                ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
   3/5 | [C-r] repo: ../gamma       ┃│  (empty) gamma commit
