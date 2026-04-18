@@ -2,7 +2,7 @@
 
 ## Testing
 
-- [/] Tune performance of tests.
+- [x] Tune performance of tests.
   The custom Nucleo + Ratatui renderer is faster than the skim-based one, so we
   should be able to improve test performance as well (particularly for tests
   that currently take ~2s).
@@ -35,9 +35,9 @@
 - [x] Detect and display the current repo from `cwd`.
   - Surface this in the UI state so repo-scoped actions can use it.
 
-- [/] Add a static header that shows shortcuts and current state.
+- [x] Add a static header that shows shortcuts and current state.
   - [x] `C-r` now sets repo context from the selected repo or repo-backed session.
-  - [ ] Include active filters and key actions so behavior is discoverable.
+  - [x] Include active filters and key actions so behavior is discoverable.
 
 - [ ] Contract repo path prefixes to initials for compact display.
   - Example: `~/Code/foo/bar` -> `~/C/f/bar`.
