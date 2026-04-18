@@ -9,6 +9,7 @@ expression: output
 The default pane prompt should be stable across test environments.
 
     :bins env
+
 > [!NOTE]
 > 'env' is available.
 
@@ -17,6 +18,7 @@ The default pane prompt should be stable across test environments.
     :tmux resize-window -x 80 -y 2 -t 0 (success)
 
     :snap
+
 ```terminal
 sh$
 
@@ -31,6 +33,7 @@ Creating a new window without a command should still produce the same stable pro
     :tmux resize-window -x 80 -y 2 -t fresh (success)
 
     :snap
+
 ```terminal
 sh$
 

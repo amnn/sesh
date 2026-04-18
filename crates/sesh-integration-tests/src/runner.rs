@@ -222,6 +222,7 @@ impl Runner {
 
             LineKind::Bins { args } => {
                 writeln!(w, "{}", line.raw)?;
+                writeln!(w)?;
                 self.eval_bins(w, args).await?;
             }
 
@@ -254,6 +255,7 @@ impl Runner {
                 filters,
             } => {
                 writeln!(w, "{}", line.raw)?;
+                writeln!(w)?;
                 self.eval_snap(w, *count, *duration, filters).await?;
             }
         }
@@ -299,10 +301,12 @@ impl Runner {
                 }
 
                 if !output.stdout.is_empty() {
+                    writeln!(w)?;
                     write_fenced_block(w, "stdout", &String::from_utf8_lossy(&output.stdout))?;
                 }
 
                 if !output.stderr.is_empty() && !output.status.success() {
+                    writeln!(w)?;
                     write_fenced_block(w, "stderr", &String::from_utf8_lossy(&output.stderr))?;
                 }
             }
@@ -398,6 +402,7 @@ impl Runner {
                 let output = String::from_utf8_lossy(&output);
                 let output = output.trim();
                 if !output.is_empty() {
+                    writeln!(w)?;
                     write_fenced_block(w, "", output)?;
                 }
             }
@@ -408,6 +413,7 @@ impl Runner {
                 let output = e.to_string();
                 let output = output.trim();
                 if !output.is_empty() {
+                    writeln!(w)?;
                     write_fenced_block(w, "", output)?;
                 }
             }

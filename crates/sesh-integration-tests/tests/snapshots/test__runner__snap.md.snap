@@ -10,6 +10,7 @@ If repeated pane captures settle to five identical filtered snapshots before
 the timeout, the settled capture should be emitted as the snapshot.
 
     :bins echo sleep
+
 > [!NOTE]
 > 'echo', and 'sleep' are available.
 
@@ -19,6 +20,7 @@ the timeout, the settled capture should be emitted as the snapshot.
 
     :t wait-for ready-stable (success)
     :snap -c 1 /stable/X
+
 ```terminal
 hello XXXXXX
 
@@ -35,6 +37,7 @@ surrounding literal text should remain unchanged.
 
     :t wait-for ready-groups (success)
     :snap -c 1 "/id=([0-9]+) user=([a-z]+)/👩🏽‍💻"
+
 ```terminal
 id=👩🏽‍💻👩🏽‍💻👩🏽‍💻 user=👩🏽‍💻👩🏽‍💻👩🏽‍💻👩🏽‍💻👩🏽‍💻
 
@@ -51,6 +54,7 @@ painted once.
 
     :t wait-for ready-nested (success)
     :snap -c 1 /token=(a(bc)d)/👩🏽‍💻
+
 ```terminal
 token=👩🏽‍💻👩🏽‍💻👩🏽‍💻👩🏽‍💻
 
@@ -62,6 +66,7 @@ If repeated pane captures do not settle before the timeout, the runner should
 emit a warning instead of a snapshot.
 
     :bins python3
+
 > [!NOTE]
 > 'python3' is available.
 
@@ -71,6 +76,7 @@ emit a warning instead of a snapshot.
 
     :t wait-for ready-unstable (success)
     :snap -d 200ms
+
 > [!WARNING]
 > pane did not stabilize in 200ms
 

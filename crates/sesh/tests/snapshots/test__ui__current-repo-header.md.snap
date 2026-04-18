@@ -8,6 +8,7 @@ This scenario launches `sesh cli` from inside a repository directory to verify
 the picker header shows the repo inferred from the current working directory.
 
     :bins jj cat
+
 > [!NOTE]
 > 'jj', and 'cat' are available.
 
@@ -23,6 +24,7 @@ This snapshot shows the initial picker state, including the current repo in the
 header.
 
     :snap -d 2s
+
 ```terminal
 >                              ┃
   3/3 | [C-r] repo: ~/alpha    ┃

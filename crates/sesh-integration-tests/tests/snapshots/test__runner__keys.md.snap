@@ -10,6 +10,7 @@ The runner should send text keys literally, then named keys like `enter`, to the
 pane.
 
     :bins cat python3 scripts/tmcap
+
 > [!NOTE]
 > 'cat', 'python3', and 'scripts/tmcap' are available.
 
@@ -21,6 +22,7 @@ pane.
 
     :t wait-for done-keys (success)
     :$ cat keys.txt (exit: 0)
+
 ```stdout
 hello world
 ```
@@ -37,6 +39,7 @@ Switching active pane should route keys into the newly selected pane.
 
     :t wait-for done-new (success)
     :$ cat new.txt (exit: 0)
+
 ```stdout
 pane-b
 ```
@@ -53,6 +56,7 @@ The runner should send a whole phrase as one literal text payload when quoted as
 
     :t wait-for done-text (success)
     :$ cat text.txt (exit: 0)
+
 ```stdout
 hello world
 ```
@@ -69,6 +73,7 @@ Literal text keys should preserve case and punctuation.
 
     :t wait-for done-pct (success)
     :$ cat pct.txt (exit: 0)
+
 ```stdout
 Hello, world!
 ```
@@ -86,6 +91,7 @@ Complex modifier combinations should be forwarded to tmux as key codes, includin
 
     :t wait-for done-mod (success)
     :$ cat mod.txt (exit: 0)
+
 ```stdout
 \x01\x1ba\x1b\x01\x1b[Z\x1b[1;2A
 ```
@@ -106,6 +112,7 @@ If `:pane` fails, key input should still go to the last successfully selected pa
 
     :t wait-for done-c (success)
     :$ cat c.txt (exit: 0)
+
 ```stdout
 still-c
 ```

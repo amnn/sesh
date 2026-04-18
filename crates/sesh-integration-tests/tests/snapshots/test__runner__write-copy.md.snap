@@ -10,16 +10,19 @@ The `:write` directive should write the next fenced block into the sandbox so la
 read it.
 
     :bins cat python3
+
 > [!NOTE]
 > 'cat', and 'python3' are available.
 
     :write nested/hello.txt (written)
+
 ```text
 hello
 from write
 ```
 
     :$ cat nested/hello.txt (exit: 0)
+
 ```stdout
 hello
 from write
@@ -33,6 +36,7 @@ out.
     :copy scripts/tmcap nested/tmcap (copied)
 
     :$ python3 -c "print(open('nested/tmcap').readline().strip())" (exit: 0)
+
 ```stdout
 #!/usr/bin/env python3
 ```

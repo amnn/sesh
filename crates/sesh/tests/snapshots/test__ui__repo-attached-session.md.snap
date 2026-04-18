@@ -21,6 +21,7 @@ it obvious what was normalized:
 - `h` replaces short hexadecimal commit IDs.
 
     :bins jj git cat
+
 > [!NOTE]
 > 'jj', 'git', and 'cat' are available.
 
@@ -57,6 +58,7 @@ This snapshot shows the initial mixed picker state before any query is typed,
 including the attached `alpha-live` session and the glob-discovered repos.
 
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
 ```terminal
 >                                              ┃
   6/6 | [C-r] repo: none                       ┃
@@ -78,6 +80,7 @@ move away from the initial attached-session result and onto the discovered
 
     :k beta
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
 ```terminal
 > beta                                         ┃
   1/6 | [C-r] repo: none                       ┃
@@ -98,6 +101,7 @@ This snapshot shows the picker after clearing the query with `C-u` and typing
 
     :k C-u mono
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
 ```terminal
 > mono                                         ┃
   2/6 | [C-r] repo: none                       ┃

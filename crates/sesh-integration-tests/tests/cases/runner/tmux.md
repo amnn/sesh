@@ -14,6 +14,7 @@ multiple invocations.
 
     :tmux new-session -d -s socket-check
     :tmux list-sessions -F '#S'
+
     :tmux kill-session -t socket-check
     :tmux has-session -t socket-check
 

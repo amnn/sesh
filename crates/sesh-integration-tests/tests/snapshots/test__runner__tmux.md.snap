@@ -10,6 +10,7 @@ Successful tmux commands should append an exit annotation and then write stdout 
 code block.
 
     :tmux list-sessions -F '#S' (success)
+
 ```
 0
 ```
@@ -21,12 +22,15 @@ multiple invocations.
 
     :tmux new-session -d -s socket-check (success)
     :tmux list-sessions -F '#S' (success)
+
 ```
 0
 socket-check
 ```
+
     :tmux kill-session -t socket-check (success)
     :tmux has-session -t socket-check (failure)
+
 ```
 can't find session: socket-check
 ```

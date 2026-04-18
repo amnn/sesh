@@ -8,6 +8,7 @@ This scenario creates several plain tmux sessions with no repo metadata and
 then launches `sesh cli`.
 
     :bins jj cat
+
 > [!NOTE]
 > 'jj', and 'cat' are available.
 
@@ -23,6 +24,7 @@ This snapshot shows the initial picker state before any query is typed, so it
 should list all discovered tmux sessions.
 
     :snap
+
 ```terminal
 >                              ┃
   5/5 | [C-r] repo: none       ┃
@@ -41,6 +43,7 @@ to the `beta` session.
 
     :k bet
     :snap
+
 ```terminal
 > bet                          ┃
   1/5 | [C-r] repo: none       ┃

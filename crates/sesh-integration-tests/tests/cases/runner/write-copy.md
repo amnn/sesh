@@ -8,6 +8,7 @@ read it.
     :bins cat python3
 
     :write nested/hello.txt
+
 ```text
 hello
 from write

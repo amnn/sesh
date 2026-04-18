@@ -9,6 +9,7 @@ expression: output
 A single valid binary in `:b` should produce a NOTE callout and no WARNING callout.
 
     :b ls
+
 > [!NOTE]
 > 'ls' is available.
 
@@ -17,6 +18,7 @@ A single valid binary in `:b` should produce a NOTE callout and no WARNING callo
 Exactly two valid binaries in one directive should both be reported as available.
 
     :b ls cat
+
 > [!NOTE]
 > 'ls', and 'cat' are available.
 
@@ -25,6 +27,7 @@ Exactly two valid binaries in one directive should both be reported as available
 With 2+ valid binaries, the success message should join them correctly and mention every one.
 
     :b ls cat echo
+
 > [!NOTE]
 > 'ls', 'cat', and 'echo' are available.
 
@@ -33,6 +36,7 @@ With 2+ valid binaries, the success message should join them correctly and menti
 A missing binary should produce a WARNING callout that includes an error for that exact binary.
 
     :b definitely-not-a-real-binary
+
 > [!WARNING]
 > 'definitely-not-a-real-binary' is unavailable: failed to add 'definitely-not-a-real-binary' to
 > environment: cannot find binary path
@@ -42,6 +46,7 @@ A missing binary should produce a WARNING callout that includes an error for tha
 Multiple invalid binaries in one directive should produce multiple WARNING callouts.
 
     :b definitely-not-a-real-binary another-not-a-real-binary
+
 > [!WARNING]
 > 'definitely-not-a-real-binary' is unavailable: failed to add 'definitely-not-a-real-binary' to
 > environment: cannot find binary path
@@ -55,6 +60,7 @@ Multiple invalid binaries in one directive should produce multiple WARNING callo
 One directive should emit both NOTE and WARNING callouts when it mixes valid and invalid binaries.
 
     :b ls definitely-not-a-real-binary
+
 > [!NOTE]
 > 'ls' is available.
 
@@ -68,6 +74,7 @@ One directive with multiple valid and invalid binaries should emit one NOTE and 
 callouts.
 
     :b ls cat definitely-not-a-real-binary another-not-a-real-binary
+
 > [!NOTE]
 > 'ls', and 'cat' are available.
 
@@ -84,6 +91,7 @@ callouts.
 `:b` with no arguments should be accepted, and only the raw directive line should be echoed.
 
     :b
+
 
 ---
 vim: set ft=markdown:

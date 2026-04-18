@@ -19,6 +19,7 @@ The helper script below writes numbered multiline descriptions into each repo so
 the test data is generated consistently.
 
     :bins jj cat python3
+
 > [!NOTE]
 > 'jj', 'cat', and 'python3' are available.
 
@@ -59,6 +60,7 @@ scrollbar should be visible.
 
     :k exact down
     :snap -d 2s
+
 ```terminal
 > exact                                        ┃@  exact 01
   1/5 | [C-r] repo: none                       ┃│  exact 02
@@ -79,6 +81,7 @@ preview scrollbar should now be visible.
 
     :k C-u overflow down
     :snap
+
 ```terminal
 > overflow                                     ┃@  overflow 01                                                         ┃
   1/5 | [C-r] repo: none                       ┃│  overflow 02                                                         ┃
@@ -99,6 +102,7 @@ preview content by one line.
 
     :k S-down
     :snap
+
 ```terminal
 > overflow                                     ┃│  overflow 02                                                         │
   1/5 | [C-r] repo: none                       ┃│  overflow 03                                                         ┃

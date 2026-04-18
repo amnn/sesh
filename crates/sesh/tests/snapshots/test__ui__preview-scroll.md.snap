@@ -15,6 +15,7 @@ The helper script below writes a numbered multiline description into a repo so
 these long-preview fixtures stay compact and readable.
 
     :bins jj cat python3
+
 > [!NOTE]
 > 'jj', 'cat', and 'python3' are available.
 
@@ -52,6 +53,7 @@ scrollbar thumb should start at the top of the scroll area.
 
     :k long down
     :snap -d 2s
+
 ```terminal
 > long                                         ┃@  line 01                                                             ┃
   1/4 | [C-r] repo: none                       ┃│  line 02                                                             ┃
@@ -72,6 +74,7 @@ scrollbar thumb should reach the bottom of the scroll area.
 
     :k S-down S-down S-down S-down S-down S-down S-down S-down S-down S-down S-down S-down S-down S-down S-down
     :snap
+
 ```terminal
 > long                                         ┃│  line 08                                                             │
   1/4 | [C-r] repo: none                       ┃│  line 09                                                             │

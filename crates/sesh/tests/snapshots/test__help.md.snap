@@ -3,6 +3,7 @@ source: crates/sesh/tests/test.rs
 expression: output
 ---
     :$ sesh --help (exit: 0)
+
 ```stdout
 Usage: sesh <COMMAND>
 
