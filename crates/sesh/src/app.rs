@@ -3,7 +3,6 @@
 
 //! Picker UI state, rendering, and input handling.
 
-use std::fmt::Write as _;
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
@@ -22,7 +21,10 @@ use ratatui::backend::CrosstermBackend;
 use ratatui::layout::Constraint;
 use ratatui::layout::Direction;
 use ratatui::layout::Layout;
+use ratatui::style::Color;
+use ratatui::style::Style;
 use ratatui::text::Line;
+use ratatui::text::Span;
 use ratatui::text::Text;
 use ratatui::widgets::HighlightSpacing;
 use ratatui::widgets::List;
@@ -271,14 +273,20 @@ fn header_widget(snapshot: &Snapshot<Session>, repo: Option<&Path>) -> impl Widg
         total.ilog10() as usize + 1
     };
 
-    let mut line = format!(" {found:>width$}/{total} | [C-r] repo: ");
-    if let Some(repo) = repo {
-        write!(line, "{}", repo.truncated().compact().display()).unwrap();
-    } else {
-        line.push_str("none");
-    }
+    let mut line = Line::default();
+    let dim = Style::new().dim();
 
-    Line::from(line)
+    line += Span::raw(format!(" {found:>width$}"));
+    line += Span::styled(format!("/{total} | "), dim);
+    push_shortcut_span(&mut line, "C-r");
+    line += Span::raw(" repo: ");
+
+    line += match repo {
+        Some(repo) => Span::raw(repo.truncated().compact().display().to_string()),
+        None => Span::styled("none", dim),
+    };
+
+    line
 }
 
 /// Build the preview widget for the currently selected session.
@@ -320,4 +328,16 @@ fn session_list_widget(snapshot: &Snapshot<Session>) -> impl StatefulWidget<Stat
     List::new(snapshot.matched_items(..).map(|i| i.data))
         .highlight_symbol("> ")
         .highlight_spacing(HighlightSpacing::Always)
+}
+
+/// Build a consistently styled shortcut token for header help text.
+fn push_shortcut_span(line: &mut Line<'_>, code: &str) {
+    let dim = Style::new().dim();
+    let key = Style::new().fg(Color::Magenta);
+
+    line.extend([
+        Span::styled("[", dim),
+        Span::styled(code.to_owned(), key),
+        Span::styled("]", dim),
+    ])
 }

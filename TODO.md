@@ -10,7 +10,7 @@
 - [x] Lock down modules: Make all modules in `lib.rs` private, and re-export
   relevant items at the top level.
 
-- [ ] Colorize parts of item text (for example repo name and repo-prefix/glob
+- [/] Colorize parts of item text (for example repo name and repo-prefix/glob
   segment).
   - [ ] Repo name
   - [ ] Shortcut keys
