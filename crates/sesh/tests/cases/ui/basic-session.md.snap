@@ -27,13 +27,13 @@ should list all discovered tmux sessions.
     :snap
 
 ```terminal
->                              ┃
+session:                       ┃
   5/5 | [C-r] repo: none       ┃
-  alpha                        ┃
-  beta                         ┃
-  gamma                        ┃
-  runner                       ┃
-  ui                           ┃
+ alpha                         ┃
+ beta                          ┃
+ gamma                         ┃
+ runner                        ┃
+ ui                            ┃
                                ┃
                                ┃
                                ┃
@@ -46,9 +46,9 @@ to the `beta` session.
     :snap
 
 ```terminal
-> bet                          ┃
+session: bet                   ┃
   1/5 | [C-r] repo: none       ┃
-  beta                         ┃
+ beta                          ┃
                                ┃
                                ┃
                                ┃

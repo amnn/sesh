@@ -31,13 +31,13 @@ from `cwd`.
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
 ```terminal
->                                  ┃
+session:                           ┃
   5/5 | [C-r] repo: ~/alpha        ┃
-  runner                           ┃
-  ui                               ┃
-  alpha                            ┃
-  beta                             ┃
-  gamma                            ┃
+ runner                            ┃
+ ui                                ┃
+ alpha                             ┃
+ beta                              ┃
+ gamma                             ┃
                                    ┃
                                    ┃
                                    ┃
@@ -49,13 +49,13 @@ Move the cursor to the discovered `beta` repo row.
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
 ```terminal
->                                  ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
+session:                           ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
   5/5 | [C-r] repo: ~/alpha        ┃│  (empty) alpha commit
-  runner                           ┃◆  wwwwwwww root() hhhhhhhh
-  ui                               ┃
-> alpha                            ┃
-  beta                             ┃
-  gamma                            ┃
+ runner                            ┃◆  wwwwwwww root() hhhhhhhh
+ ui                                ┃
+▌alpha                             ┃
+ beta                              ┃
+ gamma                             ┃
                                    ┃
                                    ┃
                                    ┃
@@ -68,13 +68,13 @@ to `beta` while the selected row stays on `beta` after the picker refreshes.
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
 ```terminal
->                                  ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
+session:                           ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
   5/5 | [C-r] repo: ../alpha       ┃│  (empty) alpha commit
-  runner                           ┃◆  wwwwwwww root() hhhhhhhh
-  ui                               ┃
-> alpha                            ┃
-  beta                             ┃
-  gamma                            ┃
+ runner                            ┃◆  wwwwwwww root() hhhhhhhh
+ ui                                ┃
+▌alpha                             ┃
+ beta                              ┃
+ gamma                             ┃
                                    ┃
                                    ┃
                                    ┃
@@ -88,11 +88,11 @@ filtered list.
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
 ```terminal
-> a                                ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
+session: a                         ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
   3/5 | [C-r] repo: ../gamma       ┃│  (empty) gamma commit
-  alpha                            ┃◆  wwwwwwww root() hhhhhhhh
-  beta                             ┃
-> gamma                            ┃
+ alpha                             ┃◆  wwwwwwww root() hhhhhhhh
+ beta                              ┃
+▌gamma                             ┃
                                    ┃
                                    ┃
                                    ┃

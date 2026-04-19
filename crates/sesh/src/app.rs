@@ -310,7 +310,10 @@ fn preview_widget(
 
 /// Build the prompt widget for the active query string.
 fn prompt_widget(query: &str) -> impl Widget {
-    Line::from(format!("> {query}"))
+    Line::from(vec![
+        Span::styled("session: ", Style::new().dim()),
+        Span::raw(query.to_owned()),
+    ])
 }
 
 /// Build the scrollbar widget that visually separates the session list from the
@@ -326,7 +329,8 @@ fn scrollbar_widget() -> impl StatefulWidget<State = ScrollbarState> {
 /// Build the session list widget for the current fuzzy-match snapshot.
 fn session_list_widget(snapshot: &Snapshot<Session>) -> impl StatefulWidget<State = ListState> {
     List::new(snapshot.matched_items(..).map(|i| i.data))
-        .highlight_symbol("> ")
+        .highlight_style(Style::new().reversed())
+        .highlight_symbol(Span::styled("▌", Style::new().bg(Color::Red)))
         .highlight_spacing(HighlightSpacing::Always)
 }
 

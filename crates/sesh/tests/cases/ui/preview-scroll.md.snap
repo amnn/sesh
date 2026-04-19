@@ -47,9 +47,9 @@ scrollbar thumb should start at the top of the scroll area.
     :snap -d 2s
 
 ```terminal
-> long                                         ┃@  line 01                                                             ┃
+session: long                                  ┃@  line 01                                                             ┃
   1/4 | [C-r] repo: none                       ┃│  line 02                                                             ┃
-> long                                     long┃│  line 03                                                             ┃
+▌long                                     long ┃│  line 03                                                             ┃
                                                ┃│  line 04                                                             ┃
                                                ┃│  line 05                                                             ┃
                                                ┃│  line 06                                                             ┃
@@ -68,9 +68,9 @@ scrollbar thumb should reach the bottom of the scroll area.
     :snap
 
 ```terminal
-> long                                         ┃│  line 08                                                             │
+session: long                                  ┃│  line 08                                                             │
   1/4 | [C-r] repo: none                       ┃│  line 09                                                             │
-> long                                     long┃│  line 10                                                             │
+▌long                                     long ┃│  line 10                                                             │
                                                ┃│  line 11                                                             │
                                                ┃│  line 12                                                             ┃
                                                ┃│  line 13                                                             ┃
