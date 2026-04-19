@@ -74,50 +74,13 @@ impl Preview for Session {
             return Ok(String::new());
         };
 
-        let preview = jj::log(repo)
-            .with_context(|| format!("failed to build preview for repo '{}'", repo.display()))?;
-
-        Ok(strip_ansi(&preview))
+        jj::log(repo)
+            .with_context(|| format!("failed to build preview for repo '{}'", repo.display()))
     }
 }
 
 impl<'a> From<&'a Session> for ListItem<'a> {
     fn from(session: &'a Session) -> Self {
         ListItem::new(session.text())
-    }
-}
-
-/// Remove ANSI escape sequences from terminal output.
-fn strip_ansi(text: &str) -> String {
-    let mut stripped = String::with_capacity(text.len());
-    let mut chars = text.chars().peekable();
-
-    while let Some(ch) = chars.next() {
-        if ch != '\u{1b}' {
-            stripped.push(ch);
-            continue;
-        }
-
-        if chars.next_if_eq(&'[').is_none() {
-            continue;
-        }
-
-        for next in chars.by_ref() {
-            if ('@'..='~').contains(&next) {
-                break;
-            }
-        }
-    }
-
-    stripped
-}
-
-#[cfg(test)]
-mod tests {
-    use super::strip_ansi;
-
-    #[test]
-    fn strips_ansi_escape_sequences() {
-        assert_eq!(strip_ansi("\u{1b}[31mhello\u{1b}[0m"), "hello");
     }
 }

@@ -295,7 +295,7 @@ fn preview_widget(
     };
 
     match preview.as_ref() {
-        Ok(preview) => Text::from(preview.clone()),
+        Ok(preview) => preview.clone(),
         Err(err) => Text::from(format!("Error: {err}")),
     }
 }

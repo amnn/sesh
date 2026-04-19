@@ -28,7 +28,7 @@
   segment).
   - [ ] Repo name
   - [ ] Shortcut keys
-  - [ ] Preview text
+  - [x] Preview text
   - [ ] Selected line symbol
   - [ ] Prompt
 

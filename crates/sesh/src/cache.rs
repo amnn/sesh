@@ -5,8 +5,10 @@
 
 use std::sync::Arc;
 
+use ansi_to_tui::IntoText as _;
 use dashmap::DashMap;
 use nucleo::Utf32String;
+use ratatui::text::Text;
 use tokio_util::task::AbortOnDropHandle;
 
 use crate::picker::Item;
@@ -19,7 +21,7 @@ pub(crate) trait Preview: Item {
 
 /// Shared preview cache populated by a background worker.
 pub(crate) struct PreviewCache<I> {
-    entries: Arc<DashMap<Utf32String, Arc<anyhow::Result<String>>>>,
+    entries: Arc<DashMap<Utf32String, Arc<anyhow::Result<Text<'static>>>>>,
     _workers: Vec<AbortOnDropHandle<()>>,
     _phantom: std::marker::PhantomData<fn(I)>,
 }
@@ -34,9 +36,10 @@ impl<I: Preview + Send + 'static> PreviewCache<I> {
             .map(|item| {
                 let entries = entries.clone();
                 let worker = tokio::task::spawn_blocking(move || {
-                    let key = Utf32String::from(item.text());
-                    let preview = Arc::new(item.preview());
-                    entries.insert(key, preview);
+                    entries.insert(
+                        Utf32String::from(item.text()),
+                        Arc::new(item.preview().and_then(|p| Ok(p.into_bytes().into_text()?))),
+                    );
                 });
 
                 AbortOnDropHandle::new(worker)
@@ -51,7 +54,7 @@ impl<I: Preview + Send + 'static> PreviewCache<I> {
     }
 
     /// Return the cached preview for `key`, if it has finished rendering.
-    pub(crate) fn get(&self, key: &Utf32String) -> Option<Arc<anyhow::Result<String>>> {
+    pub(crate) fn get(&self, key: &Utf32String) -> Option<Arc<anyhow::Result<Text<'static>>>> {
         self.entries.get(key).as_deref().cloned()
     }
 }
