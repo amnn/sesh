@@ -63,7 +63,11 @@ impl Item for Session {
             return self.name().to_owned();
         };
 
-        format!("{:<40} {}", self.name(), repo.truncated())
+        format!(
+            "{:<40} {}",
+            self.name(),
+            repo.truncated().compact().display()
+        )
     }
 }
 

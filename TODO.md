@@ -1,19 +1,5 @@
 # TODO
 
-## Testing
-
-- [x] Tune performance of tests.
-  The custom Nucleo + Ratatui renderer is faster than the skim-based one, so we
-  should be able to improve test performance as well (particularly for tests
-  that currently take ~2s).
-  - [x] Trace slow UI fixtures and confirm most of the wall time is in the
-    runner's `:snap` stabilization loop rather than the picker itself.
-  - [x] Lower settle counts for later post-input UI snapshots where the traces
-    show stable output after the first render.
-- [x] See if fixture setup (repo creation / `jj describe`) can be reduced
-  further without making the tests harder to read.
-- [x] Move snapshot files to be colocated with the test source files.
-
 ## Foundation
 
 - [x] Switch to Nucleo and Ratatui based renderer
@@ -31,6 +17,7 @@
   - [x] Preview text
   - [ ] Selected line symbol
   - [ ] Prompt
+  - [ ] Repo Paths (dim everything apart from the basename)
 
 - [x] Detect and display the current repo from `cwd`.
   - Surface this in the UI state so repo-scoped actions can use it.
@@ -39,7 +26,7 @@
   - [x] `C-r` now sets repo context from the selected repo or repo-backed session.
   - [x] Include active filters and key actions so behavior is discoverable.
 
-- [ ] Contract repo path prefixes to initials for compact display.
+- [x] Contract repo path prefixes to initials for compact display.
   - Example: `~/Code/foo/bar` -> `~/C/f/bar`.
   - Apply consistently in list rows while preserving an unambiguous full path
     elsewhere.

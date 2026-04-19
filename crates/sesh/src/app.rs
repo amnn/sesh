@@ -273,7 +273,7 @@ fn header_widget(snapshot: &Snapshot<Session>, repo: Option<&Path>) -> impl Widg
 
     let mut line = format!(" {found:>width$}/{total} | [C-r] repo: ");
     if let Some(repo) = repo {
-        write!(line, "{}", repo.truncated()).unwrap();
+        write!(line, "{}", repo.truncated().compact().display()).unwrap();
     } else {
         line.push_str("none");
     }
