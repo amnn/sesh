@@ -10,14 +10,13 @@
 - [x] Lock down modules: Make all modules in `lib.rs` private, and re-export
   relevant items at the top level.
 
-- [/] Colorize parts of item text (for example repo name and repo-prefix/glob
+- [x] Colorize parts of item text (for example repo name and repo-prefix/glob
   segment).
-  - [ ] Repo name
-  - [ ] Shortcut keys
+  - [x] Shortcut keys
   - [x] Preview text
-  - [ ] Selected line symbol
-  - [ ] Prompt
-  - [ ] Repo Paths (dim everything apart from the basename)
+  - [x] Selected line symbol
+  - [x] Prompt
+  - [x] Repo Paths (dim everything apart from the basename)
 
 - [x] Detect and display the current repo from `cwd`.
   - Surface this in the UI state so repo-scoped actions can use it.

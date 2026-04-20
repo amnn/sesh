@@ -45,26 +45,15 @@ impl<I: Item + Send + Sync + 'static> Picker<I> {
         }
     }
 
-    /// Refresh fuzzy matches and return the currently visible rows.
-    pub(crate) fn refresh(&mut self) -> (Status, &Snapshot<I>, &str) {
-        let status = self.matcher.tick(TICK_TIMEOUT_MS);
-        (status, self.matcher.snapshot(), &self.query)
-    }
-
-    /// Return the current snapshot of visible rows without refreshing against the matcher state.
-    pub(crate) fn snapshot(&self) -> &Snapshot<I> {
-        self.matcher.snapshot()
-    }
-
-    /// Append one character to the active query string.
-    pub(crate) fn push(&mut self, ch: char) {
-        self.query.push(ch);
+    /// Clear the active query string.
+    pub(crate) fn clear(&mut self) {
+        self.query.clear();
         self.matcher.pattern.reparse(
             0,
             &self.query,
             CaseMatching::Smart,
             Normalization::Smart,
-            true,
+            false,
         );
     }
 
@@ -80,15 +69,26 @@ impl<I: Item + Send + Sync + 'static> Picker<I> {
         );
     }
 
-    /// Clear the active query string.
-    pub(crate) fn clear(&mut self) {
-        self.query.clear();
+    /// Append one character to the active query string.
+    pub(crate) fn push(&mut self, ch: char) {
+        self.query.push(ch);
         self.matcher.pattern.reparse(
             0,
             &self.query,
             CaseMatching::Smart,
             Normalization::Smart,
-            false,
+            true,
         );
+    }
+
+    /// Refresh fuzzy matches and return the currently visible rows.
+    pub(crate) fn refresh(&mut self) -> (Status, &Snapshot<I>, &str) {
+        let status = self.matcher.tick(TICK_TIMEOUT_MS);
+        (status, self.matcher.snapshot(), &self.query)
+    }
+
+    /// Return the current snapshot of visible rows without refreshing against the matcher state.
+    pub(crate) fn snapshot(&self) -> &Snapshot<I> {
+        self.matcher.snapshot()
     }
 }

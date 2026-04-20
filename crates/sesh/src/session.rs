@@ -7,12 +7,17 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Context as _;
+use ratatui::text::Line;
+use ratatui::text::Span;
 use ratatui::widgets::ListItem;
 
 use crate::cache::Preview;
 use crate::jj;
 use crate::path::TruncatedExt as _;
 use crate::picker::Item;
+use crate::ui::push_repo_path_spans;
+
+const SESSION_NAME_WIDTH: usize = 40;
 
 /// A tmux session and optional repo metadata.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -64,7 +69,7 @@ impl Item for Session {
         };
 
         format!(
-            "{:<40} {}",
+            "{:<SESSION_NAME_WIDTH$} {}",
             self.name(),
             repo.truncated().compact().display()
         )
@@ -83,8 +88,19 @@ impl Preview for Session {
     }
 }
 
-impl<'a> From<&'a Session> for ListItem<'a> {
-    fn from(session: &'a Session) -> Self {
-        ListItem::new(session.text())
+impl From<&'_ Session> for ListItem<'static> {
+    fn from(session: &Session) -> Self {
+        let Some(repo) = &session.repo else {
+            return ListItem::new(session.name().to_owned());
+        };
+
+        let mut line = Line::from(Span::raw(format!(
+            "{:<SESSION_NAME_WIDTH$} ",
+            session.name()
+        )));
+
+        push_repo_path_spans(&mut line, repo);
+
+        ListItem::new(line)
     }
 }

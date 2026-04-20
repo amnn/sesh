@@ -37,10 +37,11 @@ use ratatui::widgets::StatefulWidget;
 use ratatui::widgets::Widget;
 
 use crate::cache::PreviewCache;
-use crate::path::TruncatedExt as _;
 use crate::picker::Picker;
 use crate::session::Session;
 use crate::terminal::AlternateScreenGuard;
+use crate::ui::push_repo_path_spans;
+use crate::ui::push_shortcut_span;
 use crate::widget::Loading;
 use crate::widget::LoadingState;
 
@@ -281,10 +282,11 @@ fn header_widget(snapshot: &Snapshot<Session>, repo: Option<&Path>) -> impl Widg
     push_shortcut_span(&mut line, "C-r");
     line += Span::raw(" repo: ");
 
-    line += match repo {
-        Some(repo) => Span::raw(repo.truncated().compact().display().to_string()),
-        None => Span::styled("none", dim),
-    };
+    if let Some(repo) = repo {
+        push_repo_path_spans(&mut line, repo);
+    } else {
+        line += Span::styled("none", dim);
+    }
 
     line
 }
@@ -332,16 +334,4 @@ fn session_list_widget(snapshot: &Snapshot<Session>) -> impl StatefulWidget<Stat
         .highlight_style(Style::new().reversed())
         .highlight_symbol(Span::styled("▌", Style::new().bg(Color::Red)))
         .highlight_spacing(HighlightSpacing::Always)
-}
-
-/// Build a consistently styled shortcut token for header help text.
-fn push_shortcut_span(line: &mut Line<'_>, code: &str) {
-    let dim = Style::new().dim();
-    let key = Style::new().fg(Color::Magenta);
-
-    line.extend([
-        Span::styled("[", dim),
-        Span::styled(code.to_owned(), key),
-        Span::styled("]", dim),
-    ])
 }

@@ -12,6 +12,7 @@ mod path;
 mod picker;
 mod session;
 mod terminal;
+mod ui;
 mod widget;
 
 pub use app::App;
