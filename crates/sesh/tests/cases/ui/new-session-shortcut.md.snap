@@ -1,0 +1,160 @@
+---
+source: crates/sesh/tests/test.rs
+expression: output
+input_file: crates/sesh/tests/cases/ui/new-session-shortcut.md
+---
+# New session shortcut
+
+This scenario creates several repo-backed picker entries, with both live tmux
+sessions and discoverable repos that do not have live sessions. It verifies that
+`C-n` is only offered when the query is non-empty and not an exact live session
+name.
+
+    :bins jj cat
+
+> [!NOTE]
+> 'jj', and 'cat' are available.
+
+    :t rename-session -t 0 runner (success)
+    :$ jj git init alpha (exit: 0)
+    :$ jj describe -R alpha -m "alpha commit" (exit: 0)
+    :$ jj git init beta (exit: 0)
+    :$ jj describe -R beta -m "beta commit" (exit: 0)
+    :$ jj git init gamma (exit: 0)
+    :$ jj describe -R gamma -m "gamma commit" (exit: 0)
+    :$ jj git init delta (exit: 0)
+    :$ jj describe -R delta -m "delta commit" (exit: 0)
+
+Launch live sessions for `alpha` and `gamma`, while `beta` and `delta` remain
+repo-only entries discovered through the CLI globs.
+
+    :t new-session -d -s alpha "cat" (success)
+    :t set-option -t alpha @sesh.repo alpha (success)
+    :t new-session -d -s gamma "cat" (success)
+    :t set-option -t gamma @sesh.repo gamma (success)
+    :t new-session -d -s ui "sesh cli -r 'alpha' -r 'beta' -r 'gamma' -r 'delta'" (success)
+    :t resize-window -t ui:0 -x 120 -y 12 (success)
+    :pane ui:0.0
+
+Initially the query is empty, so the `C-n` shortcut should not be visible.
+Pressing `C-n` should also do nothing and leave the picker open in the same
+state.
+
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+
+```terminal
+session:                                       ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+  6/6 | [C-r] repo: none                       ┃│  (empty) alpha commit
+▌alpha                                    alpha┃◆  wwwwwwww root() hhhhhhhh
+ gamma                                    gamma┃
+ runner                                        ┃
+ ui                                            ┃
+ beta                                     beta ┃
+ delta                                    delta┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+```
+
+    :k C-n
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+
+```terminal
+session:                                       ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+  6/6 | [C-r] repo: none                       ┃│  (empty) alpha commit
+▌alpha                                    alpha┃◆  wwwwwwww root() hhhhhhhh
+ gamma                                    gamma┃
+ runner                                        ┃
+ ui                                            ┃
+ beta                                     beta ┃
+ delta                                    delta┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+```
+
+Typing a prefix of the live `alpha` session makes `C-n` visible, because `alp`
+is not an exact live session name.
+
+    :k alp
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+
+```terminal
+session: alp                                   ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+  1/6 | [C-r] repo: none | [C-n] new           ┃│  (empty) alpha commit
+▌alpha                                    alpha┃◆  wwwwwwww root() hhhhhhhh
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+```
+
+Completing the live session name hides `C-n`. Pressing `C-n` again should do
+nothing and leave the picker open.
+
+    :k ha
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+
+```terminal
+session: alpha                                 ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+  1/6 | [C-r] repo: none                       ┃│  (empty) alpha commit
+▌alpha                                    alpha┃◆  wwwwwwww root() hhhhhhhh
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+```
+
+    :k C-n
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+
+```terminal
+session: alpha                                 ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+  1/6 | [C-r] repo: none                       ┃│  (empty) alpha commit
+▌alpha                                    alpha┃◆  wwwwwwww root() hhhhhhhh
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+```
+
+Completing the name of the non-live `beta` repo makes `C-n` visible again,
+because there is no exact live session named `beta`.
+
+    :k C-u beta
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+
+```terminal
+session: beta                                  ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+  1/6 | [C-r] repo: none | [C-n] new           ┃│  (empty) beta commit
+▌beta                                     beta ┃◆  wwwwwwww root() hhhhhhhh
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+```
+
+---
+vim: set ft=markdown:

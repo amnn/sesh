@@ -24,6 +24,7 @@ const SESSION_NAME_WIDTH: usize = 40;
 pub struct Session {
     name: String,
     repo: Option<PathBuf>,
+    live: bool,
 }
 
 impl Session {
@@ -40,6 +41,7 @@ impl Session {
         Ok(Self {
             name,
             repo: Some(path),
+            live: false,
         })
     }
 
@@ -48,7 +50,11 @@ impl Session {
     /// `name` is a tmux session name and `repo` is an optional path to a jj repository attached as
     /// a user-option on the tmux session.
     pub fn from_tmux(name: String, repo: Option<PathBuf>) -> Self {
-        Self { name, repo }
+        Self {
+            name,
+            repo,
+            live: true,
+        }
     }
 
     /// Return the session name.
@@ -59,6 +65,11 @@ impl Session {
     /// Return the repository attached to this session, if any.
     pub fn repo(&self) -> Option<&Path> {
         self.repo.as_deref()
+    }
+
+    /// Return whether this entry represents a currently live tmux session.
+    pub fn is_live(&self) -> bool {
+        self.live
     }
 }
 

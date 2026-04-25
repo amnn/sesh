@@ -84,7 +84,7 @@ move away from the initial attached-session result and onto the discovered
 
 ```terminal
 session: beta                                  ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-  1/6 | [C-r] repo: none                       ┃│  (empty) beta commit
+  1/6 | [C-r] repo: none | [C-n] new           ┃│  (empty) beta commit
 ▌beta                                     beta ┃◆  wwwwwwww root() hhhhhhhh
                                                ┃
                                                ┃
@@ -105,7 +105,7 @@ This snapshot shows the picker after clearing the query with `C-u` and typing
 
 ```terminal
 session: mono                                  ┃@  wwwwwwww (no email set) ttttttttttttttttttt default@ hhhhhhhh
-  2/6 | [C-r] repo: none                       ┃│  (empty) mono commit
+  2/6 | [C-r] repo: none | [C-n] new           ┃│  (empty) mono commit
 ▌mono                                     mono ┃│ ○  wwwwwwww (no email set) ttttttttttttttttttt mono-ws@ hhhhhhhh
  mono-ws                                  mono-┃├─╯  (empty) mono workspace commit
                                                ┃◆  wwwwwwww root() hhhhhhhh

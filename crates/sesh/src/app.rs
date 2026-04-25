@@ -55,6 +55,7 @@ pub struct App {
     list: ListState,
     load: LoadingState,
     preview_scroll: usize,
+    new_session: bool,
 }
 
 impl App {
@@ -65,6 +66,7 @@ impl App {
         let list = ListState::default();
         let load = LoadingState::new();
         let preview_scroll = 0;
+        let new_session = false;
 
         Self {
             repo,
@@ -73,6 +75,7 @@ impl App {
             list,
             load,
             preview_scroll,
+            new_session,
         }
     }
 
@@ -164,11 +167,21 @@ impl App {
             self.list.select(Some(first));
         }
 
+        // The tool supports creating a new session if the query is non-empty and does not match
+        // any live session.
+        self.new_session = !query.is_empty()
+            && !items
+                .iter()
+                .any(|i| i.data.is_live() && i.data.name() == query);
+
         // Render the header and session list.
         f.render_widget(prompt_widget(query), *prompt);
         f.render_stateful_widget(Loading(status.running), *loading, &mut self.load);
-        f.render_widget(header_widget(snapshot, self.repo.as_deref()), *header);
         f.render_stateful_widget(session_list_widget(snapshot), *sessions, &mut self.list);
+        f.render_widget(
+            header_widget(snapshot, self.repo.as_deref(), self.new_session),
+            *header,
+        );
 
         // Rendering corrects the list's selected index, so we find the selected item.
         let selected = self.list.selected().and_then(|s| items.get(s));
@@ -242,6 +255,10 @@ impl App {
 
             KC::Char('r') if key.modifiers.contains(CTRL) => self.set_current_repo(),
 
+            KC::Char('n') if key.modifiers.contains(CTRL) && self.new_session => {
+                return true;
+            }
+
             KC::Char(c) if key.modifiers.is_empty() => self.picker.push(c),
             _ => {}
         };
@@ -268,7 +285,11 @@ impl App {
 }
 
 /// Build the header widget with match counts and current repo context.
-fn header_widget(snapshot: &Snapshot<Session>, repo: Option<&Path>) -> impl Widget {
+fn header_widget(
+    snapshot: &Snapshot<Session>,
+    repo: Option<&Path>,
+    new_session: bool,
+) -> impl Widget {
     let found = snapshot.matched_items(..).count();
     let total = snapshot.item_count();
     let width = if total == 0 {
@@ -291,9 +312,16 @@ fn header_widget(snapshot: &Snapshot<Session>, repo: Option<&Path>) -> impl Widg
         line += Span::styled("none", dim);
     }
 
+    if new_session {
+        line += Span::styled(" | ", dim);
+        push_shortcut_span(&mut line, "C-n");
+        line += Span::raw(" new");
+    }
+
     line
 }
 
+/// Build the preview text for the selected session, including loading and error states.
 fn preview_widget(
     cache: &PreviewCache<Session>,
     selected: Option<&Item<'_, Session>>,

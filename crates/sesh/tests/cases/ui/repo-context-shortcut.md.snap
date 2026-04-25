@@ -89,7 +89,7 @@ filtered list.
 
 ```terminal
 session: a                         ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
-  3/5 | [C-r] repo: ../gamma       ┃│  (empty) gamma commit
+  3/5 | [C-r] repo: ../gamma | [C-n┃│  (empty) gamma commit
  alpha                             ┃◆  wwwwwwww root() hhhhhhhh
  beta                              ┃
 ▌gamma                             ┃
