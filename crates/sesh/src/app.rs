@@ -192,7 +192,7 @@ impl App {
         self.new_session = !query.is_empty()
             && !items
                 .iter()
-                .any(|i| i.data.is_live() && i.data.name() == query);
+                .any(|i| i.data.is_tmux() && i.data.name() == query);
 
         // Render the header and session list.
         f.render_widget(prompt_widget(query), *prompt);

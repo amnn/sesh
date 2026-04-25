@@ -7,6 +7,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Context as _;
+use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::text::Span;
 use ratatui::widgets::ListItem;
@@ -18,13 +19,15 @@ use crate::picker::Item;
 use crate::ui::push_repo_path_spans;
 
 const SESSION_NAME_WIDTH: usize = 40;
+const SESSION_PIP_REPO: &str = "  ";
+const SESSION_PIP_TMUX: &str = "⬤ ";
 
 /// A tmux session and optional repo metadata.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Session {
     name: String,
     repo: Option<PathBuf>,
-    live: bool,
+    tmux: bool,
 }
 
 impl Session {
@@ -41,7 +44,7 @@ impl Session {
         Ok(Self {
             name,
             repo: Some(path),
-            live: false,
+            tmux: false,
         })
     }
 
@@ -53,7 +56,7 @@ impl Session {
         Self {
             name,
             repo,
-            live: true,
+            tmux: true,
         }
     }
 
@@ -68,8 +71,8 @@ impl Session {
     }
 
     /// Return whether this entry represents a currently live tmux session.
-    pub fn is_live(&self) -> bool {
-        self.live
+    pub fn is_tmux(&self) -> bool {
+        self.tmux
     }
 }
 
@@ -101,17 +104,25 @@ impl Preview for Session {
 
 impl From<&'_ Session> for ListItem<'static> {
     fn from(session: &Session) -> Self {
+        let mut line = Line::default();
+        push_live_session_pip(&mut line, session.tmux);
+
         let Some(repo) = &session.repo else {
-            return ListItem::new(session.name().to_owned());
+            line += Span::raw(session.name().to_owned());
+            return ListItem::new(line);
         };
 
-        let mut line = Line::from(Span::raw(format!(
-            "{:<SESSION_NAME_WIDTH$} ",
-            session.name()
-        )));
-
+        line += Span::raw(format!("{:<SESSION_NAME_WIDTH$} ", session.name()));
         push_repo_path_spans(&mut line, repo);
 
         ListItem::new(line)
+    }
+}
+
+fn push_live_session_pip(line: &mut Line<'static>, live: bool) {
+    if live {
+        *line += Span::styled(SESSION_PIP_TMUX, Style::new().dim());
+    } else {
+        *line += Span::raw(SESSION_PIP_REPO);
     }
 }

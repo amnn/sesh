@@ -45,12 +45,12 @@ state.
 ```terminal
 session:                                       ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
   6/6 | [C-r] repo: none                       ┃│  (empty) alpha commit
-▌alpha                                    alpha┃◆  wwwwwwww root() hhhhhhhh
- gamma                                    gamma┃
- runner                                        ┃
- ui                                            ┃
- beta                                     beta ┃
- delta                                    delta┃
+▌⬤ alpha                                    alp┃◆  wwwwwwww root() hhhhhhhh
+ ⬤ gamma                                    gam┃
+ ⬤ runner                                      ┃
+ ⬤ ui                                          ┃
+   beta                                     bet┃
+   delta                                    del┃
                                                ┃
                                                ┃
                                                ┃
@@ -63,12 +63,12 @@ session:                                       ┃@  wwwwwwww (no email set) ttt
 ```terminal
 session:                                       ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
   6/6 | [C-r] repo: none                       ┃│  (empty) alpha commit
-▌alpha                                    alpha┃◆  wwwwwwww root() hhhhhhhh
- gamma                                    gamma┃
- runner                                        ┃
- ui                                            ┃
- beta                                     beta ┃
- delta                                    delta┃
+▌⬤ alpha                                    alp┃◆  wwwwwwww root() hhhhhhhh
+ ⬤ gamma                                    gam┃
+ ⬤ runner                                      ┃
+ ⬤ ui                                          ┃
+   beta                                     bet┃
+   delta                                    del┃
                                                ┃
                                                ┃
                                                ┃
@@ -84,7 +84,7 @@ is not an exact live session name.
 ```terminal
 session: alp                                   ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
   1/6 | [C-r] repo: none | [C-n] new           ┃│  (empty) alpha commit
-▌alpha                                    alpha┃◆  wwwwwwww root() hhhhhhhh
+▌⬤ alpha                                    alp┃◆  wwwwwwww root() hhhhhhhh
                                                ┃
                                                ┃
                                                ┃
@@ -105,7 +105,7 @@ nothing and leave the picker open.
 ```terminal
 session: alpha                                 ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
   1/6 | [C-r] repo: none                       ┃│  (empty) alpha commit
-▌alpha                                    alpha┃◆  wwwwwwww root() hhhhhhhh
+▌⬤ alpha                                    alp┃◆  wwwwwwww root() hhhhhhhh
                                                ┃
                                                ┃
                                                ┃
@@ -123,7 +123,7 @@ session: alpha                                 ┃@  wwwwwwww (no email set) ttt
 ```terminal
 session: alpha                                 ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
   1/6 | [C-r] repo: none                       ┃│  (empty) alpha commit
-▌alpha                                    alpha┃◆  wwwwwwww root() hhhhhhhh
+▌⬤ alpha                                    alp┃◆  wwwwwwww root() hhhhhhhh
                                                ┃
                                                ┃
                                                ┃
@@ -144,7 +144,7 @@ because there is no exact live session named `beta`.
 ```terminal
 session: beta                                  ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
   1/6 | [C-r] repo: none | [C-n] new           ┃│  (empty) beta commit
-▌beta                                     beta ┃◆  wwwwwwww root() hhhhhhhh
+▌  beta                                     bet┃◆  wwwwwwww root() hhhhhhhh
                                                ┃
                                                ┃
                                                ┃

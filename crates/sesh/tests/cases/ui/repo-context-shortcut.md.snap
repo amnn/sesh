@@ -33,11 +33,11 @@ from `cwd`.
 ```terminal
 session:                           ┃
   5/5 | [C-r] repo: ~/alpha        ┃
-▌runner                            ┃
- ui                                ┃
- alpha                             ┃
- beta                              ┃
- gamma                             ┃
+▌⬤ runner                          ┃
+ ⬤ ui                              ┃
+   alpha                           ┃
+   beta                            ┃
+   gamma                           ┃
                                    ┃
                                    ┃
                                    ┃
@@ -51,11 +51,11 @@ Move the cursor to the discovered `beta` repo row.
 ```terminal
 session:                           ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
   5/5 | [C-r] repo: ~/alpha        ┃│  (empty) beta commit
- runner                            ┃◆  wwwwwwww root() hhhhhhhh
- ui                                ┃
- alpha                             ┃
-▌beta                              ┃
- gamma                             ┃
+ ⬤ runner                          ┃◆  wwwwwwww root() hhhhhhhh
+ ⬤ ui                              ┃
+   alpha                           ┃
+▌  beta                            ┃
+   gamma                           ┃
                                    ┃
                                    ┃
                                    ┃
@@ -70,11 +70,11 @@ to `beta` while the selected row stays on `beta` after the picker refreshes.
 ```terminal
 session:                           ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
   5/5 | [C-r] repo: ../beta        ┃│  (empty) beta commit
- runner                            ┃◆  wwwwwwww root() hhhhhhhh
- ui                                ┃
- alpha                             ┃
-▌beta                              ┃
- gamma                             ┃
+ ⬤ runner                          ┃◆  wwwwwwww root() hhhhhhhh
+ ⬤ ui                              ┃
+   alpha                           ┃
+▌  beta                            ┃
+   gamma                           ┃
                                    ┃
                                    ┃
                                    ┃
@@ -90,9 +90,9 @@ filtered list.
 ```terminal
 session: a                         ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
   3/5 | [C-r] repo: ../gamma | [C-n┃│  (empty) gamma commit
- alpha                             ┃◆  wwwwwwww root() hhhhhhhh
- beta                              ┃
-▌gamma                             ┃
+   alpha                           ┃◆  wwwwwwww root() hhhhhhhh
+   beta                            ┃
+▌  gamma                           ┃
                                    ┃
                                    ┃
                                    ┃
