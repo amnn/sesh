@@ -228,10 +228,7 @@ impl App {
 
             // Session list selection
             KC::Up => self.list.select_previous(),
-            KC::Char('p') if key.modifiers.contains(CTRL) => self.list.select_previous(),
-
             KC::Down => self.list.select_next(),
-            KC::Char('n') if key.modifiers.contains(CTRL) => self.list.select_next(),
 
             // Edit query
             KC::Backspace => self.picker.pop(),
