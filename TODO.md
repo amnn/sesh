@@ -68,7 +68,8 @@
 
 ## Preview and Workflow Enhancements
 
-- [ ] Make the preview window optional (toggleable/configurable).
+- [x] Make the preview window optional (toggleable/configurable).
+  - `C-p` toggles the preview window at runtime.
   - The preview already shows a `jj log` summary for repo entries and
     repo-associated sessions.
 

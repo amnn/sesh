@@ -55,6 +55,7 @@ pub struct App {
     list: ListState,
     load: LoadingState,
     preview_scroll: usize,
+    preview: bool,
     new_session: bool,
 }
 
@@ -66,6 +67,7 @@ impl App {
         let list = ListState::default();
         let load = LoadingState::new();
         let preview_scroll = 0;
+        let preview = true;
         let new_session = false;
 
         Self {
@@ -75,6 +77,7 @@ impl App {
             list,
             load,
             preview_scroll,
+            preview,
             new_session,
         }
     }
@@ -109,7 +112,9 @@ impl App {
 
     /// Draw the UI into the provided frame based on the current application state.
     ///
-    /// The frame is split up into the following regions, each with its own widget:
+    /// The frame is split up into the following regions, each with its own widget. The `preview`
+    /// region and its scroll bar are only visible when the preview is toggled on (defaults to
+    /// visible).
     ///
     /// ```text
     /// +-----------------+-+-------------------------+-+
@@ -130,19 +135,34 @@ impl App {
         use Layout as L;
 
         // Split the frame into regions
-        let cols = L::default()
-            .direction(D::Horizontal)
-            .constraints([C::Percentage(40), C::Length(1), C::Percentage(60)])
-            .split(f.area());
+        let (sessions, scroll, preview) = if self.preview {
+            let cols = L::default()
+                .direction(D::Horizontal)
+                .constraints([C::Percentage(40), C::Length(1), C::Percentage(60)])
+                .split(f.area());
 
-        let [sessions, scroll, preview] = &cols[..] else {
-            panic!("expected three columns in the layout")
+            let [sessions, scroll, preview] = &cols[..] else {
+                panic!("expected three columns in the layout")
+            };
+
+            (*sessions, *scroll, Some(*preview))
+        } else {
+            let cols = L::default()
+                .direction(D::Horizontal)
+                .constraints([C::Min(0), C::Length(1)])
+                .split(f.area());
+
+            let [sessions, scroll] = &cols[..] else {
+                panic!("expected two columns in the layout")
+            };
+
+            (*sessions, *scroll, None)
         };
 
         let rows = L::default()
             .direction(D::Vertical)
             .constraints([C::Length(1), C::Length(1), C::Min(0)])
-            .split(*sessions);
+            .split(sessions);
 
         let [prompt, header, sessions] = &rows[..] else {
             panic!("expected three rows in the layout")
@@ -183,15 +203,20 @@ impl App {
             *header,
         );
 
-        // Rendering corrects the list's selected index, so we find the selected item.
-        let selected = self.list.selected().and_then(|s| items.get(s));
-        let text = preview_widget(&self.cache, selected);
-
-        // Sync scroll states
         let mut session_scroll = ScrollbarState::default()
             .content_length(items.len().saturating_sub(sessions.height as usize).max(1))
             .viewport_content_length(sessions.height as usize)
             .position(self.list.offset());
+
+        f.render_stateful_widget(scrollbar_widget(), scroll, &mut session_scroll);
+
+        let Some(preview) = preview else {
+            return;
+        };
+
+        // Rendering corrects the list's selected index, so we find the selected item.
+        let selected = self.list.selected().and_then(|s| items.get(s));
+        let text = preview_widget(&self.cache, selected);
 
         self.preview_scroll = self
             .preview_scroll
@@ -207,11 +232,10 @@ impl App {
             .viewport_content_length(preview.height as usize)
             .position(self.preview_scroll);
 
-        f.render_stateful_widget(scrollbar_widget(), *scroll, &mut session_scroll);
-        f.render_stateful_widget(scrollbar_widget(), *preview, &mut preview_scroll);
+        f.render_stateful_widget(scrollbar_widget(), preview, &mut preview_scroll);
 
         let preview_para = Paragraph::new(text).scroll((self.preview_scroll as u16, 0));
-        f.render_widget(preview_para, *preview);
+        f.render_widget(preview_para, preview);
     }
 
     /// Handle a single keyboard event, returning `true` when the picker should exit.
@@ -229,16 +253,8 @@ impl App {
             KC::Char('g' | 'c') if key.modifiers.contains(CTRL) => return true,
 
             // Scroll preview
-            KC::Char('p') if key.modifiers.contains(KM::ALT) => {
-                self.preview_scroll = self.preview_scroll.saturating_sub(1);
-            }
-
             KC::Up if key.modifiers.contains(KM::SHIFT) => {
                 self.preview_scroll = self.preview_scroll.saturating_sub(1);
-            }
-
-            KC::Char('n') if key.modifiers.contains(KM::ALT) => {
-                self.preview_scroll = self.preview_scroll.saturating_add(1);
             }
 
             KC::Down if key.modifiers.contains(KM::SHIFT) => {
@@ -257,6 +273,11 @@ impl App {
 
             KC::Char('n') if key.modifiers.contains(CTRL) && self.new_session => {
                 return true;
+            }
+
+            KC::Char('p') if key.modifiers.contains(CTRL) => {
+                self.preview_scroll = 0;
+                self.preview = !self.preview;
             }
 
             KC::Char(c) if key.modifiers.is_empty() => self.picker.push(c),

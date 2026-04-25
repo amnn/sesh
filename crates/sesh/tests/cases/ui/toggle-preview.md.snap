@@ -1,0 +1,70 @@
+---
+source: crates/sesh/tests/test.rs
+expression: output
+input_file: crates/sesh/tests/cases/ui/toggle-preview.md
+---
+# Toggle preview
+
+This scenario verifies that `C-p` toggles the preview pane.
+
+    :bins jj cat
+
+> [!NOTE]
+> 'jj', and 'cat' are available.
+
+    :t rename-session -t 0 runner (success)
+    :$ jj git init alpha (exit: 0)
+    :$ jj describe -R alpha -m "alpha commit" (exit: 0)
+    :t new-session -d -s ui "sesh cli -r alpha" (success)
+    :t resize-window -t ui:0 -x 100 -y 8 (success)
+    :pane ui:0.0
+
+The preview should be visible initially.
+
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
+```terminal
+session:                               ┃
+  3/3 | [C-r] repo: none               ┃
+▌runner                                ┃
+ ui                                    ┃
+ alpha                                 ┃
+                                       ┃
+                                       ┃
+                                       ┃
+```
+
+Pressing `C-p` should hide the preview and allow the list to use the full width.
+
+    :k C-p
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
+```terminal
+session:                                                                                           ┃
+  3/3 | [C-r] repo: none                                                                           ┃
+▌runner                                                                                            ┃
+ ui                                                                                                ┃
+ alpha                                    alpha                                                    ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+```
+
+Pressing `C-p` again should restore the preview.
+
+    :k C-p
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
+```terminal
+session:                               ┃
+  3/3 | [C-r] repo: none               ┃
+▌runner                                ┃
+ ui                                    ┃
+ alpha                                 ┃
+                                       ┃
+                                       ┃
+                                       ┃
+```
+
+---
+vim: set ft=markdown:
