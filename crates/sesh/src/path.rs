@@ -97,7 +97,7 @@ mod tests {
 
     #[test]
     fn compacts_truncated_home_relative_paths() {
-        let Some(home) = super::HOME_DIR.as_ref() else {
+        let Some(home) = HOME_DIR.as_ref() else {
             return;
         };
 
@@ -113,18 +113,8 @@ mod tests {
     }
 
     #[test]
-    fn truncates_paths_under_cached_home() {
-        let Some(home) = super::HOME_DIR.as_ref() else {
-            return;
-        };
-
-        let path = home.join("repo");
-        assert_eq!(path.truncated(), PathBuf::from("~/repo"));
-    }
-
-    #[test]
     fn splits_compact_display_path_into_prefix_and_basename() {
-        let Some(home) = super::HOME_DIR.as_ref() else {
+        let Some(home) = HOME_DIR.as_ref() else {
             return;
         };
 
@@ -133,6 +123,13 @@ mod tests {
             path.split_last(),
             (PathBuf::from("~/C/f").as_path(), OsStr::new("bar"))
         );
+    }
+
+    #[test]
+    fn splits_empty_path_into_empty_parent_and_basename() {
+        let path = PathBuf::from("");
+
+        assert_eq!(path.split_last(), (Path::new(""), OsStr::new("")));
     }
 
     #[test]
@@ -146,16 +143,19 @@ mod tests {
     }
 
     #[test]
-    fn splits_empty_path_into_empty_parent_and_basename() {
-        let path = PathBuf::from("");
-
-        assert_eq!(path.split_last(), (Path::new(""), OsStr::new("")));
-    }
-
-    #[test]
     fn splits_root_path_into_empty_parent_and_root_basename() {
         let path = PathBuf::from("/");
 
         assert_eq!(path.split_last(), (Path::new(""), OsStr::new("/")));
+    }
+
+    #[test]
+    fn truncates_paths_under_cached_home() {
+        let Some(home) = HOME_DIR.as_ref() else {
+            return;
+        };
+
+        let path = home.join("repo");
+        assert_eq!(path.truncated(), PathBuf::from("~/repo"));
     }
 }
