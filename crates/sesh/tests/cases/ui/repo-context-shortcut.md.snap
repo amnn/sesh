@@ -33,7 +33,7 @@ from `cwd`.
 ```terminal
 session:                           ┃
   5/5 | [C-r] repo: ~/alpha        ┃
- runner                            ┃
+▌runner                            ┃
  ui                                ┃
  alpha                             ┃
  beta                              ┃
@@ -50,11 +50,11 @@ Move the cursor to the discovered `beta` repo row.
 
 ```terminal
 session:                           ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
-  5/5 | [C-r] repo: ~/alpha        ┃│  (empty) alpha commit
+  5/5 | [C-r] repo: ~/alpha        ┃│  (empty) beta commit
  runner                            ┃◆  wwwwwwww root() hhhhhhhh
  ui                                ┃
-▌alpha                             ┃
- beta                              ┃
+ alpha                             ┃
+▌beta                              ┃
  gamma                             ┃
                                    ┃
                                    ┃
@@ -69,11 +69,11 @@ to `beta` while the selected row stays on `beta` after the picker refreshes.
 
 ```terminal
 session:                           ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
-  5/5 | [C-r] repo: ../alpha       ┃│  (empty) alpha commit
+  5/5 | [C-r] repo: ../beta        ┃│  (empty) beta commit
  runner                            ┃◆  wwwwwwww root() hhhhhhhh
  ui                                ┃
-▌alpha                             ┃
- beta                              ┃
+ alpha                             ┃
+▌beta                              ┃
  gamma                             ┃
                                    ┃
                                    ┃

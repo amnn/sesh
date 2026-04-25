@@ -29,7 +29,7 @@ header.
 ```terminal
 session:                       ┃
   3/3 | [C-r] repo: ~/alpha    ┃
- alpha-live                    ┃
+▌alpha-live                    ┃
  runner                        ┃
  ui                            ┃
                                ┃

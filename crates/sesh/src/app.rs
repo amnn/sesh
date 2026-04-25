@@ -158,6 +158,12 @@ impl App {
         let (status, snapshot, query) = self.picker.refresh();
         let items: Vec<_> = snapshot.matched_items(..).collect();
 
+        // If the list does not have a selection, set it to the first visible item.
+        if self.list.selected().is_none() && !items.is_empty() {
+            let first = self.list.offset().min(items.len() - 1);
+            self.list.select(Some(first));
+        }
+
         // Render the header and session list.
         f.render_widget(prompt_widget(query), *prompt);
         f.render_stateful_widget(Loading(status.running), *loading, &mut self.load);
@@ -288,7 +294,6 @@ fn header_widget(snapshot: &Snapshot<Session>, repo: Option<&Path>) -> impl Widg
     line
 }
 
-/// Build the preview widget for the currently selected session.
 fn preview_widget(
     cache: &PreviewCache<Session>,
     selected: Option<&Item<'_, Session>>,

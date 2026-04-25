@@ -61,9 +61,9 @@ including the attached `alpha-live` session and the glob-discovered repos.
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 ```terminal
-session:                                       ┃
-  6/6 | [C-r] repo: none                       ┃
- alpha-live                               alpha┃
+session:                                       ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+  6/6 | [C-r] repo: none                       ┃│  (empty) alpha commit
+▌alpha-live                               alpha┃◆  wwwwwwww root() hhhhhhhh
  runner                                        ┃
  ui                                            ┃
  beta                                     beta ┃
@@ -83,9 +83,9 @@ move away from the initial attached-session result and onto the discovered
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 ```terminal
-session: beta                                  ┃
-  1/6 | [C-r] repo: none                       ┃
- beta                                     beta ┃
+session: beta                                  ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+  1/6 | [C-r] repo: none                       ┃│  (empty) beta commit
+▌beta                                     beta ┃◆  wwwwwwww root() hhhhhhhh
                                                ┃
                                                ┃
                                                ┃
@@ -104,11 +104,11 @@ This snapshot shows the picker after clearing the query with `C-u` and typing
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 ```terminal
-session: mono                                  ┃
-  2/6 | [C-r] repo: none                       ┃
- mono                                     mono ┃
- mono-ws                                  mono-┃
-                                               ┃
+session: mono                                  ┃@  wwwwwwww (no email set) ttttttttttttttttttt default@ hhhhhhhh
+  2/6 | [C-r] repo: none                       ┃│  (empty) mono commit
+▌mono                                     mono ┃│ ○  wwwwwwww (no email set) ttttttttttttttttttt mono-ws@ hhhhhhhh
+ mono-ws                                  mono-┃├─╯  (empty) mono workspace commit
+                                               ┃◆  wwwwwwww root() hhhhhhhh
                                                ┃
                                                ┃
                                                ┃

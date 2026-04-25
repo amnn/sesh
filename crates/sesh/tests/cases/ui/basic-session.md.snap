@@ -29,7 +29,7 @@ should list all discovered tmux sessions.
 ```terminal
 session:                       ┃
   5/5 | [C-r] repo: none       ┃
- alpha                         ┃
+▌alpha                         ┃
  beta                          ┃
  gamma                         ┃
  runner                        ┃
@@ -48,7 +48,7 @@ to the `beta` session.
 ```terminal
 session: bet                   ┃
   1/5 | [C-r] repo: none       ┃
- beta                          ┃
+▌beta                          ┃
                                ┃
                                ┃
                                ┃
