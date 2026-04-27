@@ -49,41 +49,51 @@ const POLL_TIMEOUT: Duration = Duration::from_millis(16);
 
 /// Session picker state, caches, and UI behavior.
 pub struct App {
-    repo: Option<PathBuf>,
-    picker: Picker<Session>,
     cache: PreviewCache<Session>,
     list: ListState,
     load: LoadingState,
-    preview_scroll: usize,
-    preview: bool,
     new_session: bool,
+    picker: Picker<Session>,
+    preview: bool,
+    preview_scroll: usize,
+    repo: Option<PathBuf>,
+    selected: Option<Session>,
+}
+
+/// Result of handling a picker input event.
+enum AppEvent {
+    Cancel,
+    Continue,
+    Select,
 }
 
 impl App {
     /// Construct application state for the provided repo context.
     pub fn new(sessions: Vec<Session>, repo: Option<PathBuf>) -> Self {
-        let picker = Picker::new(sessions.clone());
-        let cache = PreviewCache::new(sessions);
+        let cache = PreviewCache::new(sessions.clone());
         let list = ListState::default();
         let load = LoadingState::new();
-        let preview_scroll = 0;
-        let preview = true;
         let new_session = false;
+        let picker = Picker::new(sessions);
+        let preview = true;
+        let preview_scroll = 0;
+        let selected = None;
 
         Self {
-            repo,
-            picker,
             cache,
             list,
             load,
-            preview_scroll,
-            preview,
             new_session,
+            picker,
+            preview,
+            preview_scroll,
+            repo,
+            selected,
         }
     }
 
     /// Run the interactive picker for discovered sessions.
-    pub fn run(mut self) -> anyhow::Result<()> {
+    pub fn run(mut self) -> anyhow::Result<Option<Session>> {
         let _guard = AlternateScreenGuard::new()?;
         let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
 
@@ -102,12 +112,12 @@ impl App {
                 continue;
             }
 
-            if self.handle_key(key) {
-                break;
+            match self.handle_key(key) {
+                AppEvent::Continue => {}
+                AppEvent::Cancel => return Ok(None),
+                AppEvent::Select => return Ok(self.selected),
             }
         }
-
-        Ok(())
     }
 
     /// Draw the UI into the provided frame based on the current application state.
@@ -210,12 +220,14 @@ impl App {
 
         f.render_stateful_widget(scrollbar_widget(), scroll, &mut session_scroll);
 
+        // Rendering corrects the list's selected index, so we find the selected item.
+        let selected = self.list.selected().and_then(|s| items.get(s));
+        self.selected = selected.map(|i| i.data.clone());
+
         let Some(preview) = preview else {
             return;
         };
 
-        // Rendering corrects the list's selected index, so we find the selected item.
-        let selected = self.list.selected().and_then(|s| items.get(s));
         let text = preview_widget(&self.cache, selected);
 
         self.preview_scroll = self
@@ -238,19 +250,19 @@ impl App {
         f.render_widget(preview_para, preview);
     }
 
-    /// Handle a single keyboard event, returning `true` when the picker should exit.
-    fn handle_key(&mut self, key: KeyEvent) -> bool {
+    /// Handle a single keyboard event, returning the consequent application action.
+    fn handle_key(&mut self, key: KeyEvent) -> AppEvent {
         use KeyCode as KC;
         use KeyModifiers as KM;
         const CTRL: KM = KM::CONTROL;
 
         match key.code {
-            // Quit successfully
-            KC::Enter => return true,
+            // Accept the selected row.
+            KC::Enter => return AppEvent::Select,
 
             // Cancel
-            KC::Esc => return true,
-            KC::Char('g' | 'c') if key.modifiers.contains(CTRL) => return true,
+            KC::Esc => return AppEvent::Cancel,
+            KC::Char('g' | 'c') if key.modifiers.contains(CTRL) => return AppEvent::Cancel,
 
             // Scroll preview
             KC::Up if key.modifiers.contains(KM::SHIFT) => {
@@ -272,7 +284,8 @@ impl App {
             KC::Char('r') if key.modifiers.contains(CTRL) => self.set_current_repo(),
 
             KC::Char('n') if key.modifiers.contains(CTRL) && self.new_session => {
-                return true;
+                // TODO: implement new session creation
+                return AppEvent::Cancel;
             }
 
             KC::Char('p') if key.modifiers.contains(CTRL) => {
@@ -281,10 +294,11 @@ impl App {
             }
 
             KC::Char(c) if key.modifiers.is_empty() => self.picker.push(c),
+
             _ => {}
         };
 
-        false
+        AppEvent::Continue
     }
 
     /// Set the current repo from the currently selected session.
@@ -292,16 +306,10 @@ impl App {
     /// If there is no selection, or the selected session has no associated repo, the current repo
     /// is cleared.
     fn set_current_repo(&mut self) {
-        let mut items = self.picker.snapshot().matched_items(..).map(|i| i.data);
-        let selected = self.list.selected().and_then(|s| {
-            if s < items.len() {
-                items.nth(s)
-            } else {
-                items.next_back()
-            }
-        });
-
-        self.repo = selected.and_then(|s| s.repo()).map(|p| p.to_owned());
+        self.repo = self
+            .selected
+            .as_ref()
+            .and_then(|s| s.repo().map(|p| p.to_owned()));
     }
 }
 

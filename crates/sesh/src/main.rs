@@ -90,7 +90,11 @@ async fn main() -> anyhow::Result<()> {
             }
 
             let app = App::new(sessions, current_repo);
-            app.run()?;
+            if let Some(session) = app.run()?
+                && session.is_tmux()
+            {
+                tmux::switch_client(session.name()).await?;
+            }
 
             Ok(())
         }

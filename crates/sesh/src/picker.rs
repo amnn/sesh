@@ -86,9 +86,4 @@ impl<I: Item + Send + Sync + 'static> Picker<I> {
         let status = self.matcher.tick(TICK_TIMEOUT_MS);
         (status, self.matcher.snapshot(), &self.query)
     }
-
-    /// Return the current snapshot of visible rows without refreshing against the matcher state.
-    pub(crate) fn snapshot(&self) -> &Snapshot<I> {
-        self.matcher.snapshot()
-    }
 }

@@ -92,3 +92,20 @@ pub async fn sessions() -> anyhow::Result<BTreeMap<String, Option<PathBuf>>> {
 
     Ok(sessions)
 }
+
+/// Switch the current tmux client to an existing session.
+pub async fn switch_client(session: &str) -> anyhow::Result<()> {
+    let output = Command::new("tmux")
+        .args(["switch-client", "-t", session])
+        .output()
+        .await
+        .context("failed to switch tmux client")?;
+
+    ensure!(
+        output.status.success(),
+        "error running 'tmux switch-client': {}",
+        String::from_utf8_lossy(&output.stderr),
+    );
+
+    Ok(())
+}

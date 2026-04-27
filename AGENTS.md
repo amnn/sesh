@@ -20,6 +20,15 @@ For markdown-driven snapshot changes, refresh the checked-in `.snap` files with
 `cargo insta test --accept` using the appropriate package/test selection, and
 remove any leftover `.snap.new` artifacts before finishing.
 
+## Architecture
+
+Keep direct interactions with external binaries behind a dedicated module per
+binary. For example, `tmux` command construction and process execution belong
+in `crates/sesh/src/tmux.rs`, while `jj` command construction and process
+execution belong in `crates/sesh/src/jj.rs`. Other modules may decide when to
+request an operation, but the binary-specific modules should abstract how that
+operation is performed.
+
 ## Truth Seeking
 
 Default to verified claims over plausible guesses.

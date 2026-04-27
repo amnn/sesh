@@ -47,7 +47,7 @@
 
 ## Session and Repo Lifecycle
 
-- [!] Switch to the selected active session.
+- [x] Switch to the selected active session.
   - Current selection behavior should prioritize fast session attach.
 
 - [ ] Create a session when selecting an inactive repo.
