@@ -60,6 +60,11 @@ impl Session {
         }
     }
 
+    /// Return whether this entry represents a currently live tmux session.
+    pub fn is_tmux(&self) -> bool {
+        self.tmux
+    }
+
     /// Return the session name.
     pub fn name(&self) -> &str {
         &self.name
@@ -68,11 +73,6 @@ impl Session {
     /// Return the repository attached to this session, if any.
     pub fn repo(&self) -> Option<&Path> {
         self.repo.as_deref()
-    }
-
-    /// Return whether this entry represents a currently live tmux session.
-    pub fn is_tmux(&self) -> bool {
-        self.tmux
     }
 }
 

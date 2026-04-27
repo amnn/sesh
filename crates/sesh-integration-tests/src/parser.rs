@@ -243,23 +243,19 @@ impl LineKind {
                 },
             },
 
-            "k" | "keys" => LineKind::Keys {
-                keys: args
-                    .into_iter()
-                    .map(parse_key)
-                    .collect::<anyhow::Result<_>>()?,
-            },
+            "k" | "keys" => {
+                let keys: anyhow::Result<Vec<_>> = args.into_iter().map(parse_key).collect();
+                LineKind::Keys { keys: keys? }
+            }
 
             "s" | "snap" => {
                 let args = parse_snap_args(args)?;
+                let filters: anyhow::Result<Vec<_>> =
+                    args.filters.into_iter().map(parse_filter).collect();
                 LineKind::Snap {
                     count: args.count,
                     duration: args.duration,
-                    filters: args
-                        .filters
-                        .into_iter()
-                        .map(parse_filter)
-                        .collect::<anyhow::Result<_>>()?,
+                    filters: filters?,
                 }
             }
 

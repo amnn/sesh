@@ -1,7 +1,7 @@
 // Copyright (c) Ashok Menon
 // SPDX-License-Identifier: Apache-2.0
 
-//! Terminal state management helpers
+//! Terminal state management helpers.
 
 use crossterm::cursor;
 use crossterm::execute;
@@ -13,6 +13,7 @@ use crossterm::terminal::LeaveAlternateScreen;
 pub struct AlternateScreenGuard;
 
 impl AlternateScreenGuard {
+    /// Enter the alternate screen and enable raw terminal mode.
     pub fn new() -> anyhow::Result<Self> {
         terminal::enable_raw_mode()?;
         execute!(std::io::stdout(), EnterAlternateScreen, cursor::Hide)?;

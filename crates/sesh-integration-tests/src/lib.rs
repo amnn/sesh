@@ -8,5 +8,5 @@ mod parser;
 mod runner;
 mod tmux;
 
-pub use parser::Script;
-pub use runner::Runner;
+pub use crate::parser::Script;
+pub use crate::runner::Runner;

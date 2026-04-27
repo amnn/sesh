@@ -5,5 +5,5 @@
 
 mod loading;
 
-pub(crate) use self::loading::Loading;
-pub(crate) use self::loading::LoadingState;
+pub(crate) use crate::widget::loading::Loading;
+pub(crate) use crate::widget::loading::LoadingState;

@@ -11,6 +11,7 @@ use std::process::Stdio;
 
 use anyhow::Context as _;
 use anyhow::anyhow;
+use anyhow::bail;
 use anyhow::ensure;
 use tokio::fs;
 use tokio::io::AsyncBufReadExt as _;
@@ -48,8 +49,6 @@ pub(crate) struct Tmux {
     tx: mpsc::Sender<Request>,
 }
 
-type Response = mpsc::Sender<anyhow::Result<Vec<u8>>>;
-
 /// A request to the control task to run a command and return its output.
 struct Request {
     /// The command to run.
@@ -59,6 +58,8 @@ struct Request {
     /// line-by-line.
     tx: Response,
 }
+
+type Response = mpsc::Sender<anyhow::Result<Vec<u8>>>;
 
 impl Tmux {
     /// Start a `tmux` control-mode client in the given environment.
@@ -177,7 +178,7 @@ impl Command {
                     joined.push(b'\n');
                 }
 
-                Err(_) => return Err(anyhow!(String::from_utf8_lossy(&joined).into_owned())),
+                Err(_) => bail!(String::from_utf8_lossy(&joined).into_owned()),
             }
         }
 
@@ -387,9 +388,9 @@ async fn stdout_task(mut client: Child, mut requests: mpsc::Receiver<Request>) {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use std::ffi::OsStr;
+
+    use super::*;
 
     #[test]
     fn escapes_barewords() {
