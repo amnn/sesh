@@ -38,14 +38,21 @@
 
 - [ ] Highlight the matched portion of the item.
 
+- [ ] Render the tmux pip green when the session has an undismissed bell/notification.
+
+- [ ] Expand contracted portion of repo paths when they are matched against.
+
+- [ ] Scroll the contents of session list items so that the last matched
+  character is visible.
+
 ## Session and Repo Lifecycle
 
-- [ ] Switch to the selected active session.
+- [!] Switch to the selected active session.
   - Current selection behavior should prioritize fast session attach.
 
-- [!] Create a session when selecting an inactive repo.
+- [ ] Create a session when selecting an inactive repo.
 
-- [!] Ensure new tmux sessions created from repos store repo association via a
+- [ ] Ensure new tmux sessions created from repos store repo association via a
   tmux user option.
   - Keep the metadata contract stable for discovery and preview logic.
 
@@ -83,6 +90,15 @@
 - [ ] Investigate and improve debug-build performance.
   - Profile hot paths (preview generation, matching, tmux I/O) and document
     findings.
+
+## GitHub
+
+- [ ] List relevant PRs for repo in session list (a relevant PR is one that is
+  related to the user in some way -- e.g. they are the author, or they are a
+  reviewer, commenter, or mention in the PR).
+
+- [ ] Associate PR information with sessions that have a repo that is attached
+  to a PR.
 
 ## Configuration
 
