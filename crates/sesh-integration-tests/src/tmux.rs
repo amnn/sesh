@@ -7,7 +7,10 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::ffi::OsStr;
 use std::fmt::Write as _;
+use std::path::Path;
+use std::path::PathBuf;
 use std::process::Stdio;
+use std::time::Duration;
 
 use anyhow::Context as _;
 use anyhow::anyhow;
@@ -20,6 +23,7 @@ use tokio::io::BufReader;
 use tokio::process::Child;
 use tokio::process::ChildStderr;
 use tokio::sync::mpsc;
+use tokio::sync::watch;
 use tokio::task::JoinHandle;
 use tokio_util::task::AbortOnDropHandle;
 use tracing::debug;
@@ -44,6 +48,8 @@ pub(crate) struct Command {
 
 /// Handle for managing a `tmux` server.
 pub(crate) struct Tmux {
+    pane: watch::Receiver<Option<String>>,
+    socket: PathBuf,
     _stderr_task: AbortOnDropHandle<()>,
     stdout_task: JoinHandle<()>,
     tx: mpsc::Sender<Request>,
@@ -98,13 +104,31 @@ impl Tmux {
         let stderr_task = AbortOnDropHandle::new(tokio::task::spawn(stderr_task(stderr)));
 
         let (tx, rx) = mpsc::channel(32);
-        let stdout_task = tokio::task::spawn(stdout_task(client, rx));
+        let (pane_tx, pane) = watch::channel(None);
+        let stdout_task = tokio::task::spawn(stdout_task(client, rx, pane_tx.clone()));
 
-        Ok(Self {
+        let tmux = Self {
+            pane,
+            socket,
             _stderr_task: stderr_task,
             stdout_task,
             tx,
-        })
+        };
+
+        // Set-up a subscription to track the current pane.
+        tmux.command("refresh-client")
+            .args(["-B", "runner-pane::#{pane_id}"])
+            .status()
+            .await
+            .context("failed to subscribe to current pane changes")?;
+
+        let pane = tmux
+            .query_current_pane()
+            .await
+            .context("failed to confirm initial current pane")?;
+
+        pane_tx.send_replace(Some(pane));
+        Ok(tmux)
     }
 
     /// Create a new `Command` with the given name, that will be run against this `Tmux` instance.
@@ -113,6 +137,17 @@ impl Tmux {
             tx: self.tx.clone(),
             line: escape(name.as_ref()).into_owned(),
         }
+    }
+
+    /// Return the current pane reported by the control-mode client.
+    ///
+    /// `Tmux::new` confirms and seeds this value before constructing a runner, and the control
+    /// task keeps it current from subscription notifications.
+    pub(crate) fn pane(&self) -> String {
+        self.pane
+            .borrow()
+            .clone()
+            .expect("tmux pane is confirmed on startup")
     }
 
     /// Gracefully shutdown the `tmux` server and control client, waiting for them to exit.
@@ -125,6 +160,41 @@ impl Tmux {
         self.stdout_task.await.ok();
 
         Ok(())
+    }
+
+    /// Return the path to the tmux server socket used by this runner.
+    pub(crate) fn socket(&self) -> &Path {
+        &self.socket
+    }
+
+    /// Wait for the control-mode client to report `expected` as its current pane.
+    pub(crate) async fn wait_for_pane(&self, expected: &str) -> anyhow::Result<()> {
+        let mut pane = self.pane.clone();
+        tokio::time::timeout(Duration::from_secs(2), async {
+            pane.wait_for(|pane| pane.as_deref() == Some(expected))
+                .await
+                .context("current pane notification stream closed")?;
+
+            Ok(())
+        })
+        .await
+        .context("timed out waiting for current pane notification")?
+    }
+
+    /// Poll tmux for the current pane. Only used during initialization, after which this is kept
+    /// up-to-date with subscription notifications.
+    async fn query_current_pane(&self) -> anyhow::Result<String> {
+        let output = self
+            .command("display-message")
+            .args(["-p", "#{pane_id}"])
+            .status()
+            .await?;
+
+        let output = String::from_utf8_lossy(&output);
+        let pane = output.trim();
+        ensure!(pane.starts_with('%'), "invalid current pane '{pane}'");
+
+        Ok(pane.to_owned())
     }
 }
 
@@ -301,7 +371,11 @@ async fn stderr_task(stderr: ChildStderr) {
 /// Task looking after `stdout` (and `stdin`) for a control-mode `tmux` client.
 ///
 /// `client` is kept alive by this task, and `requests` receives control commands to send to tmux.
-async fn stdout_task(mut client: Child, mut requests: mpsc::Receiver<Request>) {
+async fn stdout_task(
+    mut client: Child,
+    mut requests: mpsc::Receiver<Request>,
+    pane: watch::Sender<Option<String>>,
+) {
     let Some(mut stdin) = client.stdin.take() else {
         error!("failed to setup control client stdin");
         return;
@@ -367,6 +441,11 @@ async fn stdout_task(mut client: Child, mut requests: mpsc::Receiver<Request>) {
                     let _ = tx.send(unescape(line.into_bytes())).await;
                 } else if line.starts_with("%begin") {
                     active = pending.pop_front();
+                } else if let Some(rest) = line.strip_prefix("%subscription-changed runner-pane ")
+                    && let Some((_, p)) = rest.rsplit_once(" : ")
+                    && p.starts_with('%')
+                {
+                    pane.send_replace(Some(p.to_owned()));
                 } else if line.starts_with("%") {
                     debug!("notification: {line}");
                 } else {
@@ -393,6 +472,12 @@ mod tests {
     use super::*;
 
     #[test]
+    fn escapes_backslashes() {
+        let escaped = escape(OsStr::new(r"path\\segment"));
+        insta::assert_snapshot!(escaped.as_ref(), @r###""path\\\\segment""###);
+    }
+
+    #[test]
     fn escapes_barewords() {
         let escaped = escape(OsStr::new("list-sessions"));
         insta::assert_snapshot!(escaped.as_ref(), @"list-sessions");
@@ -405,23 +490,17 @@ mod tests {
     }
 
     #[test]
-    fn escapes_backslashes() {
-        let escaped = escape(OsStr::new(r"path\\segment"));
-        insta::assert_snapshot!(escaped.as_ref(), @r###""path\\\\segment""###);
+    fn rejects_character_escape() {
+        let input = br"bad\x".to_vec();
+        let error = unescape(input).expect_err("unescape should fail");
+        assert_eq!(error.to_string(), "malformed escape");
     }
 
     #[test]
-    fn unescapes_output_without_escapes_is_unchanged() {
-        let input = b"plain output".to_vec();
-        let output = unescape(input.clone()).expect("unescape should succeed");
-        assert_eq!(output, input);
-    }
-
-    #[test]
-    fn unescapes_octal_and_backslash_sequences() {
-        let input = br"one\040two\134three\\four\073".to_vec();
-        let output = unescape(input).expect("unescape should succeed");
-        assert_eq!(output, b"one two\\three\\four;");
+    fn rejects_escape_overflow() {
+        let input = br"bad\777".to_vec();
+        let error = unescape(input).expect_err("unescape should fail");
+        assert_eq!(error.to_string(), "overflow");
     }
 
     #[test]
@@ -439,23 +518,23 @@ mod tests {
     }
 
     #[test]
-    fn rejects_escape_overflow() {
-        let input = br"bad\777".to_vec();
-        let error = unescape(input).expect_err("unescape should fail");
-        assert_eq!(error.to_string(), "overflow");
-    }
-
-    #[test]
-    fn rejects_character_escape() {
-        let input = br"bad\x".to_vec();
-        let error = unescape(input).expect_err("unescape should fail");
-        assert_eq!(error.to_string(), "malformed escape");
-    }
-
-    #[test]
     fn rejects_unfinished_escape() {
         let input = br"bad\".to_vec();
         let error = unescape(input).expect_err("unescape should fail");
         assert_eq!(error.to_string(), "unfinished escape");
+    }
+
+    #[test]
+    fn unescapes_octal_and_backslash_sequences() {
+        let input = br"one\040two\134three\\four\073".to_vec();
+        let output = unescape(input).expect("unescape should succeed");
+        assert_eq!(output, b"one two\\three\\four;");
+    }
+
+    #[test]
+    fn unescapes_output_without_escapes_is_unchanged() {
+        let input = b"plain output".to_vec();
+        let output = unescape(input.clone()).expect("unescape should succeed");
+        assert_eq!(output, input);
     }
 }

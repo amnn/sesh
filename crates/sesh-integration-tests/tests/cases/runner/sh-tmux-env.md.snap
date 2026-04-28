@@ -1,0 +1,53 @@
+---
+source: crates/sesh-integration-tests/tests/test.rs
+expression: output
+input_file: crates/sesh-integration-tests/tests/cases/runner/sh-tmux-env.md
+---
+# Shell tmux environment
+
+Host shell commands should receive `TMUX` and `TMUX_PANE` values matching the
+runner's current pane target, so tmux commands run through `:$` behave like
+commands launched from that pane.
+
+    :bins tmux cat
+
+> [!NOTE]
+> 'tmux', and 'cat' are available.
+
+    :t rename-session -t 0 runner (success)
+    :t new-session -d -s beta "cat" (success)
+    :t list-clients -F '#{client_session}:#{pane_id}' (success)
+
+```
+runner:%0
+```
+
+Switching from a shell directive should affect the control-mode client attached
+to the runner's current pane.
+
+    :$ tmux switch-client -t beta (exit: 0)
+    :t list-clients -F '#{client_session}:#{pane_id}' (success)
+
+```
+beta:%1
+```
+
+    :t list-sessions -F '#{session_name}:#{session_attached}' (success)
+
+```
+beta:1
+runner:0
+```
+
+Changing the active runner pane via the synchronized pane directive should also
+change the `TMUX_PANE` value seen by subsequent shell directives.
+
+    :pane beta:0.0
+    :$ tmux display-message -p '#{pane_id}' (exit: 0)
+
+```stdout
+%1
+```
+
+---
+vim: set ft=markdown:

@@ -84,15 +84,5 @@ If `:pane` fails, key input should still go to the last successfully selected pa
     :t wait-for done-c
     :$ cat c.txt
 
-## Invalid active pane reports send-keys error
-
-Sending keys to a removed pane should emit a warning.
-
-    :t new-window -d -n d "cat > d.txt"
-    :p 0:d.0
-    :t kill-pane -t 0:d.0
-
-    :k "boom"
-
 ---
 vim: set ft=markdown:

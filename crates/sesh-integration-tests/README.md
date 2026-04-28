@@ -19,6 +19,9 @@ Supported directives:
   - Run a tmux command on the test socket.
 - `:p` / `:pane <target>`
   - Set current pane target (default is `zz-sesh-ui-runner:0.0`).
+  - Use this instead of `:tmux switch-client ...` when later `:keys`, `:sh`, or
+    `:snap` directives should operate on the new pane; `:pane` waits for the
+    control-mode pane notification to settle before the next directive runs.
 - `:k` / `:keys <tokens...>`
   - Send key presses to the current pane.
   - Key names are lowercase only: `enter`, `up`, `down`, `left`, `right`,

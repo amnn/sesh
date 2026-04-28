@@ -37,6 +37,13 @@ Default to verified claims over plausible guesses.
   when they can be checked directly.
 - Validate assumptions with repo evidence first (for example file reads,
   searches, tests, or command output) before acting on them.
+- When asked to undo or narrowly adjust a change, preserve all unrelated text
+  and operands exactly. Re-read the edited hunk or diff before reporting so the
+  response does not claim a narrower change than was actually made.
+- Do not justify or retain defensive changes from speculation. If a change is
+  based on a plausible failure mode rather than observed evidence, either
+  reproduce the failure, remove the change, or clearly call out the uncertainty
+  before proceeding.
 - Prefer to ground factual claims in external documentation or another citable
   source; make a reasonable effort to find one before relying on memory alone,
   and cite the source you used in the response.

@@ -11,7 +11,6 @@ use std::path::Path;
 use std::slice;
 use std::time::Duration;
 
-use anyhow::Context as _;
 use futures::future;
 use nonempty::NonEmpty;
 use textwrap::Options;
@@ -35,9 +34,6 @@ pub struct Runner {
 
     /// Filesystem and process environment used for each test run.
     env: Env,
-
-    /// Active tmux pane identifier that receives subsequent commands.
-    pane: String,
 }
 
 impl Runner {
@@ -46,19 +42,7 @@ impl Runner {
         let env = Env::new(manifest_dir.as_ref().to_path_buf()).await?;
         let tmux = Tmux::new(&env).await?;
 
-        let mut runner = Self {
-            tmux,
-            env,
-            pane: "".to_owned(),
-        };
-
-        runner.pane = runner
-            .target_to_pane_id("0.0")
-            .await
-            .context("failed to query initial tmux pane target '0.0'")?
-            .context("initial tmux pane target '0.0' not found")?;
-
-        Ok(runner)
+        Ok(Self { tmux, env })
     }
 
     /// Add a binary to the runner environment's `$PATH`.
@@ -94,14 +78,7 @@ impl Runner {
 
     /// Capture the active pane and normalize dynamic spans with `filters`.
     async fn capture_pane(&self, filters: &[parser::Filter]) -> anyhow::Result<String> {
-        let output = self
-            .tmux
-            .command("capture-pane")
-            .args(["-p", "-t"])
-            .arg(&self.pane)
-            .status()
-            .await?;
-
+        let output = self.tmux.command("capture-pane").arg("-p").status().await?;
         let mut capture = String::from_utf8_lossy(&output).into_owned();
         for filter in filters {
             capture = paint_filter(&capture, filter);
@@ -189,17 +166,15 @@ impl Runner {
         let command = self
             .tmux
             .command("send-keys")
-            .arg("-t")
-            .arg(&self.pane)
             .args(keys.iter().map(|k| k.code().into_owned()));
 
         if let Err(e) = command.status().await {
             let stderr = e.to_string();
             let stderr = stderr.trim();
             let msg = if !stderr.is_empty() {
-                format!("failed to send keys to pane '{}': {}", self.pane, stderr)
+                format!("failed to send keys: {stderr}")
             } else {
-                format!("failed to send keys to pane '{}'", self.pane)
+                "failed to send keys".to_owned()
             };
 
             writeln!(w)?;
@@ -280,11 +255,29 @@ impl Runner {
             }
         };
 
-        if let Some(pane) = pane {
-            self.pane = pane;
-        } else {
+        let Some(pane) = pane else {
             writeln!(w)?;
             write_callout(w, "WARNING", &["No such pane."])?;
+            return Ok(());
+        };
+
+        if let Err(error) = self
+            .tmux
+            .command("switch-client")
+            .args(["-t", &pane])
+            .status()
+            .await
+        {
+            writeln!(w)?;
+            let message = format!("failed to switch client to pane '{target}': {error}");
+            write_callout(w, "WARNING", &[&message])?;
+            return Ok(());
+        }
+
+        if let Err(error) = self.tmux.wait_for_pane(&pane).await {
+            writeln!(w)?;
+            let message = format!("failed to observe pane target '{target}': {error}");
+            write_callout(w, "WARNING", &[&message])?;
         }
 
         Ok(())
@@ -299,7 +292,14 @@ impl Runner {
     ) -> fmt::Result {
         write!(w, "{raw}")?;
 
-        match self.env.command(&args.head).args(&args.tail).output().await {
+        let mut command = self.env.command(&args.head);
+
+        // Indicate that this shell command is running in the context of the runner's tmux socket
+        // and pane.
+        let tmux = format!("{},,0", self.tmux.socket().display());
+        command.env("TMUX", tmux).env("TMUX_PANE", self.tmux.pane());
+
+        match command.args(&args.tail).output().await {
             Ok(output) => {
                 if let Some(code) = output.status.code() {
                     writeln!(w, " (exit: {code})")?;
@@ -349,7 +349,7 @@ impl Runner {
             let pane = match self.capture_pane(filters).await {
                 Ok(pane) => pane,
                 Err(error) => {
-                    let message = format!("failed to capture pane '{}': {error:#}", self.pane);
+                    let message = format!("failed to capture pane: {error:#}");
                     write_callout(w, "WARNING", &[&message])?;
                     return Ok(());
                 }
