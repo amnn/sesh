@@ -120,6 +120,14 @@ impl App {
         }
     }
 
+    /// Set the current selection to a new session built from the current query and repo context.
+    fn create_new_session(&mut self) {
+        self.selected = Some(Session::new(
+            self.picker.query().to_owned(),
+            self.repo.clone(),
+        ));
+    }
+
     /// Draw the UI into the provided frame based on the current application state.
     ///
     /// The frame is split up into the following regions, each with its own widget. The `preview`
@@ -284,8 +292,8 @@ impl App {
             KC::Char('r') if key.modifiers.contains(CTRL) => self.set_current_repo(),
 
             KC::Char('n') if key.modifiers.contains(CTRL) && self.new_session => {
-                // TODO: implement new session creation
-                return AppEvent::Cancel;
+                self.create_new_session();
+                return AppEvent::Select;
             }
 
             KC::Char('p') if key.modifiers.contains(CTRL) => {

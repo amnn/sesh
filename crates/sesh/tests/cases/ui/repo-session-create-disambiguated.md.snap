@@ -1,0 +1,90 @@
+---
+source: crates/sesh/tests/test.rs
+expression: output
+input_file: crates/sesh/tests/cases/ui/repo-session-create-disambiguated.md
+---
+# Repo session create disambiguated
+
+When a discovered repo's default session name is already used by an unrelated
+live tmux session, selecting the repo should create and switch to a disambiguated
+session name using a tilde suffix.
+
+    :bins jj tmux cat
+
+> [!NOTE]
+> 'jj', 'tmux', and 'cat' are available.
+
+    :t rename-session -t 0 runner (success)
+    :$ jj git init beta (exit: 0)
+    :$ jj describe -R beta -m "beta commit" (exit: 0)
+    :t new-session -d -s beta "cat" (success)
+
+Launch the picker and select the inactive repo row, not the existing live
+session with the same name.
+
+    :t new-session -d -s ui "sesh cli -r beta" (success)
+    :t resize-window -t ui:0 -x 120 -y 10 (success)
+    :pane ui:0.0
+    :k beta down
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
+```terminal
+session: beta                                  ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+  2/4 | [C-r] repo: none                       ┃│  (empty) beta commit
+ ⬤ beta                                        ┃◆  wwwwwwww root() hhhhhhhh
+▌  beta~1                                   bet┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+```
+
+Accepting the repo row should create `beta~2`, attach repo metadata to that
+session, and switch the client there.
+
+    :k enter
+    :snap -d 2s
+
+```terminal
+sh$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```
+    :t display-message -p '#{client_session}' (success)
+
+```
+beta~1
+```
+    :t list-sessions -F '#{session_name}:#{@sesh.repo}' (success)
+
+```
+beta:
+beta~1:beta
+runner:
+```
+
+---
+vim: set ft=markdown:

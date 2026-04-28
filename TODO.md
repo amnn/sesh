@@ -50,9 +50,9 @@
 - [x] Switch to the selected active session.
   - Current selection behavior should prioritize fast session attach.
 
-- [ ] Create a session when selecting an inactive repo.
+- [x] Create a session when selecting an inactive repo.
 
-- [ ] Ensure new tmux sessions created from repos store repo association via a
+- [x] Ensure new tmux sessions created from repos store repo association via a
   tmux user option.
   - Keep the metadata contract stable for discovery and preview logic.
 
@@ -62,7 +62,9 @@
     clear it back to none.
   - This should work consistently whether a repo or session row is selected.
 
-- [ ] Add `C-n` to create a brand-new session/workspace.
+- [x] Add `C-n` to create a brand-new session.
+
+- [ ] Add workspace creation for new repo-backed work.
 
 - [ ] Add `C-x` to close the selected session.
 

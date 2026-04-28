@@ -5,7 +5,9 @@
 
 use std::collections::BTreeMap;
 use std::env;
+use std::ffi::OsStr;
 use std::os::unix::process::CommandExt as _;
+use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Context as _;
@@ -91,6 +93,46 @@ pub async fn sessions() -> anyhow::Result<BTreeMap<String, Option<PathBuf>>> {
     }
 
     Ok(sessions)
+}
+
+/// Create a detached tmux session.
+pub async fn new_session(session: &str, cwd: &Path) -> anyhow::Result<()> {
+    let output = Command::new("tmux")
+        .args(["new-session", "-d", "-s", session, "-c"])
+        .arg(cwd)
+        .output()
+        .await
+        .context("failed to create tmux session")?;
+
+    ensure!(
+        output.status.success(),
+        "error running 'tmux new-session': {}",
+        String::from_utf8_lossy(&output.stderr),
+    );
+
+    Ok(())
+}
+
+/// Set a tmux session option.
+pub async fn set_option<V: AsRef<OsStr> + ?Sized>(
+    session: &str,
+    option: &str,
+    value: &V,
+) -> anyhow::Result<()> {
+    let output = Command::new("tmux")
+        .args(["set-option", "-t", session, option])
+        .arg(value)
+        .output()
+        .await
+        .context("failed to set tmux session option")?;
+
+    ensure!(
+        output.status.success(),
+        "error running 'tmux set-option': {}",
+        String::from_utf8_lossy(&output.stderr),
+    );
+
+    Ok(())
 }
 
 /// Switch the current tmux client to an existing session.

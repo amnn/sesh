@@ -5,7 +5,9 @@
 
 use std::collections::BTreeSet;
 use std::env;
+use std::path::Path;
 
+use anyhow::Context as _;
 use clap::Parser;
 use clap::Subcommand;
 
@@ -69,34 +71,67 @@ async fn main() -> anyhow::Result<()> {
             jj::ensure()?;
             tmux::ensure()?;
 
-            let current_repo = env::current_dir().ok().and_then(|cwd| jj::repo_root(&cwd));
+            let cwd = env::current_dir().context("failed to resolve current working directory")?;
+            let current_repo = jj::repo_root(&cwd);
 
             let mut sessions = vec![];
-            let mut seen = BTreeSet::new();
+            let mut seen_repos = BTreeSet::new();
+            let mut seen_names = BTreeSet::new();
 
+            // Add all the live sessions from tmux.
             for (name, repo) in tmux::sessions().await? {
-                if let Some(repo) = &repo {
-                    seen.insert(repo.clone());
-                }
-
+                seen_names.insert(name.clone());
+                seen_repos.extend(repo.clone());
                 sessions.push(Session::from_tmux(name, repo))
             }
 
+            // Add an entry for every repo found, as long as it's not already associated with a
+            // live tmux session.
             for repo in jj::repos(&repos)? {
-                let inserted = seen.insert(repo.clone());
-                if inserted {
-                    sessions.push(Session::from_repo(repo)?);
+                let inserted = seen_repos.insert(repo.clone());
+                if !inserted {
+                    continue;
                 }
+
+                let mut session = Session::from_repo(repo)?;
+
+                // Make sure the name that will be used for a new session associated with this repo
+                // will be unambiguous by adding a suffix.
+                let mut i = 1;
+                while !seen_names.insert(session.name()) {
+                    session.set_suffix(i.to_string());
+                    i += 1;
+                }
+
+                sessions.push(session);
             }
 
             let app = App::new(sessions, current_repo);
-            if let Some(session) = app.run()?
-                && session.is_tmux()
-            {
-                tmux::switch_client(session.name()).await?;
-            }
+            let Some(session) = app.run()? else {
+                return Ok(());
+            };
 
+            prepare_session(&session, &cwd).await?;
+            tmux::switch_client(&session.name()).await?;
             Ok(())
         }
     }
+}
+
+/// Ensure the tmux session we are switching to is ready.
+async fn prepare_session(session: &Session, cwd: &Path) -> anyhow::Result<()> {
+    if session.is_tmux() {
+        return Ok(());
+    }
+
+    let target = session.name();
+    let cwd = session.repo().unwrap_or(cwd);
+    tmux::new_session(&target, cwd).await?;
+
+    let Some(repo) = session.repo() else {
+        return Ok(());
+    };
+
+    tmux::set_option(&target, "@sesh.repo", repo).await?;
+    Ok(())
 }

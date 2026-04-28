@@ -81,6 +81,11 @@ impl<I: Item + Send + Sync + 'static> Picker<I> {
         );
     }
 
+    /// Return the active query string.
+    pub(crate) fn query(&self) -> &str {
+        &self.query
+    }
+
     /// Refresh fuzzy matches and return the currently visible rows.
     pub(crate) fn refresh(&mut self) -> (Status, &Snapshot<I>, &str) {
         let status = self.matcher.tick(TICK_TIMEOUT_MS);
