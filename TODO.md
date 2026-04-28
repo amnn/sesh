@@ -23,7 +23,7 @@
   - Agent Harness
   - Shell
 
-- [ ] Add `C-x` to close the selected session.
+- [x] Add `C-x` to close the selected session.
 
 - [ ] Add `C-d` to delete the selected session/workspace.
   - Destroy the underlying workspace too, if applicable.

@@ -25,7 +25,7 @@ The preview should be visible initially.
 
 ```terminal
 session:                               ┃
-  3/3 | [C-r] repo: none               ┃
+  3/3 | [C-r] repo: none | [C-x] close ┃
 ▌⬤ runner                              ┃
  ⬤ ui                                  ┃
    alpha                               ┃
@@ -41,7 +41,7 @@ Pressing `C-p` should hide the preview and allow the list to use the full width.
 
 ```terminal
 session:                                                                                           ┃
-  3/3 | [C-r] repo: none                                                                           ┃
+  3/3 | [C-r] repo: none | [C-x] close                                                             ┃
 ▌⬤ runner                                                                                          ┃
  ⬤ ui                                                                                              ┃
    alpha                                    alpha                                                  ┃
@@ -57,7 +57,7 @@ Pressing `C-p` again should restore the preview.
 
 ```terminal
 session:                               ┃
-  3/3 | [C-r] repo: none               ┃
+  3/3 | [C-r] repo: none | [C-x] close ┃
 ▌⬤ runner                              ┃
  ⬤ ui                                  ┃
    alpha                               ┃

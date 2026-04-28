@@ -44,7 +44,7 @@ state.
 
 ```terminal
 session:                                       ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-  6/6 | [C-r] repo: none                       ┃│  (empty) alpha commit
+  6/6 | [C-r] repo: none | [C-x] close         ┃│  (empty) alpha commit
 ▌⬤ alpha                                    alp┃◆  wwwwwwww root() hhhhhhhh
  ⬤ gamma                                    gam┃
  ⬤ runner                                      ┃
@@ -62,7 +62,7 @@ session:                                       ┃@  wwwwwwww (no email set) ttt
 
 ```terminal
 session:                                       ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-  6/6 | [C-r] repo: none                       ┃│  (empty) alpha commit
+  6/6 | [C-r] repo: none | [C-x] close         ┃│  (empty) alpha commit
 ▌⬤ alpha                                    alp┃◆  wwwwwwww root() hhhhhhhh
  ⬤ gamma                                    gam┃
  ⬤ runner                                      ┃
@@ -83,7 +83,7 @@ is not an exact live session name.
 
 ```terminal
 session: alp                                   ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-  1/6 | [C-r] repo: none | [C-n] new           ┃│  (empty) alpha commit
+  1/6 | [C-r] repo: none | [C-n] new | [C-x] cl┃│  (empty) alpha commit
 ▌⬤ alpha                                    alp┃◆  wwwwwwww root() hhhhhhhh
                                                ┃
                                                ┃
@@ -104,7 +104,7 @@ nothing and leave the picker open.
 
 ```terminal
 session: alpha                                 ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-  1/6 | [C-r] repo: none                       ┃│  (empty) alpha commit
+  1/6 | [C-r] repo: none | [C-x] close         ┃│  (empty) alpha commit
 ▌⬤ alpha                                    alp┃◆  wwwwwwww root() hhhhhhhh
                                                ┃
                                                ┃
@@ -122,7 +122,7 @@ session: alpha                                 ┃@  wwwwwwww (no email set) ttt
 
 ```terminal
 session: alpha                                 ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-  1/6 | [C-r] repo: none                       ┃│  (empty) alpha commit
+  1/6 | [C-r] repo: none | [C-x] close         ┃│  (empty) alpha commit
 ▌⬤ alpha                                    alp┃◆  wwwwwwww root() hhhhhhhh
                                                ┃
                                                ┃

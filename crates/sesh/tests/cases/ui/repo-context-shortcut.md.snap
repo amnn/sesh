@@ -32,7 +32,7 @@ from `cwd`.
 
 ```terminal
 session:                           ┃
-  5/5 | [C-r] repo: ~/alpha        ┃
+  5/5 | [C-r] repo: ~/alpha | [C-x]┃
 ▌⬤ runner                          ┃
  ⬤ ui                              ┃
    alpha                           ┃

@@ -11,6 +11,7 @@ use anyhow::Context as _;
 use clap::Parser;
 use clap::Subcommand;
 
+use sesh::Action;
 use sesh::App;
 use sesh::Session;
 use sesh::jj;
@@ -107,13 +108,15 @@ async fn main() -> anyhow::Result<()> {
             }
 
             let app = App::new(sessions, current_repo);
-            let Some(session) = app.run()? else {
-                return Ok(());
-            };
 
-            prepare_session(&session, &cwd).await?;
-            tmux::switch_client(&session.name()).await?;
-            Ok(())
+            match app.run()? {
+                Action::Cancel => Ok(()),
+                Action::Close(session) => tmux::kill_session(&session.name()).await,
+                Action::Switch(session) => {
+                    prepare_session(&session, &cwd).await?;
+                    tmux::switch_client(&session.name()).await
+                }
+            }
         }
     }
 }

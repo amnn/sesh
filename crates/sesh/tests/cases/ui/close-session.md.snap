@@ -1,0 +1,72 @@
+---
+source: crates/sesh/tests/test.rs
+expression: output
+input_file: crates/sesh/tests/cases/ui/close-session.md
+---
+# Close session
+
+`C-x` closes the selected live tmux session. The shortcut is only offered for
+live tmux sessions, not repo-only entries.
+
+    :bins jj tmux cat sleep
+
+> [!NOTE]
+> 'jj', 'tmux', 'cat', and 'sleep' are available.
+
+    :t rename-session -t 0 runner (success)
+    :$ jj git init beta (exit: 0)
+    :$ jj describe -R beta -m "beta commit" (exit: 0)
+    :t new-session -d -s alpha "cat" (success)
+    :t new-session -d -s ui "sesh cli -r beta; cat" (success)
+    :t resize-window -t ui:0 -x 120 -y 10 (success)
+    :pane ui:0.0
+
+The initial selection is the live `alpha` session, so the header offers close.
+
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+
+```terminal
+session:                                       ┃
+  4/4 | [C-r] repo: none | [C-x] close         ┃
+▌⬤ alpha                                       ┃
+ ⬤ runner                                      ┃
+ ⬤ ui                                          ┃
+   beta                                     bet┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+```
+
+Filtering to the repo-only `beta` row hides the close shortcut.
+
+    :k beta
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+
+```terminal
+session: beta                                  ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+  1/4 | [C-r] repo: none | [C-n] new           ┃│  (empty) beta commit
+▌  beta                                     bet┃◆  wwwwwwww root() hhhhhhhh
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+                                               ┃
+```
+
+Pressing `C-x` on the live `alpha` session should kill `alpha` and exit without
+switching to it.
+
+    :k C-u C-x
+    :$ sleep 1 (exit: 0)
+    :t has-session -t alpha (failure)
+
+```
+can't find session: alpha
+```
+    :t has-session -t ui (success)
+
+---
+vim: set ft=markdown:

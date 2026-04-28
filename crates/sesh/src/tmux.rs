@@ -95,6 +95,23 @@ pub async fn sessions() -> anyhow::Result<BTreeMap<String, Option<PathBuf>>> {
     Ok(sessions)
 }
 
+/// Kill an existing tmux session.
+pub async fn kill_session(session: &str) -> anyhow::Result<()> {
+    let output = Command::new("tmux")
+        .args(["kill-session", "-t", session])
+        .output()
+        .await
+        .context("failed to kill tmux session")?;
+
+    ensure!(
+        output.status.success(),
+        "error running 'tmux kill-session': {}",
+        String::from_utf8_lossy(&output.stderr),
+    );
+
+    Ok(())
+}
+
 /// Create a detached tmux session.
 pub async fn new_session(session: &str, cwd: &Path) -> anyhow::Result<()> {
     let output = Command::new("tmux")

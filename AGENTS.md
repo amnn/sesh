@@ -20,6 +20,11 @@ For markdown-driven snapshot changes, refresh the checked-in `.snap` files with
 `cargo insta test --accept` using the appropriate package/test selection, and
 remove any leftover `.snap.new` artifacts before finishing.
 
+When a UI test needs to assert behavior after `sesh cli` exits without
+switching the client, keep the launched tmux pane alive (for example
+`"sesh cli ...; cat"`) so later markdown directives can still query the tmux
+server.
+
 ## Architecture
 
 Keep direct interactions with external binaries behind a dedicated module per

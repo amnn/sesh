@@ -62,7 +62,7 @@ including the attached `alpha-live` session and the glob-discovered repos.
 
 ```terminal
 session:                                       ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-  6/6 | [C-r] repo: none                       ┃│  (empty) alpha commit
+  6/6 | [C-r] repo: none | [C-x] close         ┃│  (empty) alpha commit
 ▌⬤ alpha-live                               alp┃◆  wwwwwwww root() hhhhhhhh
  ⬤ runner                                      ┃
  ⬤ ui                                          ┃

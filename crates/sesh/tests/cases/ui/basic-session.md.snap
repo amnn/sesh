@@ -28,7 +28,7 @@ should list all discovered tmux sessions.
 
 ```terminal
 session:                       ┃
-  5/5 | [C-r] repo: none       ┃
+  5/5 | [C-r] repo: none | [C-x┃
 ▌⬤ alpha                       ┃
  ⬤ beta                        ┃
  ⬤ gamma                       ┃
