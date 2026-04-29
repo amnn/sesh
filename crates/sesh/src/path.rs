@@ -34,9 +34,9 @@ impl TruncatedExt for Path {
         while let Some(part) = parts.next() {
             if parts.peek().is_some()
                 && let Component::Normal(name) = part
-                && let Some(init) = name.to_string_lossy().chars().next()
+                && let Some(init) = compact_component(name)
             {
-                path.push(init.to_string());
+                path.push(init);
             } else {
                 path.push(part.as_os_str())
             }
@@ -82,17 +82,36 @@ impl TruncatedExt for PathBuf {
     }
 }
 
+/// Return the compact display form of a single path component.
+fn compact_component(name: &OsStr) -> Option<String> {
+    let name = name.to_string_lossy();
+    let mut chars = name.chars();
+
+    match chars.next()? {
+        '.' => chars.next().map(|next| format!(".{next}")),
+        first => Some(first.to_string()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use std::path::MAIN_SEPARATOR_STR;
     use std::path::PathBuf;
 
     use super::*;
 
     #[test]
     fn compact_contracts_absolute_intermediate_components() {
-        let path = PathBuf::from("/tmp/foo/bar");
+        let path = PathBuf::from(MAIN_SEPARATOR_STR)
+            .join("tmp")
+            .join("foo")
+            .join("bar");
+        let expected = PathBuf::from(MAIN_SEPARATOR_STR)
+            .join("t")
+            .join("f")
+            .join("bar");
 
-        assert_eq!(path.compact(), PathBuf::from("/t/f/bar"));
+        assert_eq!(path.compact(), expected);
     }
 
     #[test]
@@ -101,15 +120,25 @@ mod tests {
             return;
         };
 
-        let path = home.join("Code/foo/bar");
-        assert_eq!(path.truncated().compact(), PathBuf::from("~/C/f/bar"));
+        let path = home.join("Code").join("foo").join("bar");
+        let expected = PathBuf::from("~").join("C").join("f").join("bar");
+
+        assert_eq!(path.truncated().compact(), expected);
+    }
+
+    #[test]
+    fn compacts_hidden_intermediate_components_without_dropping_them() {
+        let path = PathBuf::from("~").join(".config").join("nvim");
+        let expected = PathBuf::from("~").join(".c").join("nvim");
+
+        assert_eq!(path.compact(), expected);
     }
 
     #[test]
     fn leaves_non_home_paths_unchanged() {
-        let path = PathBuf::from("/tmp/repo");
+        let path = PathBuf::from(MAIN_SEPARATOR_STR).join("tmp").join("repo");
 
-        assert_eq!(path.truncated(), PathBuf::from("/tmp/repo"));
+        assert_eq!(path.truncated(), path);
     }
 
     #[test]
@@ -118,10 +147,18 @@ mod tests {
             return;
         };
 
-        let path = home.join("Code/foo/bar").truncated().compact();
+        let path = home
+            .join("Code")
+            .join("foo")
+            .join("bar")
+            .truncated()
+            .compact();
         assert_eq!(
             path.split_last(),
-            (PathBuf::from("~/C/f").as_path(), OsStr::new("bar"))
+            (
+                PathBuf::from("~").join("C").join("f").as_path(),
+                OsStr::new("bar")
+            )
         );
     }
 
@@ -134,7 +171,7 @@ mod tests {
 
     #[test]
     fn splits_parent_dir_as_basename() {
-        let path = PathBuf::from("foo/..");
+        let path = PathBuf::from("foo").join("..");
 
         assert_eq!(
             path.split_last(),
@@ -144,9 +181,12 @@ mod tests {
 
     #[test]
     fn splits_root_path_into_empty_parent_and_root_basename() {
-        let path = PathBuf::from("/");
+        let path = PathBuf::from(MAIN_SEPARATOR_STR);
 
-        assert_eq!(path.split_last(), (Path::new(""), OsStr::new("/")));
+        assert_eq!(
+            path.split_last(),
+            (Path::new(""), OsStr::new(MAIN_SEPARATOR_STR))
+        );
     }
 
     #[test]
@@ -156,6 +196,6 @@ mod tests {
         };
 
         let path = home.join("repo");
-        assert_eq!(path.truncated(), PathBuf::from("~/repo"));
+        assert_eq!(path.truncated(), PathBuf::from("~").join("repo"));
     }
 }
