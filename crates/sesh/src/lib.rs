@@ -3,6 +3,7 @@
 
 //! Core modules for the `sesh` CLI.
 
+pub mod config;
 pub mod jj;
 pub mod tmux;
 

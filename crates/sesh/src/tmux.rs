@@ -22,6 +22,41 @@ pub fn ensure() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Kill an existing tmux session.
+pub async fn kill_session(session: &str) -> anyhow::Result<()> {
+    let output = Command::new("tmux")
+        .args(["kill-session", "-t", session])
+        .output()
+        .await
+        .context("failed to kill tmux session")?;
+
+    ensure!(
+        output.status.success(),
+        "error running 'tmux kill-session': {}",
+        String::from_utf8_lossy(&output.stderr),
+    );
+
+    Ok(())
+}
+
+/// Create a detached tmux session.
+pub async fn new_session(session: &str, cwd: &Path) -> anyhow::Result<()> {
+    let output = Command::new("tmux")
+        .args(["new-session", "-d", "-s", session, "-c"])
+        .arg(cwd)
+        .output()
+        .await
+        .context("failed to create tmux session")?;
+
+    ensure!(
+        output.status.success(),
+        "error running 'tmux new-session': {}",
+        String::from_utf8_lossy(&output.stderr),
+    );
+
+    Ok(())
+}
+
 /// Open sesh in a tmux popup and forward arguments to the `cli` command.
 pub fn popup(width: &str, height: &str, title: &str, args: &[String]) -> anyhow::Result<()> {
     ensure!(env::var_os("TMUX").is_some(), "popups must run inside tmux");
@@ -55,6 +90,25 @@ pub fn popup(width: &str, height: &str, title: &str, args: &[String]) -> anyhow:
         .exec();
 
     Err(error).context("failed to display popup")
+}
+
+/// Run a shell script in the context of a target pane.
+pub async fn run_shell(target: &str, cwd: &Path, script: &str) -> anyhow::Result<()> {
+    let output = Command::new("tmux")
+        .args(["run-shell", "-t", target, "-c"])
+        .arg(cwd)
+        .arg(script)
+        .output()
+        .await
+        .context("failed to run tmux shell command")?;
+
+    ensure!(
+        output.status.success(),
+        "error running 'tmux run-shell': {}",
+        String::from_utf8_lossy(&output.stderr),
+    );
+
+    Ok(())
 }
 
 /// Query tmux for current sessions and attached sesh repo metadata.
@@ -93,41 +147,6 @@ pub async fn sessions() -> anyhow::Result<BTreeMap<String, Option<PathBuf>>> {
     }
 
     Ok(sessions)
-}
-
-/// Kill an existing tmux session.
-pub async fn kill_session(session: &str) -> anyhow::Result<()> {
-    let output = Command::new("tmux")
-        .args(["kill-session", "-t", session])
-        .output()
-        .await
-        .context("failed to kill tmux session")?;
-
-    ensure!(
-        output.status.success(),
-        "error running 'tmux kill-session': {}",
-        String::from_utf8_lossy(&output.stderr),
-    );
-
-    Ok(())
-}
-
-/// Create a detached tmux session.
-pub async fn new_session(session: &str, cwd: &Path) -> anyhow::Result<()> {
-    let output = Command::new("tmux")
-        .args(["new-session", "-d", "-s", session, "-c"])
-        .arg(cwd)
-        .output()
-        .await
-        .context("failed to create tmux session")?;
-
-    ensure!(
-        output.status.success(),
-        "error running 'tmux new-session': {}",
-        String::from_utf8_lossy(&output.stderr),
-    );
-
-    Ok(())
 }
 
 /// Set a tmux session option.

@@ -1,0 +1,83 @@
+---
+source: crates/sesh/tests/test.rs
+assertion_line: 68
+expression: output
+input_file: crates/sesh/tests/cases/ui/session-setup-config.md
+---
+# Session setup config
+
+A custom session setup script runs in the new session's tmux context and repo
+working directory, so setup commands can rely on default tmux targets and cwd.
+
+    :bins jj tmux cat test
+
+> [!NOTE]
+> 'jj', 'tmux', 'cat', and 'test' are available.
+
+    :t rename-session -t 0 runner (success)
+    :$ jj git init beta (exit: 0)
+
+    :w .config/sesh/sesh.toml (written)
+```toml
+[tmux]
+setup = '''
+: > setup-touched
+tmux rename-window configured
+tmux new-window -n shell ': > new-window-touched; cat'
+'''
+```
+
+Launch the picker and select the discovered repo entry.
+
+    :t new-session -d -s ui "sesh cli -r beta" (success)
+    :t resize-window -t ui:0 -x 120 -y 10 (success)
+    :pane ui:0.0
+    :snap
+
+```terminal
+session:
+  3/3 | [C-r] repo: none | [C-x] close
+▌⬤ runner                                                                                                              ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+```
+
+    :k beta
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
+```terminal
+session: beta
+  1/3 | [C-r] repo: none | [C-n] new
+▌  beta                                     beta                                                                       ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+│  (empty) (no description set)
+◆  wwwwwwww root() hhhhhhhh
+
+
+
+```
+
+    :k enter
+    :$ sh -c 'until test -f beta/new-window-touched; do :; done' (exit: 0)
+
+The setup script should have renamed the initial window, created another window,
+and run commands from the repo directory.
+
+    :t list-windows -t beta -F '#W' (success)
+
+```
+configured
+shell
+```
+
+    :$ test -f beta/setup-touched (exit: 0)
+    :$ test -f beta/new-window-touched (exit: 0)
+
+---
+vim: set ft=markdown:

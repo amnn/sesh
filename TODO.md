@@ -1,10 +1,27 @@
 # TODO
 
+## Testing
+
+- [ ] Take SVG snapshots of snapped tmux frames for visual regression testing.
+
 ## Rendering
 
-- [ ] Highlight the matched portion of the item.
+- [ ] Get rid of `popup` command (it is redundant).
 
 - [ ] Render the tmux pip green when the session has an undismissed bell/notification.
+  - [ ] Track bell state per tmux session.
+  - [ ] Switch to first Window in session with bell when session is selected.
+  - [ ] Refactor: Move session switching logic onto `Session` type.
+
+- [ ] Generate a line/entry for the "new" session instead of having a dedicated
+  key combination to create it.
+  - Introduce key combinations to go to the top or bottom of the session list
+    instead (this session will go at the top).
+  - Leave an empty row (visual spacer) at the top of the list if a valid
+    new session cannot be created, to prevent the other results from jumping
+    around.
+
+- [ ] Highlight the matched portion of the item.
 
 - [ ] Expand contracted portion of repo paths when they are matched against.
 
@@ -16,9 +33,15 @@
   - If the overall screen real-estate is not at least 140 characters, switch to
     a vertical stacked view.
 
+## Matching
+
+- [ ] Split fuzzy matching over multiple columns
+  - State (bells), name, repo, PR info etc should sent as separate columns.
+  - Send truncated repo path even though the rendering is compacted.
+
 ## Session and Repo Lifecycle
 
-- [ ] Set-up windows in new session.
+- [x] Set-up windows in new session.
   - Editor
   - Agent Harness
   - Shell
@@ -33,6 +56,8 @@
   - Define trunk resolution rules for mixed repo types.
 
 - [ ] Add workspace creation for new repo-backed work.
+  - Name is derived from repo name + workspace name.
+  - Create a workspace
 
 ## GitHub
 
@@ -48,6 +73,20 @@
 - [ ] Add a TOML-based config system.
   - Define config file location(s), defaults, and merge/override precedence.
   - Move hard-coded UI/runtime values (for example preview sizing) into config.
+
+- [x] Configure new session set-up
+
+- [ ] Configure previews
+
+- [ ] Configure repo detection
+
+- [ ] Configure listing trunks
+
+- [ ] Configure workspace creation
+  - [ ] How to create a new workspace
+  - [ ] How to name workspace directories
+  - [ ] How to name workspace sessions
+  - [ ] Where to create workspace directories
 
 # Appendix: Legend
 

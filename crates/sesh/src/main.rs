@@ -6,6 +6,7 @@
 use std::collections::BTreeSet;
 use std::env;
 use std::path::Path;
+use std::path::PathBuf;
 
 use anyhow::Context as _;
 use clap::Parser;
@@ -14,6 +15,7 @@ use clap::Subcommand;
 use sesh::Action;
 use sesh::App;
 use sesh::Session;
+use sesh::config::SeshConfig;
 use sesh::jj;
 use sesh::tmux;
 
@@ -24,6 +26,10 @@ use sesh::tmux;
 struct Args {
     #[arg(short = '?', long = "help", action = clap::ArgAction::Help, global = true)]
     help: Option<bool>,
+
+    /// Path to a custom config file.
+    #[arg(long, global = true, value_name = "PATH")]
+    config: Option<PathBuf>,
 
     #[command(subcommand)]
     command: Command,
@@ -60,13 +66,20 @@ enum Command {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    match Args::parse().command {
+    let args = Args::parse();
+    let config_path = args.config;
+    let config = SeshConfig::load(config_path.as_deref())?;
+
+    match args.command {
         Command::Popup {
             width,
             height,
             title,
             args,
-        } => tmux::popup(&width, &height, &title, &args),
+        } => {
+            let args = popup_args(config_path.as_deref(), args);
+            tmux::popup(&width, &height, &title, &args)
+        }
 
         Command::Cli { repos } => {
             jj::ensure()?;
@@ -113,7 +126,7 @@ async fn main() -> anyhow::Result<()> {
                 Action::Cancel => Ok(()),
                 Action::Close(session) => tmux::kill_session(&session.name()).await,
                 Action::Switch(session) => {
-                    prepare_session(&session, &cwd).await?;
+                    prepare_session(&session, &cwd, &config).await?;
                     tmux::switch_client(&session.name()).await
                 }
             }
@@ -121,8 +134,17 @@ async fn main() -> anyhow::Result<()> {
     }
 }
 
+fn popup_args(config: Option<&Path>, mut args: Vec<String>) -> Vec<String> {
+    if let Some(config) = config {
+        args.insert(0, config.to_string_lossy().into_owned());
+        args.insert(0, "--config".to_owned());
+    }
+
+    args
+}
+
 /// Ensure the tmux session we are switching to is ready.
-async fn prepare_session(session: &Session, cwd: &Path) -> anyhow::Result<()> {
+async fn prepare_session(session: &Session, cwd: &Path, config: &SeshConfig) -> anyhow::Result<()> {
     if session.is_tmux() {
         return Ok(());
     }
@@ -131,10 +153,11 @@ async fn prepare_session(session: &Session, cwd: &Path) -> anyhow::Result<()> {
     let cwd = session.repo().unwrap_or(cwd);
     tmux::new_session(&target, cwd).await?;
 
-    let Some(repo) = session.repo() else {
-        return Ok(());
-    };
+    if let Some(repo) = session.repo() {
+        tmux::set_option(&target, "@sesh.repo", repo).await?;
+    }
 
-    tmux::set_option(&target, "@sesh.repo", repo).await?;
+    tmux::run_shell(&format!("{target}:0"), cwd, &config.tmux.setup).await?;
+
     Ok(())
 }
