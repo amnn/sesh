@@ -29,16 +29,16 @@ session with the same name.
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 ```terminal
-session: beta                                  ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-  2/4 | [C-r] repo: none                       ┃│  (empty) beta commit
- ⬤ beta                                        ┃◆  wwwwwwww root() hhhhhhhh
-▌  beta~1                                   bet┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
+session: beta
+  2/4 | [C-r] repo: none
+▌  beta~1                                   beta                                                                       ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+│  (empty) beta commit
+◆  wwwwwwww root() hhhhhhhh
+
+
+
 ```
 
 Accepting the repo row should create `beta~2`, attach repo metadata to that

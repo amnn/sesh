@@ -18,9 +18,7 @@ use nucleo::Item;
 use nucleo::Snapshot;
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
-use ratatui::layout::Constraint;
-use ratatui::layout::Direction;
-use ratatui::layout::Layout;
+use ratatui::layout::Rect;
 use ratatui::style::Color;
 use ratatui::style::Style;
 use ratatui::text::Line;
@@ -42,10 +40,34 @@ use crate::session::Session;
 use crate::terminal::AlternateScreenGuard;
 use crate::ui::push_repo_path_spans;
 use crate::ui::push_shortcut_span;
+use crate::widget::Block;
 use crate::widget::Loading;
 use crate::widget::LoadingState;
 
+/// Percentage of space to give to the preview pane when in horizontal split mode.
+const PERC_H_PREVIEW: u16 = 60;
+
+/// Percentage of space to give to the preview pane when in vertical split mode.
+const PERC_V_PREVIEW: u16 = 40;
+
+/// Timeout for waiting for a key event.
 const POLL_TIMEOUT: Duration = Duration::from_millis(16);
+
+/// The largest the preview pane gets.
+const WIDTH_MAX_PREVIEW: u16 = 100;
+
+/// The minimum width to support a vertical split layout (session list and preview side-by-side).
+const WIDTH_MIN_VSPLIT: u16 = 160;
+
+/// Completed action chosen from the picker.
+pub enum Action {
+    /// Do nothing and exit the picker.
+    Cancel,
+    /// Kill the selected live tmux session.
+    Close(Session),
+    /// Switch to the selected session, creating it first if needed.
+    Switch(Session),
+}
 
 /// Session picker state, caches, and UI behavior.
 pub struct App {
@@ -57,18 +79,54 @@ pub struct App {
     preview_scroll: usize,
     repo: Option<PathBuf>,
     selected: Option<Session>,
-    session_new: bool,
     session_close: bool,
+    session_new: bool,
 }
 
-/// Completed action chosen from the picker.
-pub enum Action {
-    /// Do nothing and exit the picker.
-    Cancel,
-    /// Kill the selected live tmux session.
-    Close(Session),
-    /// Switch to the selected session, creating it first if needed.
-    Switch(Session),
+/// Regions to render each component into, each houses its own widget. When there is enough
+/// horizontal space, the layout is as follows:
+///
+/// ```text
+/// +-----------------+-+--------------+
+/// | prompt          |s| preview      |
+/// +-+---------------+c| ...          |
+/// |l| header        |r|              |
+/// +-+---------------+o|              |
+/// | sessions        |l|              |
+/// | ...             |l|              |
+/// |                 | |              |
+/// |                 | |              |
+/// |                 | |              |
+/// +-----------------+-+--------------+
+/// ```
+///
+/// When the display is too narrow, it stacks vertically:
+///
+/// ```text
+/// +--------------------------+
+/// | prompt                   |
+/// +-+------------------------+
+/// |l| header                 |
+/// +-+----------------------+-|
+/// | sessions               |s|
+/// | ...                    |c|
+/// |                        |r|
+/// +------------------------+-+
+/// | separator                |
+/// +--------------------------+
+/// | preview                  |
+/// | ...                      |
+/// |                          |
+/// +--------------------------+
+/// ```
+struct Layout {
+    header: Rect,
+    loading: Rect,
+    preview: Option<Rect>,
+    prompt: Rect,
+    scroll: Rect,
+    separator: Option<Rect>,
+    sessions: Rect,
 }
 
 impl App {
@@ -93,8 +151,8 @@ impl App {
             preview_scroll,
             repo,
             selected,
-            session_new,
             session_close,
+            session_new,
         }
     }
 
@@ -134,70 +192,10 @@ impl App {
 
     /// Draw the UI into the provided frame based on the current application state.
     ///
-    /// The frame is split up into the following regions, each with its own widget. The `preview`
-    /// region and its scroll bar are only visible when the preview is toggled on (defaults to
-    /// visible).
-    ///
-    /// ```text
-    /// +-----------------+-+-------------------------+-+
-    /// |> Prompt         |S| Preview                 |S|
-    /// +-+---------------+c| ...                     |c|
-    /// |L| Header        |r|                         |r|
-    /// +-+---------------+o|                         |o|
-    /// | Session List    |l|                         |l|
-    /// | ...             |l|                         |l|
-    /// |                 | |                         | |
-    /// |                 | |                         | |
-    /// |                 | |                         | |
-    /// +-----------------+-+-------------------------+-+
-    /// ```
+    /// The frame is split up into regions, each with its own widget. The `preview` region and its
+    /// scroll bar are only visible when the preview is toggled on (defaults to visible).
     fn draw(&mut self, f: &mut ratatui::Frame<'_>) {
-        use Constraint as C;
-        use Direction as D;
-        use Layout as L;
-
-        // Split the frame into regions
-        let (sessions, scroll, preview) = if self.preview {
-            let cols = L::default()
-                .direction(D::Horizontal)
-                .constraints([C::Percentage(40), C::Length(1), C::Percentage(60)])
-                .split(f.area());
-
-            let [sessions, scroll, preview] = &cols[..] else {
-                panic!("expected three columns in the layout")
-            };
-
-            (*sessions, *scroll, Some(*preview))
-        } else {
-            let cols = L::default()
-                .direction(D::Horizontal)
-                .constraints([C::Min(0), C::Length(1)])
-                .split(f.area());
-
-            let [sessions, scroll] = &cols[..] else {
-                panic!("expected two columns in the layout")
-            };
-
-            (*sessions, *scroll, None)
-        };
-
-        let rows = L::default()
-            .direction(D::Vertical)
-            .constraints([C::Length(1), C::Length(1), C::Min(0)])
-            .split(sessions);
-
-        let [prompt, header, sessions] = &rows[..] else {
-            panic!("expected three rows in the layout")
-        };
-
-        let cols = L::default()
-            .direction(D::Horizontal)
-            .constraints([C::Length(1), C::Min(0)])
-            .split(*header);
-
-        let [loading, header] = &cols[..] else {
-            panic!("expected two columns in header");
-        };
+        let l = self.layout(f.area());
 
         // Poll the picker for its latest state, and build the data model.
         let (status, snapshot, query) = self.picker.refresh();
@@ -222,9 +220,9 @@ impl App {
         // The tool supports closing the current session if it is a live tmux session.
         self.session_close = selected.is_some_and(|i| i.data.is_tmux());
 
-        f.render_widget(prompt_widget(query), *prompt);
-        f.render_stateful_widget(Loading(status.running), *loading, &mut self.load);
-        f.render_stateful_widget(session_list_widget(snapshot), *sessions, &mut self.list);
+        f.render_widget(prompt_widget(query), l.prompt);
+        f.render_stateful_widget(Loading(status.running), l.loading, &mut self.load);
+        f.render_stateful_widget(session_list_widget(snapshot), l.sessions, &mut self.list);
         f.render_widget(
             header_widget(
                 snapshot,
@@ -232,23 +230,28 @@ impl App {
                 self.session_new,
                 self.session_close,
             ),
-            *header,
+            l.header,
         );
 
+        let height = l.sessions.height as usize;
         let mut session_scroll = ScrollbarState::default()
-            .content_length(items.len().saturating_sub(sessions.height as usize).max(1))
-            .viewport_content_length(sessions.height as usize)
+            .content_length(items.len().saturating_sub(height).max(1))
+            .viewport_content_length(height)
             .position(self.list.offset());
 
-        f.render_stateful_widget(scrollbar_widget(), scroll, &mut session_scroll);
+        f.render_stateful_widget(scrollbar_widget(), l.scroll, &mut session_scroll);
 
         // Rendering corrects the list's selected index, so we find the selected item.
         let selected = self.list.selected().and_then(|s| items.get(s));
         self.selected = selected.map(|i| i.data.clone());
 
-        let Some(preview) = preview else {
+        let Some(preview) = l.preview else {
             return;
         };
+
+        if let Some(separator) = l.separator {
+            f.render_widget(separator_widget(), separator);
+        }
 
         let text = preview_widget(&self.cache, selected);
 
@@ -327,6 +330,172 @@ impl App {
         };
 
         None
+    }
+
+    /// Split the given area into sub-regions to layout the app.
+    fn layout(&self, area: Rect) -> Layout {
+        use ratatui::layout::Constraint as C;
+        use ratatui::layout::Direction as D;
+        use ratatui::layout::Layout as L;
+
+        if !self.preview {
+            let cols = L::default()
+                .direction(D::Horizontal)
+                .constraints([C::Min(0), C::Length(1)])
+                .split(area);
+
+            let &[content, scroll] = &cols[..] else {
+                panic!("expected two columns in the layout");
+            };
+
+            let rows = L::default()
+                .direction(D::Vertical)
+                .constraints([C::Length(1), C::Length(1), C::Min(0)])
+                .split(content);
+
+            let &[prompt, header, sessions] = &rows[..] else {
+                panic!("expected three rows in the layout")
+            };
+
+            let cols = L::default()
+                .direction(D::Horizontal)
+                .constraints([C::Length(1), C::Min(0)])
+                .split(header);
+
+            let &[loading, header] = &cols[..] else {
+                panic!("expected two columns in header");
+            };
+
+            Layout {
+                header,
+                loading,
+                preview: None,
+                prompt,
+                scroll,
+                separator: None,
+                sessions,
+            }
+        } else if area.width > 100 * WIDTH_MAX_PREVIEW / PERC_V_PREVIEW {
+            let cols = L::default()
+                .direction(D::Horizontal)
+                .constraints([C::Min(0), C::Length(1), C::Length(WIDTH_MAX_PREVIEW)])
+                .split(area);
+
+            let &[content, scroll, preview] = &cols[..] else {
+                panic!("expected three columns in the layout");
+            };
+
+            let rows = L::default()
+                .direction(D::Vertical)
+                .constraints([C::Length(1), C::Length(1), C::Min(0)])
+                .split(content);
+
+            let &[prompt, header, sessions] = &rows[..] else {
+                panic!("expected three rows in the layout")
+            };
+
+            let cols = L::default()
+                .direction(D::Horizontal)
+                .constraints([C::Length(1), C::Min(0)])
+                .split(header);
+
+            let &[loading, header] = &cols[..] else {
+                panic!("expected two columns in header");
+            };
+
+            Layout {
+                header,
+                loading,
+                preview: Some(preview),
+                prompt,
+                scroll,
+                separator: None,
+                sessions,
+            }
+        } else if area.width >= WIDTH_MIN_VSPLIT {
+            let cols = L::default()
+                .direction(D::Horizontal)
+                .constraints([C::Percentage(60), C::Length(1), C::Percentage(40)])
+                .split(area);
+
+            let &[content, scroll, preview] = &cols[..] else {
+                panic!("expected three columns in the layout");
+            };
+
+            let rows = L::default()
+                .direction(D::Vertical)
+                .constraints([C::Length(1), C::Length(1), C::Min(0)])
+                .split(content);
+
+            let &[prompt, header, sessions] = &rows[..] else {
+                panic!("expected three rows in the layout")
+            };
+
+            let cols = L::default()
+                .direction(D::Horizontal)
+                .constraints([C::Length(1), C::Min(0)])
+                .split(header);
+
+            let &[loading, header] = &cols[..] else {
+                panic!("expected two columns in header");
+            };
+
+            Layout {
+                header,
+                loading,
+                preview: Some(preview),
+                prompt,
+                scroll,
+                separator: None,
+                sessions,
+            }
+        } else {
+            let rows = L::default()
+                .direction(D::Vertical)
+                .constraints([C::Min(0), C::Length(1), C::Percentage(PERC_H_PREVIEW)])
+                .split(area);
+
+            let &[content, separator, preview] = &rows[..] else {
+                panic!("expected three rows in the layout");
+            };
+
+            let rows = L::default()
+                .direction(D::Vertical)
+                .constraints([C::Length(1), C::Length(1), C::Min(0)])
+                .split(content);
+
+            let &[prompt, header, sessions] = &rows[..] else {
+                panic!("expected three rows in the layout")
+            };
+
+            let cols = L::default()
+                .direction(D::Horizontal)
+                .constraints([C::Length(1), C::Min(0)])
+                .split(header);
+
+            let &[loading, header] = &cols[..] else {
+                panic!("expected two columns in header");
+            };
+
+            let cols = L::default()
+                .direction(D::Horizontal)
+                .constraints([C::Min(0), C::Length(1)])
+                .split(sessions);
+
+            let &[sessions, scroll] = &cols[..] else {
+                panic!("expected two columns in the layout");
+            };
+
+            Layout {
+                header,
+                loading,
+                preview: Some(preview),
+                prompt,
+                scroll,
+                separator: Some(separator),
+                sessions,
+            }
+        }
     }
 
     /// Set the current repo from the currently selected session.
@@ -420,6 +589,11 @@ fn scrollbar_widget() -> impl StatefulWidget<State = ScrollbarState> {
         .end_symbol(None)
         .track_symbol(Some("│"))
         .thumb_symbol("┃")
+}
+
+/// Build the horizontal separator between the stacked session list and preview.
+fn separator_widget() -> impl Widget {
+    Block::new('─')
 }
 
 /// Build the session list widget for the current fuzzy-match snapshot.

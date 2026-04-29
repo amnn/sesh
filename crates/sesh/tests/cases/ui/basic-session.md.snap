@@ -27,16 +27,16 @@ should list all discovered tmux sessions.
     :snap
 
 ```terminal
-session:                       ┃
-  5/5 | [C-r] repo: none | [C-x┃
-▌⬤ alpha                       ┃
- ⬤ beta                        ┃
- ⬤ gamma                       ┃
- ⬤ runner                      ┃
- ⬤ ui                          ┃
-                               ┃
-                               ┃
-                               ┃
+session:
+  5/5 | [C-r] repo: none | [C-x] close
+▌⬤ alpha                                                                       ┃
+────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
 ```
 
 This snapshot shows the picker after typing `bet`, so the selection should move
@@ -46,16 +46,16 @@ to the `beta` session.
     :snap
 
 ```terminal
-session: bet                   ┃
-  1/5 | [C-r] repo: none | [C-n┃
-▌⬤ beta                        ┃
-                               ┃
-                               ┃
-                               ┃
-                               ┃
-                               ┃
-                               ┃
-                               ┃
+session: bet
+  1/5 | [C-r] repo: none | [C-n] new | [C-x] close
+▌⬤ beta                                                                        ┃
+────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
 ```
 
 ---

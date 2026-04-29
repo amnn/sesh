@@ -1,0 +1,63 @@
+---
+source: crates/sesh/tests/test.rs
+expression: output
+input_file: crates/sesh/tests/cases/ui/adaptive-layout.md
+---
+# Adaptive layout
+
+This scenario verifies that the picker redraws when the terminal width changes.
+At narrow widths the session list and preview are stacked vertically; once the
+terminal is wide enough they switch to a side-by-side layout.
+
+    :bins jj cat
+
+> [!NOTE]
+> 'jj', and 'cat' are available.
+
+    :t rename-session -t 0 runner (success)
+    :$ jj git init alpha (exit: 0)
+    :$ jj describe -R alpha -m "alpha commit" (exit: 0)
+    :t new-session -d -s ui "sesh cli -r alpha" (success)
+    :t resize-window -t ui:0 -x 120 -y 10 (success)
+    :pane ui:0.0
+
+This snapshot shows the narrow stacked layout, including the horizontal
+separator between the session list and preview.
+
+    :k alpha
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
+```terminal
+session: alpha
+  1/3 | [C-r] repo: none | [C-n] new
+▌  alpha                                    alpha                                                                      ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+│  (empty) alpha commit
+◆  wwwwwwww root() hhhhhhhh
+
+
+
+```
+
+After widening the terminal, the picker should redraw with the session list and
+preview side by side.
+
+    :t resize-window -t ui:0 -x 180 -y 10 (success)
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
+```terminal
+session: alpha                                                                                             ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+  1/3 | [C-r] repo: none | [C-n] new                                                                       ┃│  (empty) alpha commit
+▌  alpha                                    alpha                                                          ┃◆  wwwwwwww root() hhhhhhhh
+                                                                                                           ┃
+                                                                                                           ┃
+                                                                                                           ┃
+                                                                                                           ┃
+                                                                                                           ┃
+                                                                                                           ┃
+                                                                                                           ┃
+```
+
+---
+vim: set ft=markdown:

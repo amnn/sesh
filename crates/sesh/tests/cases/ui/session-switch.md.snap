@@ -32,16 +32,16 @@ and capture the `beta` pane.
     :snap
 
 ```terminal
-session: bet                   ┃
-  1/2 | [C-r] repo: none | [C-n┃
-▌⬤ beta                        ┃
-                               ┃
-                               ┃
-                               ┃
-                               ┃
-                               ┃
-                               ┃
-                               ┃
+session: bet
+  1/2 | [C-r] repo: none | [C-n] new | [C-x] close
+▌⬤ beta                                                                        ┃
+────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
 ```
     :k enter
     :snap -d 2s

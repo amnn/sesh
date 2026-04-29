@@ -43,36 +43,36 @@ state.
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
 ```terminal
-session:                                       ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-  6/6 | [C-r] repo: none | [C-x] close         ┃│  (empty) alpha commit
-▌⬤ alpha                                    alp┃◆  wwwwwwww root() hhhhhhhh
- ⬤ gamma                                    gam┃
- ⬤ runner                                      ┃
- ⬤ ui                                          ┃
-   beta                                     bet┃
-   delta                                    del┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
+session:
+  6/6 | [C-r] repo: none | [C-x] close
+▌⬤ alpha                                    alpha                                                                      ┃
+ ⬤ gamma                                    gamma                                                                      │
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+│  (empty) alpha commit
+◆  wwwwwwww root() hhhhhhhh
+
+
+
+
 ```
 
     :k C-n
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
 ```terminal
-session:                                       ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-  6/6 | [C-r] repo: none | [C-x] close         ┃│  (empty) alpha commit
-▌⬤ alpha                                    alp┃◆  wwwwwwww root() hhhhhhhh
- ⬤ gamma                                    gam┃
- ⬤ runner                                      ┃
- ⬤ ui                                          ┃
-   beta                                     bet┃
-   delta                                    del┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
+session:
+  6/6 | [C-r] repo: none | [C-x] close
+▌⬤ alpha                                    alpha                                                                      ┃
+ ⬤ gamma                                    gamma                                                                      │
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+│  (empty) alpha commit
+◆  wwwwwwww root() hhhhhhhh
+
+
+
+
 ```
 
 Typing a prefix of the live `alpha` session makes `C-n` visible, because `alp`
@@ -82,18 +82,18 @@ is not an exact live session name.
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
 ```terminal
-session: alp                                   ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-  1/6 | [C-r] repo: none | [C-n] new | [C-x] cl┃│  (empty) alpha commit
-▌⬤ alpha                                    alp┃◆  wwwwwwww root() hhhhhhhh
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
+session: alp
+  1/6 | [C-r] repo: none | [C-n] new | [C-x] close
+▌⬤ alpha                                    alpha                                                                      ┃
+                                                                                                                       ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+│  (empty) alpha commit
+◆  wwwwwwww root() hhhhhhhh
+
+
+
+
 ```
 
 Completing the live session name hides `C-n`. Pressing `C-n` again should do
@@ -103,36 +103,36 @@ nothing and leave the picker open.
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
 ```terminal
-session: alpha                                 ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-  1/6 | [C-r] repo: none | [C-x] close         ┃│  (empty) alpha commit
-▌⬤ alpha                                    alp┃◆  wwwwwwww root() hhhhhhhh
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
+session: alpha
+  1/6 | [C-r] repo: none | [C-x] close
+▌⬤ alpha                                    alpha                                                                      ┃
+                                                                                                                       ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+│  (empty) alpha commit
+◆  wwwwwwww root() hhhhhhhh
+
+
+
+
 ```
 
     :k C-n
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
 ```terminal
-session: alpha                                 ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-  1/6 | [C-r] repo: none | [C-x] close         ┃│  (empty) alpha commit
-▌⬤ alpha                                    alp┃◆  wwwwwwww root() hhhhhhhh
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
+session: alpha
+  1/6 | [C-r] repo: none | [C-x] close
+▌⬤ alpha                                    alpha                                                                      ┃
+                                                                                                                       ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+│  (empty) alpha commit
+◆  wwwwwwww root() hhhhhhhh
+
+
+
+
 ```
 
 Completing the name of the non-live `beta` repo makes `C-n` visible again,
@@ -142,18 +142,18 @@ because there is no exact live session named `beta`.
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
 ```terminal
-session: beta                                  ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-  1/6 | [C-r] repo: none | [C-n] new           ┃│  (empty) beta commit
-▌  beta                                     bet┃◆  wwwwwwww root() hhhhhhhh
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
+session: beta
+  1/6 | [C-r] repo: none | [C-n] new
+▌  beta                                     beta                                                                       ┃
+                                                                                                                       ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+│  (empty) beta commit
+◆  wwwwwwww root() hhhhhhhh
+
+
+
+
 ```
 
 ---

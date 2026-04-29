@@ -27,16 +27,16 @@ header.
     :snap
 
 ```terminal
-session:                       ┃
-  3/3 | [C-r] repo: ~/alpha | [┃
-▌⬤ alpha-live                  ┃
- ⬤ runner                      ┃
- ⬤ ui                          ┃
-                               ┃
-                               ┃
-                               ┃
-                               ┃
-                               ┃
+session:
+  3/3 | [C-r] repo: ~/alpha | [C-x] close
+▌⬤ alpha-live                                                                  ┃
+────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
 ```
 
 ---

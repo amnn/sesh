@@ -31,16 +31,16 @@ from `cwd`.
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
 ```terminal
-session:                           ┃
-  5/5 | [C-r] repo: ~/alpha | [C-x]┃
-▌⬤ runner                          ┃
- ⬤ ui                              ┃
-   alpha                           ┃
-   beta                            ┃
-   gamma                           ┃
-                                   ┃
-                                   ┃
-                                   ┃
+session:
+  5/5 | [C-r] repo: ~/alpha | [C-x] close
+▌⬤ runner                                                                                ┃
+──────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
 ```
 
 Move the cursor to the discovered `beta` repo row.
@@ -49,16 +49,16 @@ Move the cursor to the discovered `beta` repo row.
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
 ```terminal
-session:                           ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
-  5/5 | [C-r] repo: ~/alpha        ┃│  (empty) beta commit
- ⬤ runner                          ┃◆  wwwwwwww root() hhhhhhhh
- ⬤ ui                              ┃
-   alpha                           ┃
-▌  beta                            ┃
-   gamma                           ┃
-                                   ┃
-                                   ┃
-                                   ┃
+session:
+  5/5 | [C-r] repo: ~/alpha
+▌  beta                                     ../beta                                      ┃
+──────────────────────────────────────────────────────────────────────────────────────────
+@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+│  (empty) beta commit
+◆  wwwwwwww root() hhhhhhhh
+
+
+
 ```
 
 Press `C-r` to set repo context from the selected row. The header should update
@@ -68,16 +68,16 @@ to `beta` while the selected row stays on `beta` after the picker refreshes.
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
 ```terminal
-session:                           ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
-  5/5 | [C-r] repo: ../beta        ┃│  (empty) beta commit
- ⬤ runner                          ┃◆  wwwwwwww root() hhhhhhhh
- ⬤ ui                              ┃
-   alpha                           ┃
-▌  beta                            ┃
-   gamma                           ┃
-                                   ┃
-                                   ┃
-                                   ┃
+session:
+  5/5 | [C-r] repo: ../beta
+▌  beta                                     ../beta                                      ┃
+──────────────────────────────────────────────────────────────────────────────────────────
+@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+│  (empty) beta commit
+◆  wwwwwwww root() hhhhhhhh
+
+
+
 ```
 
 This snapshot applies the query `a`, which still matches multiple repo rows,
@@ -88,16 +88,16 @@ filtered list.
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
 ```terminal
-session: a                         ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhh
-  3/5 | [C-r] repo: ../gamma | [C-n┃│  (empty) gamma commit
-   alpha                           ┃◆  wwwwwwww root() hhhhhhhh
-   beta                            ┃
-▌  gamma                           ┃
-                                   ┃
-                                   ┃
-                                   ┃
-                                   ┃
-                                   ┃
+session: a
+  3/5 | [C-r] repo: ../gamma | [C-n] new
+▌  gamma                                    ../gamma                                     ┃
+──────────────────────────────────────────────────────────────────────────────────────────
+@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+│  (empty) gamma commit
+◆  wwwwwwww root() hhhhhhhh
+
+
+
 ```
 
 ---

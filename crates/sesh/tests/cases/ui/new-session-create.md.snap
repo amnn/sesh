@@ -24,16 +24,16 @@ Type a unique session name and create it with `C-n`.
     :snap
 
 ```terminal
-session: zeta                                  ┃
-  0/2 | [C-r] repo: none | [C-n] new           ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
+session: zeta
+  0/2 | [C-r] repo: none | [C-n] new
+                                                                                                                       ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
 ```
 
     :k C-n

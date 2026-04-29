@@ -11,7 +11,7 @@
 - [ ] Scroll the contents of session list items so that the last matched
   character is visible.
 
-- [ ] Re-adjust frame split:
+- [x] Re-adjust frame split:
   - The preview should be given 80 characters
   - If the overall screen real-estate is not at least 140 characters, switch to
     a vertical stacked view.

@@ -26,16 +26,16 @@ The initial selection is the live `alpha` session, so the header offers close.
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
 ```terminal
-session:                                       ┃
-  4/4 | [C-r] repo: none | [C-x] close         ┃
-▌⬤ alpha                                       ┃
- ⬤ runner                                      ┃
- ⬤ ui                                          ┃
-   beta                                     bet┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
+session:
+  4/4 | [C-r] repo: none | [C-x] close
+▌⬤ alpha                                                                                                               ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
 ```
 
 Filtering to the repo-only `beta` row hides the close shortcut.
@@ -44,16 +44,16 @@ Filtering to the repo-only `beta` row hides the close shortcut.
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
 ```terminal
-session: beta                                  ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-  1/4 | [C-r] repo: none | [C-n] new           ┃│  (empty) beta commit
-▌  beta                                     bet┃◆  wwwwwwww root() hhhhhhhh
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
-                                               ┃
+session: beta
+  1/4 | [C-r] repo: none | [C-n] new
+▌  beta                                     beta                                                                       ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+│  (empty) beta commit
+◆  wwwwwwww root() hhhhhhhh
+
+
+
 ```
 
 Pressing `C-x` on the live `alpha` session should kill `alpha` and exit without

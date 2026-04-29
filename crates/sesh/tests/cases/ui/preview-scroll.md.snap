@@ -47,18 +47,18 @@ scrollbar thumb should start at the top of the scroll area.
     :snap -d 2s
 
 ```terminal
-session: long                                  ┃@  line 01                                                             ┃
-  1/4 | [C-r] repo: none | [C-n] new           ┃│  line 02                                                             ┃
-▌  long                                     lon┃│  line 03                                                             ┃
-                                               ┃│  line 04                                                             ┃
-                                               ┃│  line 05                                                             ┃
-                                               ┃│  line 06                                                             ┃
-                                               ┃│  line 07                                                             ┃
-                                               ┃│  line 08                                                             ┃
-                                               ┃│  line 09                                                             │
-                                               ┃│  line 10                                                             │
-                                               ┃│  line 11                                                             │
-                                               ┃│  line 12                                                             │
+session: long
+  1/4 | [C-r] repo: none | [C-n] new
+▌  long                                     long                                                                       ┃
+                                                                                                                       ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+@  line 01                                                                                                             ┃
+│  line 02                                                                                                             ┃
+│  line 03                                                                                                             ┃
+│  line 04                                                                                                             │
+│  line 05                                                                                                             │
+│  line 06                                                                                                             │
+│  line 07                                                                                                             │
 ```
 
 This snapshot shows the preview after repeated `S-down` presses. The preview
@@ -68,18 +68,18 @@ scrollbar thumb should reach the bottom of the scroll area.
     :snap
 
 ```terminal
-session: long                                  ┃│  line 08                                                             │
-  1/4 | [C-r] repo: none | [C-n] new           ┃│  line 09                                                             │
-▌  long                                     lon┃│  line 10                                                             │
-                                               ┃│  line 11                                                             │
-                                               ┃│  line 12                                                             ┃
-                                               ┃│  line 13                                                             ┃
-                                               ┃│  line 14                                                             ┃
-                                               ┃│  line 15                                                             ┃
-                                               ┃│  line 16                                                             ┃
-                                               ┃│  line 17                                                             ┃
-                                               ┃│  line 18                                                             ┃
-                                               ┃◆                                                                      ┃
+session: long
+  1/4 | [C-r] repo: none | [C-n] new
+▌  long                                     long                                                                       ┃
+                                                                                                                       ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+│  line 13                                                                                                             │
+│  line 14                                                                                                             │
+│  line 15                                                                                                             │
+│  line 16                                                                                                             │
+│  line 17                                                                                                             ┃
+│  line 18                                                                                                             ┃
+◆                                                                                                                      ┃
 ```
 
 ---
