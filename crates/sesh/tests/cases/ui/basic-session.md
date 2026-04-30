@@ -1,7 +1,7 @@
 # Basic session
 
 This scenario creates several plain tmux sessions with no repo metadata and
-then launches `sesh cli`.
+then launches `sesh`.
 
     :bins jj cat
 
@@ -9,7 +9,7 @@ then launches `sesh cli`.
     :t new-session -d -s alpha "cat"
     :t new-session -d -s beta "cat"
     :t new-session -d -s gamma "cat"
-    :t new-session -d -s ui "sesh cli"
+    :t new-session -d -s ui "sesh"
     :t resize-window -t ui:0 -x 80 -y 10
     :pane ui:0.0
 

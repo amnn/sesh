@@ -6,7 +6,7 @@ input_file: crates/sesh/tests/cases/ui/basic-session.md
 # Basic session
 
 This scenario creates several plain tmux sessions with no repo metadata and
-then launches `sesh cli`.
+then launches `sesh`.
 
     :bins jj cat
 
@@ -17,7 +17,7 @@ then launches `sesh cli`.
     :t new-session -d -s alpha "cat" (success)
     :t new-session -d -s beta "cat" (success)
     :t new-session -d -s gamma "cat" (success)
-    :t new-session -d -s ui "sesh cli" (success)
+    :t new-session -d -s ui "sesh" (success)
     :t resize-window -t ui:0 -x 80 -y 10 (success)
     :pane ui:0.0
 

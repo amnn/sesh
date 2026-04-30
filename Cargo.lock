@@ -1665,7 +1665,6 @@ dependencies = [
  "ratatui",
  "serde",
  "sesh-integration-tests",
- "shlex",
  "telemetry-subscribers",
  "tempfile",
  "tokio",

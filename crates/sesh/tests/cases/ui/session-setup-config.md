@@ -20,7 +20,7 @@ tmux new-window -n shell ': > new-window-touched; cat'
 
 Launch the picker and select the discovered repo entry.
 
-    :t new-session -d -s ui "sesh cli -r beta"
+    :t new-session -d -s ui "sesh -r beta"
     :t resize-window -t ui:0 -x 120 -y 10
     :pane ui:0.0
     :snap

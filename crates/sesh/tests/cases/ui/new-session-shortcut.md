@@ -24,7 +24,7 @@ repo-only entries discovered through the CLI globs.
     :t set-option -t alpha @sesh.repo alpha
     :t new-session -d -s gamma "cat"
     :t set-option -t gamma @sesh.repo gamma
-    :t new-session -d -s ui "sesh cli -r 'alpha' -r 'beta' -r 'gamma' -r 'delta'"
+    :t new-session -d -s ui "sesh -r 'alpha' -r 'beta' -r 'gamma' -r 'delta'"
     :t resize-window -t ui:0 -x 120 -y 12
     :pane ui:0.0
 

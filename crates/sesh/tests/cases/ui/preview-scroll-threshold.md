@@ -44,7 +44,7 @@ if __name__ == "__main__":
     :$ jj config set --repo -R overflow templates.log 'description'
     :$ python3 scripts/mklog.py overflow overflow 12
     :t new-session -d -s plain "cat"
-    :t new-session -d -s ui "sesh cli -r exact -r overflow"
+    :t new-session -d -s ui "sesh -r exact -r overflow"
     :t resize-window -t ui:0 -x 120 -y 12
     :pane ui:0.0
 

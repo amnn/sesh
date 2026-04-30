@@ -1,6 +1,6 @@
 # Repo session create
 
-This scenario launches `sesh cli` with a repo-backed picker entry that does not
+This scenario launches `sesh` with a repo-backed picker entry that does not
 have a live tmux session. Pressing Enter on that entry should create a detached
 tmux session for the repo, attach `@sesh.repo` metadata, and switch the current
 client to it.
@@ -12,7 +12,7 @@ client to it.
     :$ jj describe -R beta -m "beta commit"
 Launch the picker in a live tmux client and make the repo discoverable.
 
-    :t new-session -d -s ui "sesh cli -r beta"
+    :t new-session -d -s ui "sesh -r beta"
     :t resize-window -t ui:0 -x 120 -y 10
     :pane ui:0.0
 

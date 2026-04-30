@@ -9,7 +9,7 @@ live tmux sessions, not repo-only entries.
     :$ jj git init beta
     :$ jj describe -R beta -m "beta commit"
     :t new-session -d -s alpha "cat"
-    :t new-session -d -s ui "sesh cli -r beta; cat"
+    :t new-session -d -s ui "sesh -r beta; cat"
     :t resize-window -t ui:0 -x 120 -y 10
     :pane ui:0.0
 

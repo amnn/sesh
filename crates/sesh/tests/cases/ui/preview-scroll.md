@@ -28,7 +28,7 @@ run(["jj", "describe", "-R", repo, "-m", message], check=True)
     :$ jj config set --repo -R long templates.log 'description'
     :$ python3 scripts/mklog.py long line 18
     :t new-session -d -s plain "cat"
-    :t new-session -d -s ui "sesh cli -r long"
+    :t new-session -d -s ui "sesh -r long"
     :t resize-window -t ui:0 -x 120 -y 12
     :pane ui:0.0
 

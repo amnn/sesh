@@ -14,7 +14,7 @@ session inherits the current working directory and has no repo metadata.
 > 'jj', and 'tmux' are available.
 
     :t rename-session -t 0 runner (success)
-    :t new-session -d -s ui "sesh cli" (success)
+    :t new-session -d -s ui "sesh" (success)
     :t resize-window -t ui:0 -x 120 -y 10 (success)
     :pane ui:0.0
 

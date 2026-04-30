@@ -12,7 +12,9 @@ suggest changes. Report unresolved items with reasons.`
 
 When validating multiple Rust tests, avoid parallel `cargo test` invocations:
 they contend on Cargo's package and build locks. Prefer a single `cargo
-nextest run` command that covers the desired cases.
+nextest run` command that covers the desired cases. For tmux-backed markdown UI
+tests, pass `--test-threads=1`; concurrent tmux tests can close each other's
+control channels and create misleading snapshot failures.
 
 ## Snapshots
 
@@ -20,9 +22,9 @@ For markdown-driven snapshot changes, refresh the checked-in `.snap` files with
 `cargo insta test --accept` using the appropriate package/test selection, and
 remove any leftover `.snap.new` artifacts before finishing.
 
-When a UI test needs to assert behavior after `sesh cli` exits without
+When a UI test needs to assert behavior after `sesh` exits without
 switching the client, keep the launched tmux pane alive (for example
-`"sesh cli ...; cat"`) so later markdown directives can still query the tmux
+`"sesh ...; cat"`) so later markdown directives can still query the tmux
 server.
 
 ## Architecture

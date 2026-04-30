@@ -9,7 +9,7 @@ terminal is wide enough they switch to a side-by-side layout.
     :t rename-session -t 0 runner
     :$ jj git init alpha
     :$ jj describe -R alpha -m "alpha commit"
-    :t new-session -d -s ui "sesh cli -r alpha"
+    :t new-session -d -s ui "sesh -r alpha"
     :t resize-window -t ui:0 -x 120 -y 10
     :pane ui:0.0
 

@@ -16,7 +16,7 @@ session starts in that repo and records `@sesh.repo` metadata.
     :t rename-session -t 0 runner (success)
     :$ jj git init beta (exit: 0)
     :$ jj describe -R beta -m "beta commit" (exit: 0)
-    :t new-session -d -s ui "sesh cli -r beta" (success)
+    :t new-session -d -s ui "sesh -r beta" (success)
     :t resize-window -t ui:0 -x 120 -y 10 (success)
     :pane ui:0.0
 

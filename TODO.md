@@ -2,11 +2,13 @@
 
 ## Testing
 
+- [ ] Investigate source of issues when running tests concurrently.
+
 - [ ] Take SVG snapshots of snapped tmux frames for visual regression testing.
 
 ## Rendering
 
-- [ ] Get rid of `popup` command (it is redundant).
+- [x] Get rid of `popup` command (it is redundant).
 
 - [ ] Render the tmux pip green when the session has an undismissed bell/notification.
   - [ ] Track bell state per tmux session.
@@ -70,7 +72,7 @@
 
 ## Configuration
 
-- [ ] Add a TOML-based config system.
+- [x] Add a TOML-based config system.
   - Define config file location(s), defaults, and merge/override precedence.
   - Move hard-coded UI/runtime values (for example preview sizing) into config.
 

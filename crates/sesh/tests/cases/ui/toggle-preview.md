@@ -7,7 +7,7 @@ This scenario verifies that `C-p` toggles the preview pane.
     :t rename-session -t 0 runner
     :$ jj git init alpha
     :$ jj describe -R alpha -m "alpha commit"
-    :t new-session -d -s ui "sesh cli -r alpha"
+    :t new-session -d -s ui "sesh -r alpha"
     :t resize-window -t ui:0 -x 100 -y 8
     :pane ui:0.0
 

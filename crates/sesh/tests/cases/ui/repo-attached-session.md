@@ -6,7 +6,7 @@ This scenario combines several repo-backed options in one picker:
 - a discovered `beta` repo with no open session,
 - and a discovered `mono` repo plus its `mono-ws` workspace.
 
-The glob passed to `sesh cli` ensures repos without matching tmux sessions are
+The glob passed to `sesh` ensures repos without matching tmux sessions are
 still listed.
 
 The `:snap` filters use distinct replacement characters so the snapshot makes
@@ -43,7 +43,7 @@ repo discovery enabled for `alpha`, `beta`, and `mono*`.
 
     :t new-session -d -s alpha-live "cat"
     :t set-option -t alpha-live @sesh.repo alpha
-    :t new-session -d -s ui "sesh cli -r 'alpha' -r 'beta' -r 'mono*'"
+    :t new-session -d -s ui "sesh -r 'alpha' -r 'beta' -r 'mono*'"
     :t resize-window -t ui:0 -x 120 -y 12
     :pane ui:0.0
 

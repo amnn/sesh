@@ -17,7 +17,7 @@ live tmux sessions, not repo-only entries.
     :$ jj git init beta (exit: 0)
     :$ jj describe -R beta -m "beta commit" (exit: 0)
     :t new-session -d -s alpha "cat" (success)
-    :t new-session -d -s ui "sesh cli -r beta; cat" (success)
+    :t new-session -d -s ui "sesh -r beta; cat" (success)
     :t resize-window -t ui:0 -x 120 -y 10 (success)
     :pane ui:0.0
 

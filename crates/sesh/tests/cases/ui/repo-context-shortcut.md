@@ -1,6 +1,6 @@
 # Repo context shortcut
 
-This scenario launches `sesh cli` from inside the `alpha` repository so the
+This scenario launches `sesh` from inside the `alpha` repository so the
 picker starts with a repo context inferred from `cwd`, then uses `C-r` both on
 an unfiltered repo row and on a row selected from a multi-match query.
 
@@ -13,7 +13,7 @@ an unfiltered repo row and on a row selected from a multi-match query.
     :$ jj describe -R beta -m "beta commit"
     :$ jj git init gamma
     :$ jj describe -R gamma -m "gamma commit"
-    :t new-session -d -s ui "cd alpha && sesh cli -r '../alpha' -r '../beta' -r '../gamma'"
+    :t new-session -d -s ui "cd alpha && sesh -r '../alpha' -r '../beta' -r '../gamma'"
     :t resize-window -t ui:0 -x 90 -y 10
     :pane ui:0.0
 

@@ -1,22 +1,17 @@
 ---
 source: crates/sesh/tests/test.rs
-assertion_line: 68
 expression: output
 input_file: crates/sesh/tests/cases/help.md
 ---
     :$ sesh --help (exit: 0)
 
 ```stdout
-Usage: sesh [OPTIONS] <COMMAND>
-
-Commands:
-  popup  Run `sesh` in a tmux pop-up
-  cli    Run `sesh` in the current terminal
-  help   Print this message or the help of the given subcommand(s)
+Usage: sesh [OPTIONS]
 
 Options:
   -?, --help           
       --config <PATH>  Path to a custom config file
+  -r, --repo <GLOB>    Additional repository globs to surface alongside existing tmux sessions
   -V, --version        Print version
 ```
 

@@ -8,7 +8,7 @@ session starts in that repo and records `@sesh.repo` metadata.
     :t rename-session -t 0 runner
     :$ jj git init beta
     :$ jj describe -R beta -m "beta commit"
-    :t new-session -d -s ui "sesh cli -r beta"
+    :t new-session -d -s ui "sesh -r beta"
     :t resize-window -t ui:0 -x 120 -y 10
     :pane ui:0.0
 

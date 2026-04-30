@@ -1,6 +1,6 @@
 # Current repo header
 
-This scenario launches `sesh cli` from inside a repository directory to verify
+This scenario launches `sesh` from inside a repository directory to verify
 the picker header shows the repo inferred from the current working directory.
 
     :bins jj cat
@@ -9,7 +9,7 @@ the picker header shows the repo inferred from the current working directory.
     :$ jj git init alpha
     :$ jj describe -R alpha -m "alpha commit"
     :t new-session -d -s alpha-live "cat"
-    :t new-session -d -s ui "cd alpha && sesh cli"
+    :t new-session -d -s ui "cd alpha && sesh"
     :t resize-window -t ui:0 -x 80 -y 10
     :pane ui:0.0
 

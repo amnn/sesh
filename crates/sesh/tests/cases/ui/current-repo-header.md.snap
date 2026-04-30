@@ -5,7 +5,7 @@ input_file: crates/sesh/tests/cases/ui/current-repo-header.md
 ---
 # Current repo header
 
-This scenario launches `sesh cli` from inside a repository directory to verify
+This scenario launches `sesh` from inside a repository directory to verify
 the picker header shows the repo inferred from the current working directory.
 
     :bins jj cat
@@ -17,7 +17,7 @@ the picker header shows the repo inferred from the current working directory.
     :$ jj git init alpha (exit: 0)
     :$ jj describe -R alpha -m "alpha commit" (exit: 0)
     :t new-session -d -s alpha-live "cat" (success)
-    :t new-session -d -s ui "cd alpha && sesh cli" (success)
+    :t new-session -d -s ui "cd alpha && sesh" (success)
     :t resize-window -t ui:0 -x 80 -y 10 (success)
     :pane ui:0.0
 

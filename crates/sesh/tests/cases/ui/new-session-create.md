@@ -6,7 +6,7 @@ session inherits the current working directory and has no repo metadata.
     :bins jj tmux
 
     :t rename-session -t 0 runner
-    :t new-session -d -s ui "sesh cli"
+    :t new-session -d -s ui "sesh"
     :t resize-window -t ui:0 -x 120 -y 10
     :pane ui:0.0
 

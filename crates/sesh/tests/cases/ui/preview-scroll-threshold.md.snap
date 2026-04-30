@@ -52,7 +52,7 @@ if __name__ == "__main__":
     :$ jj config set --repo -R overflow templates.log 'description' (exit: 0)
     :$ python3 scripts/mklog.py overflow overflow 12 (exit: 0)
     :t new-session -d -s plain "cat" (success)
-    :t new-session -d -s ui "sesh cli -r exact -r overflow" (success)
+    :t new-session -d -s ui "sesh -r exact -r overflow" (success)
     :t resize-window -t ui:0 -x 120 -y 12 (success)
     :pane ui:0.0
 
