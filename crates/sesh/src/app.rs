@@ -35,6 +35,7 @@ use ratatui::widgets::StatefulWidget;
 use ratatui::widgets::Widget;
 
 use crate::cache::PreviewCache;
+use crate::picker::Item as _;
 use crate::picker::Picker;
 use crate::session::Session;
 use crate::terminal::AlternateScreenGuard;
@@ -207,8 +208,16 @@ impl App {
             self.list.select(Some(first));
         }
 
-        // Render the header and session list.
+        f.render_stateful_widget(
+            session_list_widget(snapshot, self.list.selected()),
+            l.sessions,
+            &mut self.list,
+        );
+
+        // Rendering corrects the list's selected index, so we find the selected item, and can use
+        // that to render the header, etc.
         let selected = self.list.selected().and_then(|s| items.get(s));
+        self.selected = selected.map(|i| i.data.clone());
 
         // The tool supports creating a new session if the query is non-empty and does not match
         // any live session.
@@ -222,7 +231,7 @@ impl App {
 
         f.render_widget(prompt_widget(query), l.prompt);
         f.render_stateful_widget(Loading(status.running), l.loading, &mut self.load);
-        f.render_stateful_widget(session_list_widget(snapshot), l.sessions, &mut self.list);
+
         f.render_widget(
             header_widget(
                 snapshot,
@@ -240,10 +249,6 @@ impl App {
             .position(self.list.offset());
 
         f.render_stateful_widget(scrollbar_widget(), l.scroll, &mut session_scroll);
-
-        // Rendering corrects the list's selected index, so we find the selected item.
-        let selected = self.list.selected().and_then(|s| items.get(s));
-        self.selected = selected.map(|i| i.data.clone());
 
         let Some(preview) = l.preview else {
             return;
@@ -415,7 +420,11 @@ impl App {
         } else if area.width >= WIDTH_MIN_VSPLIT {
             let cols = L::default()
                 .direction(D::Horizontal)
-                .constraints([C::Percentage(60), C::Length(1), C::Percentage(40)])
+                .constraints([
+                    C::Percentage(100 - PERC_V_PREVIEW),
+                    C::Length(1),
+                    C::Percentage(PERC_V_PREVIEW),
+                ])
                 .split(area);
 
             let &[content, scroll, preview] = &cols[..] else {
@@ -597,9 +606,16 @@ fn separator_widget() -> impl Widget {
 }
 
 /// Build the session list widget for the current fuzzy-match snapshot.
-fn session_list_widget(snapshot: &Snapshot<Session>) -> impl StatefulWidget<State = ListState> {
-    List::new(snapshot.matched_items(..).map(|i| i.data))
-        .highlight_style(Style::new().reversed())
-        .highlight_symbol(Span::styled("▌", Style::new().bg(Color::Red)))
-        .highlight_spacing(HighlightSpacing::Always)
+fn session_list_widget(
+    snapshot: &Snapshot<Session>,
+    selected: Option<usize>,
+) -> impl StatefulWidget<State = ListState> {
+    List::new(
+        snapshot
+            .matched_items(..)
+            .enumerate()
+            .map(|(index, item)| item.data.render(selected == Some(index))),
+    )
+    .highlight_symbol(Span::styled("▌", Style::new().bg(Color::Red)))
+    .highlight_spacing(HighlightSpacing::Always)
 }

@@ -10,9 +10,9 @@
 
 - [x] Get rid of `popup` command (it is redundant).
 
-- [ ] Render the tmux pip green when the session has an undismissed bell/notification.
-  - [ ] Track bell state per tmux session.
-  - [ ] Switch to first Window in session with bell when session is selected.
+- [/] Render the tmux pip green when the session has an undismissed bell/notification.
+  - [x] Track bell state per tmux session.
+  - [x] Switch to first Window in session with bell when session is selected.
   - [ ] Refactor: Move session switching logic onto `Session` type.
 
 - [ ] Generate a line/entry for the "new" session instead of having a dedicated

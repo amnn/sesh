@@ -13,6 +13,16 @@ use anyhow::ensure;
 use tokio::process::Command;
 use which::which;
 
+/// Metadata for a live tmux session.
+#[derive(Debug)]
+pub struct SessionInfo {
+    /// Windows in the session that have an active bell alert.
+    pub alerts: Vec<String>,
+
+    /// Optional jj repository attached to the session.
+    pub repo: Option<PathBuf>,
+}
+
 /// Validate that `tmux` is available on `$PATH`.
 pub fn ensure() -> anyhow::Result<()> {
     ensure!(which("tmux").is_ok(), "'tmux' not found in PATH");
@@ -73,8 +83,8 @@ pub async fn run_shell(target: &str, cwd: &Path, script: &str) -> anyhow::Result
     Ok(())
 }
 
-/// Query tmux for current sessions and attached sesh repo metadata.
-pub async fn sessions() -> anyhow::Result<BTreeMap<String, Option<PathBuf>>> {
+/// Query tmux for current sessions, attached sesh repo metadata, and bell alerts.
+pub async fn sessions() -> anyhow::Result<BTreeMap<String, SessionInfo>> {
     let output = Command::new("tmux")
         .args(["list-sessions", "-F", "#{session_name}\t#{@sesh.repo}"])
         .output()
@@ -105,7 +115,45 @@ pub async fn sessions() -> anyhow::Result<BTreeMap<String, Option<PathBuf>>> {
             Some(PathBuf::from(repo))
         };
 
-        sessions.insert(session.to_owned(), repo);
+        sessions.insert(
+            session.to_owned(),
+            SessionInfo {
+                alerts: vec![],
+                repo,
+            },
+        );
+    }
+
+    let output = Command::new("tmux")
+        .args([
+            "list-windows",
+            "-a",
+            "-F",
+            "#{session_name}\t#{window_index}\t#{window_bell_flag}",
+        ])
+        .output()
+        .await
+        .context("failed to discover tmux bell alerts")?;
+
+    ensure!(
+        output.status.success(),
+        "error running 'tmux list-windows': {}",
+        String::from_utf8_lossy(&output.stderr),
+    );
+
+    for line in String::from_utf8_lossy(&output.stdout).lines() {
+        let fields: Vec<_> = line.splitn(3, '\t').collect();
+        let [session, window, bell] = fields[..] else {
+            continue;
+        };
+
+        if bell.trim() != "1" {
+            continue;
+        }
+
+        if let Some(info) = sessions.get_mut(session.trim()) {
+            info.alerts.push(window.trim().to_owned());
+        }
     }
 
     Ok(sessions)

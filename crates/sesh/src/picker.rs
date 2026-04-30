@@ -12,19 +12,23 @@ use nucleo::Status;
 use nucleo::Utf32String;
 use nucleo::pattern::CaseMatching;
 use nucleo::pattern::Normalization;
+use ratatui::widgets::ListItem;
 
 const TICK_TIMEOUT_MS: u64 = 10;
 
 /// Items that can be displayed and matched in the picker.
 pub(crate) trait Item {
+    /// Render this item for the picker list.
+    fn render(&self, highlighted: bool) -> ListItem<'static>;
+
     /// Return the text shown for this item in the picker list.
     fn text(&self) -> String;
 }
 
 /// Fuzzy matcher state for the session picker.
 pub(crate) struct Picker<I: Send + Sync + 'static> {
-    query: String,
     matcher: Nucleo<I>,
+    query: String,
 }
 
 impl<I: Item + Send + Sync + 'static> Picker<I> {
@@ -40,8 +44,8 @@ impl<I: Item + Send + Sync + 'static> Picker<I> {
         }
 
         Self {
-            query: String::new(),
             matcher,
+            query: String::new(),
         }
     }
 

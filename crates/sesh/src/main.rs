@@ -50,10 +50,10 @@ async fn main() -> anyhow::Result<()> {
     let mut seen_names = BTreeSet::new();
 
     // Add all the live sessions from tmux.
-    for (name, repo) in tmux::sessions().await? {
+    for (name, info) in tmux::sessions().await? {
         seen_names.insert(name.clone());
-        seen_repos.extend(repo.clone());
-        sessions.push(Session::from_tmux(name, repo))
+        seen_repos.extend(info.repo.clone());
+        sessions.push(Session::from_tmux(name, info.repo, info.alerts))
     }
 
     // Add an entry for every repo found, as long as it's not already associated with a
@@ -84,7 +84,7 @@ async fn main() -> anyhow::Result<()> {
         Action::Close(session) => tmux::kill_session(&session.name()).await,
         Action::Switch(session) => {
             prepare_session(&session, &cwd, &config).await?;
-            tmux::switch_client(&session.name()).await
+            tmux::switch_client(&session.switch_target()).await
         }
     }
 }

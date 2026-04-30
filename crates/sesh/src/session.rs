@@ -7,6 +7,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Context as _;
+use ratatui::style::Color;
 use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::text::Span;
@@ -26,9 +27,10 @@ const SUFFIX_DELIM: &str = "~";
 /// A tmux session and optional repo metadata.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Session {
+    alerts: Vec<String>,
     name: String,
-    suffix: Option<String>,
     repo: Option<PathBuf>,
+    suffix: Option<String>,
     tmux: bool,
 }
 
@@ -44,30 +46,34 @@ impl Session {
             .into_owned();
 
         Ok(Self {
+            alerts: vec![],
             name,
-            suffix: None,
             repo: Some(path),
+            suffix: None,
             tmux: false,
         })
     }
 
     /// Construct a potential session from information extracted from `tmux`.
     ///
-    /// `name` is a tmux session name and `repo` is an optional path to a jj repository attached as
-    /// a user-option on the tmux session.
-    pub fn from_tmux(name: String, repo: Option<PathBuf>) -> Self {
+    /// `name` is a tmux session name, `repo` is an optional path to a jj repository attached as a
+    /// user-option on the tmux session, and `alerts` is a list of windows in the sssion that have
+    /// an active bell alert.
+    pub fn from_tmux(name: String, repo: Option<PathBuf>, alerts: Vec<String>) -> Self {
         if let Some((name, suffix)) = name.rsplit_once(SUFFIX_DELIM) {
             Self {
+                alerts,
                 name: name.to_owned(),
-                suffix: Some(suffix.to_owned()),
                 repo,
+                suffix: Some(suffix.to_owned()),
                 tmux: true,
             }
         } else {
             Self {
+                alerts,
                 name,
-                suffix: None,
                 repo,
+                suffix: None,
                 tmux: true,
             }
         }
@@ -76,9 +82,10 @@ impl Session {
     /// Construct a potential session from a name and optional repository path.
     pub fn new(name: String, repo: Option<PathBuf>) -> Self {
         Self {
+            alerts: vec![],
             name,
-            suffix: None,
             repo,
+            suffix: None,
             tmux: false,
         }
     }
@@ -106,9 +113,38 @@ impl Session {
     pub fn set_suffix(&mut self, suffix: String) {
         self.suffix = Some(suffix);
     }
+
+    /// Return the tmux target for switching to this session.
+    pub fn switch_target(&self) -> String {
+        let session = self.name();
+        if let Some(window) = &self.alerts.first() {
+            format!("{session}:{window}")
+        } else {
+            session
+        }
+    }
 }
 
 impl Item for Session {
+    fn render(&self, highlighted: bool) -> ListItem<'static> {
+        let mut line = Line::default();
+        push_live_session_pip(&mut line, self.tmux, !self.alerts.is_empty(), highlighted);
+        push_session_name_spans(&mut line, self);
+
+        if let Some(repo) = &self.repo {
+            let padding = NAME_WIDTH.saturating_sub(self.name().len()) + 1;
+            line += Span::raw(" ".repeat(padding));
+            push_repo_path_spans(&mut line, repo);
+        };
+
+        let item = ListItem::new(line);
+        if highlighted {
+            item.style(Style::new().reversed())
+        } else {
+            item
+        }
+    }
+
     fn text(&self) -> String {
         let Some(repo) = &self.repo else {
             return self.name();
@@ -134,30 +170,21 @@ impl Preview for Session {
     }
 }
 
-impl From<&'_ Session> for ListItem<'static> {
-    fn from(session: &Session) -> Self {
-        let mut line = Line::default();
-        push_live_session_pip(&mut line, session.tmux);
-        push_session_name_spans(&mut line, session);
-
-        let Some(repo) = &session.repo else {
-            return ListItem::new(line);
-        };
-
-        let padding = NAME_WIDTH.saturating_sub(session.name().len()) + 1;
-        line += Span::raw(" ".repeat(padding));
-        push_repo_path_spans(&mut line, repo);
-
-        ListItem::new(line)
-    }
-}
-
-fn push_live_session_pip(line: &mut Line<'static>, live: bool) {
-    if live {
-        *line += Span::styled(PIP_TMUX, Style::new().dim());
-    } else {
+fn push_live_session_pip(line: &mut Line<'static>, live: bool, alert: bool, highlighted: bool) {
+    if !live {
         *line += Span::raw(PIP_REPO);
+        return;
     }
+
+    let style = if alert && highlighted {
+        Style::new().bg(Color::Green)
+    } else if alert {
+        Style::new().fg(Color::Green)
+    } else {
+        Style::new().dim()
+    };
+
+    *line += Span::styled(PIP_TMUX, style);
 }
 
 fn push_session_name_spans(line: &mut Line<'static>, session: &Session) {
