@@ -51,6 +51,7 @@ if __name__ == "__main__":
 This snapshot shows a preview that exactly fits the viewport, so no preview
 scrollbar should be visible.
 
+    :settle
     :k exact down
     :snap
 

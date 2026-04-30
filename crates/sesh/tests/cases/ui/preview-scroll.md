@@ -35,6 +35,7 @@ run(["jj", "describe", "-R", repo, "-m", message], check=True)
 This snapshot shows the long preview at its initial position. The preview
 scrollbar thumb should start at the top of the scroll area.
 
+    :settle
     :k long down
     :snap -d 2s
 
