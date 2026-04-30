@@ -285,13 +285,44 @@ impl Runner {
             return Ok(());
         }
 
-        if let Err(error) = self.tmux.wait_for_pane(&pane).await {
-            writeln!(w)?;
-            let message = format!("failed to observe pane target '{target}': {error}");
-            write_callout(w, "WARNING", &[&message])?;
+        // tmux control-mode subscriptions are throttled, so confirm the switch with an explicit
+        // query instead of waiting for the next subscription notification.
+        match self.tmux.refresh_pane().await {
+            Ok(current) => {
+                if current != pane {
+                    writeln!(w)?;
+                    let msg = format!("failed to observe pane target '{target}'");
+                    write_callout(w, "WARNING", &[&msg])?;
+                }
+            }
+            Err(error) => {
+                writeln!(w)?;
+                let message = format!("failed to observe pane target '{target}': {error}");
+                write_callout(w, "WARNING", &[&message])?;
+            }
         }
 
         Ok(())
+    }
+
+    /// Wait for the pane to reach a settled state within `deadline`. Repeatedly takes snapshots
+    /// until `count` consecutive snapshots match.
+    async fn eval_settle(
+        &self,
+        w: &mut impl fmt::Write,
+        raw: &str,
+        count: NonZeroUsize,
+        duration: Duration,
+        filters: &[parser::Filter],
+    ) -> fmt::Result {
+        write!(w, "{raw}")?;
+        match self.settle(count, duration, filters).await {
+            Ok(_) => writeln!(w, " (settled)"),
+            Err(e) => {
+                writeln!(w, "\n")?;
+                write_callout(w, "WARNING", &[&format!("{e:#}")])
+            }
+        }
     }
 
     /// Run a host command inside the runner environment and render its output.
@@ -337,26 +368,6 @@ impl Runner {
         }
 
         Ok(())
-    }
-
-    /// Wait for the pane to reach a settled state within `deadline`. Repeatedly takes snapshots
-    /// until `count` consecutive snapshots match.
-    async fn eval_settle(
-        &self,
-        w: &mut impl fmt::Write,
-        raw: &str,
-        count: NonZeroUsize,
-        duration: Duration,
-        filters: &[parser::Filter],
-    ) -> fmt::Result {
-        write!(w, "{raw}")?;
-        match self.settle(count, duration, filters).await {
-            Ok(_) => writeln!(w, " (settled)"),
-            Err(e) => {
-                writeln!(w, "\n")?;
-                write_callout(w, "WARNING", &[&format!("{e:#}")])
-            }
-        }
     }
 
     /// Capture the current pane in a settled state within `deadline`. Repeatedly takes snapshots
@@ -514,8 +525,10 @@ impl Runner {
                 }
             }
 
-            if capture.is_some() && streak >= target {
-                return Ok(capture.unwrap());
+            if streak >= target
+                && let Some(capture) = capture
+            {
+                return Ok(capture);
             }
 
             time::sleep(INTERVAL).await;

@@ -10,7 +10,6 @@ use std::fmt::Write as _;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Stdio;
-use std::time::Duration;
 
 use anyhow::Context as _;
 use anyhow::anyhow;
@@ -48,7 +47,8 @@ pub(crate) struct Command {
 
 /// Handle for managing a `tmux` server.
 pub(crate) struct Tmux {
-    pane: watch::Receiver<Option<String>>,
+    pane_rx: watch::Receiver<String>,
+    pane_tx: watch::Sender<String>,
     socket: PathBuf,
     _stderr_task: AbortOnDropHandle<()>,
     stdout_task: JoinHandle<()>,
@@ -104,11 +104,12 @@ impl Tmux {
         let stderr_task = AbortOnDropHandle::new(tokio::task::spawn(stderr_task(stderr)));
 
         let (tx, rx) = mpsc::channel(32);
-        let (pane_tx, pane) = watch::channel(None);
+        let (pane_tx, pane_rx) = watch::channel(String::new());
         let stdout_task = tokio::task::spawn(stdout_task(client, rx, pane_tx.clone()));
 
         let tmux = Self {
-            pane,
+            pane_rx,
+            pane_tx,
             socket,
             _stderr_task: stderr_task,
             stdout_task,
@@ -122,12 +123,11 @@ impl Tmux {
             .await
             .context("failed to subscribe to current pane changes")?;
 
-        let pane = tmux
-            .query_current_pane()
+        // Also update the current pane synchronously, so it has an initial value.
+        tmux.refresh_pane()
             .await
             .context("failed to confirm initial current pane")?;
 
-        pane_tx.send_replace(Some(pane));
         Ok(tmux)
     }
 
@@ -144,10 +144,24 @@ impl Tmux {
     /// `Tmux::new` confirms and seeds this value before constructing a runner, and the control
     /// task keeps it current from subscription notifications.
     pub(crate) fn pane(&self) -> String {
-        self.pane
-            .borrow()
-            .clone()
-            .expect("tmux pane is confirmed on startup")
+        self.pane_rx.borrow().clone()
+    }
+
+    /// Poll tmux for the current pane and update the cached value used for shell directives.
+    pub(crate) async fn refresh_pane(&self) -> anyhow::Result<String> {
+        let output = self
+            .command("display-message")
+            .args(["-p", "#{pane_id}"])
+            .status()
+            .await?;
+
+        let output = String::from_utf8_lossy(&output);
+        let pane = output.trim();
+        ensure!(pane.starts_with('%'), "invalid current pane '{pane}'");
+
+        let pane = pane.to_owned();
+        self.pane_tx.send_replace(pane.clone());
+        Ok(pane)
     }
 
     /// Gracefully shutdown the `tmux` server and control client, waiting for them to exit.
@@ -165,36 +179,6 @@ impl Tmux {
     /// Return the path to the tmux server socket used by this runner.
     pub(crate) fn socket(&self) -> &Path {
         &self.socket
-    }
-
-    /// Wait for the control-mode client to report `expected` as its current pane.
-    pub(crate) async fn wait_for_pane(&self, expected: &str) -> anyhow::Result<()> {
-        let mut pane = self.pane.clone();
-        tokio::time::timeout(Duration::from_secs(2), async {
-            pane.wait_for(|pane| pane.as_deref() == Some(expected))
-                .await
-                .context("current pane notification stream closed")?;
-
-            Ok(())
-        })
-        .await
-        .context("timed out waiting for current pane notification")?
-    }
-
-    /// Poll tmux for the current pane. Only used during initialization, after which this is kept
-    /// up-to-date with subscription notifications.
-    async fn query_current_pane(&self) -> anyhow::Result<String> {
-        let output = self
-            .command("display-message")
-            .args(["-p", "#{pane_id}"])
-            .status()
-            .await?;
-
-        let output = String::from_utf8_lossy(&output);
-        let pane = output.trim();
-        ensure!(pane.starts_with('%'), "invalid current pane '{pane}'");
-
-        Ok(pane.to_owned())
     }
 }
 
@@ -374,7 +358,7 @@ async fn stderr_task(stderr: ChildStderr) {
 async fn stdout_task(
     mut client: Child,
     mut requests: mpsc::Receiver<Request>,
-    pane: watch::Sender<Option<String>>,
+    pane: watch::Sender<String>,
 ) {
     let Some(mut stdin) = client.stdin.take() else {
         error!("failed to setup control client stdin");
@@ -458,7 +442,7 @@ async fn stdout_task(
                     && let Some((_, p)) = rest.rsplit_once(" : ")
                     && p.starts_with('%')
                 {
-                    pane.send_replace(Some(p.to_owned()));
+                    pane.send_replace(p.to_owned());
                 } else if line.starts_with(b"%") {
                     debug!("notification: {}", String::from_utf8_lossy(&line));
                 } else {
