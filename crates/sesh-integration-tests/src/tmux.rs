@@ -67,6 +67,64 @@ struct Request {
 
 type Response = mpsc::Sender<anyhow::Result<Vec<u8>>>;
 
+impl Command {
+    /// Add one argument.
+    pub(crate) fn arg(mut self, arg: impl AsRef<OsStr>) -> Self {
+        self.line.push(' ');
+        self.line.push_str(&escape(arg.as_ref()));
+        self
+    }
+
+    /// Add many arguments.
+    pub(crate) fn args(mut self, args: impl IntoIterator<Item = impl AsRef<OsStr>>) -> Self {
+        for arg in args {
+            self.line.push(' ');
+            self.line.push_str(&escape(arg.as_ref()));
+        }
+
+        self
+    }
+
+    /// Run this command against the control-mode `tmux` instance it was created from and stream
+    /// output lines.
+    ///
+    /// The returned channel yields one item per output line while the command is active. When tmux
+    /// emits `%end`, the channel is closed and no additional item is sent. When tmux emits
+    /// `%error`, a final `Err(...)` item is sent and then the channel is closed.
+    pub(crate) async fn output(self) -> anyhow::Result<mpsc::Receiver<anyhow::Result<Vec<u8>>>> {
+        let (tx, rx) = mpsc::channel(32);
+        self.tx
+            .send(Request { cmd: self.line, tx })
+            .await
+            .context("failed to queue tmux command")?;
+
+        Ok(rx)
+    }
+
+    /// Run this command against the control-mode `tmux` instance it was created from and collect
+    /// output.
+    ///
+    /// Output lines are joined with trailing newlines until the command terminates. `%end` maps to
+    /// `Ok(collected_bytes)`. `%error` maps to `Err(...)`, where the error message is built from
+    /// the collected bytes using lossy UTF-8 conversion.
+    pub(crate) async fn status(self) -> anyhow::Result<Vec<u8>> {
+        let mut joined = vec![];
+        let mut output = self.output().await?;
+        while let Some(line) = output.recv().await {
+            match line {
+                Ok(line) => {
+                    joined.extend_from_slice(&line);
+                    joined.push(b'\n');
+                }
+
+                Err(_) => bail!(String::from_utf8_lossy(&joined).into_owned()),
+            }
+        }
+
+        Ok(joined)
+    }
+}
+
 impl Tmux {
     /// Start a `tmux` control-mode client in the given environment.
     ///
@@ -179,64 +237,6 @@ impl Tmux {
     /// Return the path to the tmux server socket used by this runner.
     pub(crate) fn socket(&self) -> &Path {
         &self.socket
-    }
-}
-
-impl Command {
-    /// Add one argument.
-    pub(crate) fn arg(mut self, arg: impl AsRef<OsStr>) -> Self {
-        self.line.push(' ');
-        self.line.push_str(&escape(arg.as_ref()));
-        self
-    }
-
-    /// Add many arguments.
-    pub(crate) fn args(mut self, args: impl IntoIterator<Item = impl AsRef<OsStr>>) -> Self {
-        for arg in args {
-            self.line.push(' ');
-            self.line.push_str(&escape(arg.as_ref()));
-        }
-
-        self
-    }
-
-    /// Run this command against the control-mode `tmux` instance it was created from and stream
-    /// output lines.
-    ///
-    /// The returned channel yields one item per output line while the command is active. When tmux
-    /// emits `%end`, the channel is closed and no additional item is sent. When tmux emits
-    /// `%error`, a final `Err(...)` item is sent and then the channel is closed.
-    pub(crate) async fn output(self) -> anyhow::Result<mpsc::Receiver<anyhow::Result<Vec<u8>>>> {
-        let (tx, rx) = mpsc::channel(32);
-        self.tx
-            .send(Request { cmd: self.line, tx })
-            .await
-            .context("failed to queue tmux command")?;
-
-        Ok(rx)
-    }
-
-    /// Run this command against the control-mode `tmux` instance it was created from and collect
-    /// output.
-    ///
-    /// Output lines are joined with trailing newlines until the command terminates. `%end` maps to
-    /// `Ok(collected_bytes)`. `%error` maps to `Err(...)`, where the error message is built from
-    /// the collected bytes using lossy UTF-8 conversion.
-    pub(crate) async fn status(self) -> anyhow::Result<Vec<u8>> {
-        let mut joined = vec![];
-        let mut output = self.output().await?;
-        while let Some(line) = output.recv().await {
-            match line {
-                Ok(line) => {
-                    joined.extend_from_slice(&line);
-                    joined.push(b'\n');
-                }
-
-                Err(_) => bail!(String::from_utf8_lossy(&joined).into_owned()),
-            }
-        }
-
-        Ok(joined)
     }
 }
 
