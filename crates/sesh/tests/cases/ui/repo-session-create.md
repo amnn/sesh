@@ -15,6 +15,7 @@ Launch the picker in a live tmux client and make the repo discoverable.
     :t new-session -d -s ui "sesh -r beta"
     :t resize-window -t ui:0 -x 120 -y 10
     :pane ui:0.0
+    :settle -d 2s
 
 Type a query that selects `beta`, wait for the picker to redraw, and accept it.
 

@@ -93,6 +93,13 @@ pub(crate) enum LineKind {
     /// Send key inputs to current pane.
     Keys { keys: Vec<Key> },
 
+    /// Wait for pane output to settle without emitting a snapshot.
+    Settle {
+        count: NonZeroUsize,
+        duration: Duration,
+        filters: Vec<Filter>,
+    },
+
     /// Capture pane output and apply regex replacement filters.
     Snap {
         count: NonZeroUsize,
@@ -104,9 +111,9 @@ pub(crate) enum LineKind {
     Error { message: String },
 }
 
-/// Parsed arguments for `:snap`.
+/// Parsed arguments for `:snap` and `:settle`.
 #[derive(clap::Parser)]
-struct SnapArgs {
+struct SettleArgs {
     /// Number of consecutive identical samples required before a snap settles.
     #[arg(short = 'c', long = "count", default_value = "5")]
     count: NonZeroUsize,
@@ -248,8 +255,19 @@ impl LineKind {
                 LineKind::Keys { keys: keys? }
             }
 
+            "settle" => {
+                let args = parse_settle_args(":settle", args)?;
+                let filters: anyhow::Result<Vec<_>> =
+                    args.filters.into_iter().map(parse_filter).collect();
+                LineKind::Settle {
+                    count: args.count,
+                    duration: args.duration,
+                    filters: filters?,
+                }
+            }
+
             "s" | "snap" => {
-                let args = parse_snap_args(args)?;
+                let args = parse_settle_args(":snap", args)?;
                 let filters: anyhow::Result<Vec<_>> =
                     args.filters.into_iter().map(parse_filter).collect();
                 LineKind::Snap {
@@ -407,10 +425,10 @@ fn parse_key_kind(input: &str) -> KeyKind {
     }
 }
 
-/// Parse `:snap` arguments with Clap so diagnostics match real CLI parsing.
-fn parse_snap_args(args: Vec<String>) -> anyhow::Result<SnapArgs> {
-    let argv = std::iter::once(":snap".to_owned()).chain(args);
-    SnapArgs::try_parse_from(argv).map_err(|error| anyhow::anyhow!(error.render().to_string()))
+/// Parse settle-style arguments with Clap so diagnostics match real CLI parsing.
+fn parse_settle_args(name: &str, args: Vec<String>) -> anyhow::Result<SettleArgs> {
+    let argv = std::iter::once(name.to_owned()).chain(args);
+    SettleArgs::try_parse_from(argv).map_err(|error| anyhow::anyhow!(error.render().to_string()))
 }
 
 #[cfg(test)]
@@ -432,6 +450,7 @@ mod tests {
                 r#"    :t new-session -d -s fixture "sleep 3600""#,
                 r#"    :p runner:0.0"#,
                 r#"    :k down "abc""#,
+                r#"    :settle -c 2 -d 500ms /foo/x"#,
                 r#"    :s /foo/x"#,
                 r#""#,
                 r#"Notes."#,

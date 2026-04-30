@@ -9,6 +9,7 @@ session inherits the current working directory and has no repo metadata.
     :t new-session -d -s ui "sesh"
     :t resize-window -t ui:0 -x 120 -y 10
     :pane ui:0.0
+    :settle -d 2s
 
 Type a unique session name and create it with `C-n`.
 

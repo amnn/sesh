@@ -11,6 +11,8 @@ use std::path::Path;
 use std::slice;
 use std::time::Duration;
 
+use anyhow::Context as _;
+use anyhow::ensure;
 use futures::future;
 use nonempty::NonEmpty;
 use textwrap::Options;
@@ -229,6 +231,15 @@ impl Runner {
                 self.eval_keys(w, line.raw, keys).await?;
             }
 
+            LineKind::Settle {
+                count,
+                duration,
+                filters,
+            } => {
+                self.eval_settle(w, line.raw, *count, *duration, filters)
+                    .await?;
+            }
+
             LineKind::Snap {
                 count,
                 duration,
@@ -328,9 +339,28 @@ impl Runner {
         Ok(())
     }
 
+    /// Wait for the pane to reach a settled state within `deadline`. Repeatedly takes snapshots
+    /// until `count` consecutive snapshots match.
+    async fn eval_settle(
+        &self,
+        w: &mut impl fmt::Write,
+        raw: &str,
+        count: NonZeroUsize,
+        duration: Duration,
+        filters: &[parser::Filter],
+    ) -> fmt::Result {
+        write!(w, "{raw}")?;
+        match self.settle(count, duration, filters).await {
+            Ok(_) => writeln!(w, " (settled)"),
+            Err(e) => {
+                writeln!(w, "\n")?;
+                write_callout(w, "WARNING", &[&format!("{e:#}")])
+            }
+        }
+    }
+
     /// Capture the current pane in a settled state within `deadline`. Repeatedly takes snapshots
-    /// until `count` consecutive snapshots match. Initially snapshots are taken at a longer
-    /// interval, until a change is detected, at which point the interval is shortened.
+    /// until `count` consecutive snapshots match.
     async fn eval_snap(
         &self,
         w: &mut impl fmt::Write,
@@ -338,58 +368,10 @@ impl Runner {
         duration: Duration,
         filters: &[parser::Filter],
     ) -> fmt::Result {
-        const INTERVAL: Duration = Duration::from_millis(25);
-
-        let deadline = time::Instant::now() + duration;
-        let mut capture = None;
-        let mut streak = 0;
-        let target = count.get();
-
-        loop {
-            let pane = match self.capture_pane(filters).await {
-                Ok(pane) => pane,
-                Err(error) => {
-                    let message = format!("failed to capture pane: {error:#}");
-                    write_callout(w, "WARNING", &[&message])?;
-                    return Ok(());
-                }
-            };
-
-            match &mut capture {
-                _ if pane.trim().is_empty() => {
-                    // ignore empty captures, they usually indicate that tmux hasn't initialized
-                    // the pane yet.
-                }
-
-                Some(prev) if prev == &pane => {
-                    streak += 1;
-                }
-
-                Some(prev) => {
-                    *prev = pane;
-                    streak = 1;
-                }
-
-                None => {
-                    capture = Some(pane);
-                    streak = 1;
-                }
-            }
-
-            if streak >= target {
-                write_fenced_block(w, "terminal", capture.as_deref().unwrap_or_default())?;
-                return Ok(());
-            }
-
-            time::sleep(INTERVAL).await;
-            if time::Instant::now() > deadline {
-                break;
-            }
+        match self.settle(count, duration, filters).await {
+            Ok(capture) => write_fenced_block(w, "terminal", &capture),
+            Err(e) => write_callout(w, "WARNING", &[&format!("{e:#}")]),
         }
-
-        let warning = format!("pane did not stabilize in {}ms", duration.as_millis());
-        write_callout(w, "WARNING", &[&warning])?;
-        Ok(())
     }
 
     /// Run a tmux command against the test server and render its outcome.
@@ -486,6 +468,63 @@ impl Runner {
 
         writeln!(w, " (written)")?;
         Ok(())
+    }
+
+    /// Capture the current pane in a settled state within `duration`.
+    ///
+    /// A settled state implies that a streak of `count` snapshots all observed the same state,
+    /// after filters have been applied.
+    async fn settle(
+        &self,
+        count: NonZeroUsize,
+        duration: Duration,
+        filters: &[parser::Filter],
+    ) -> anyhow::Result<String> {
+        const INTERVAL: Duration = Duration::from_millis(25);
+
+        let deadline = time::Instant::now() + duration;
+        let mut capture = None;
+        let mut streak = 0;
+        let target = count.get();
+
+        loop {
+            let pane = self
+                .capture_pane(filters)
+                .await
+                .context("failed to capture pane")?;
+
+            match &mut capture {
+                _ if pane.trim().is_empty() => {
+                    // Ignore empty captures, they usually indicate that tmux hasn't initialized
+                    // the pane yet.
+                }
+
+                Some(prev) if prev == &pane => {
+                    streak += 1;
+                }
+
+                Some(prev) => {
+                    *prev = pane;
+                    streak = 1;
+                }
+
+                None => {
+                    capture = Some(pane);
+                    streak = 1;
+                }
+            }
+
+            if capture.is_some() && streak >= target {
+                return Ok(capture.unwrap());
+            }
+
+            time::sleep(INTERVAL).await;
+            ensure!(
+                time::Instant::now() <= deadline,
+                "pane did not stabilize in {}ms",
+                duration.as_millis()
+            );
+        }
     }
 
     /// Resolve a user-facing pane target into a concrete tmux pane id.

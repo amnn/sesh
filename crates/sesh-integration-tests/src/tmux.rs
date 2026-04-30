@@ -381,10 +381,12 @@ async fn stdout_task(
         return;
     };
 
-    let Some(mut stdout) = client.stdout.take().map(|p| BufReader::new(p).lines()) else {
+    let Some(stdout) = client.stdout.take() else {
         error!("failed to setup control client stdout");
         return;
     };
+    let mut stdout = BufReader::new(stdout);
+    let mut line = Vec::new();
 
     let mut active: Option<Response> = None;
     let mut pending: VecDeque<Response> = VecDeque::new();
@@ -417,14 +419,9 @@ async fn stdout_task(
                 }
             }
 
-            line = stdout.next_line() => {
-                let line = match line {
-                    Ok(Some(line)) => line,
-
-                    Ok(None) => {
-                        warn!("stdout closed");
-                        break;
-                    }
+            read = stdout.read_until(b'\n', &mut line) => {
+                let read = match read {
+                    Ok(read) => read,
 
                     Err(e) => {
                         error!("stdout error: {e}");
@@ -432,25 +429,43 @@ async fn stdout_task(
                     }
                 };
 
-                if let Some(tx) = &active && line.starts_with("%error") {
+                if read == 0 {
+                    warn!("stdout closed");
+                    break;
+                }
+
+                if line.ends_with(b"\n") {
+                    line.pop();
+                }
+
+                if line.ends_with(b"\r") {
+                    line.pop();
+                }
+
+                if let Some(tx) = &active && line.starts_with(b"%error") {
                     let _ = tx.send(Err(anyhow!("tmux command failed"))).await;
                     active = None;
-                } else if active.is_some() && line.starts_with("%end") {
+                } else if active.is_some() && line.starts_with(b"%end") {
                     active = None;
+                } else if line.starts_with(b"%output ") {
+                    debug!("notification: {}", String::from_utf8_lossy(&line));
                 } else if let Some(tx) = &active {
-                    let _ = tx.send(unescape(line.into_bytes())).await;
-                } else if line.starts_with("%begin") {
+                    let _ = tx.send(unescape(line.clone())).await;
+                } else if line.starts_with(b"%begin") {
                     active = pending.pop_front();
-                } else if let Some(rest) = line.strip_prefix("%subscription-changed runner-pane ")
+                } else if let Some(rest) = line.strip_prefix(b"%subscription-changed runner-pane ")
+                    && let Some(rest) = str::from_utf8(rest).ok()
                     && let Some((_, p)) = rest.rsplit_once(" : ")
                     && p.starts_with('%')
                 {
                     pane.send_replace(Some(p.to_owned()));
-                } else if line.starts_with("%") {
-                    debug!("notification: {line}");
+                } else if line.starts_with(b"%") {
+                    debug!("notification: {}", String::from_utf8_lossy(&line));
                 } else {
-                    warn!("unexpected: {line}");
+                    warn!("unexpected: {}", String::from_utf8_lossy(&line));
                 }
+
+                line.clear();
             }
         }
     }

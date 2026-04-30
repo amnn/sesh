@@ -15,6 +15,7 @@ runner's `TMUX` and `TMUX_PANE` environment, so this targets the pane currently
 shown by the control-mode client.
 
     :$ tmux respawn-pane -k 'sesh'
+    :settle -d 2s
 
 Type a query that selects `beta`, wait for the picker to redraw, and accept it.
 The next snapshot should follow the control-mode client to the selected session

@@ -1,6 +1,6 @@
 ---
 source: crates/sesh-integration-tests/src/parser.rs
-expression: "Script::parse(&[r#\"# Scenario\"#, r#\"\"#, r#\"    :$ cargo --version\"#,\nr#\"    :w tmp/hello.txt\"#, r#\"```text\"#, r#\"hello\"#, r#\"```\"#,\nr#\"    :cp fixtures/source.txt tmp/source.txt\"#,\nr#\"    :t new-session -d -s fixture \"sleep 3600\"\"#, r#\"    :p runner:0.0\"#,\nr#\"    :k down \"abc\"\"#, r#\"    :s /foo/x\"#, r#\"\"#, r#\"Notes.\"#,\nr#\"\"#,].join(\"\\n\"))"
+expression: "Script::parse(&[r#\"# Scenario\"#, r#\"\"#, r#\"    :$ cargo --version\"#,\nr#\"    :w tmp/hello.txt\"#, r#\"```text\"#, r#\"hello\"#, r#\"```\"#,\nr#\"    :cp fixtures/source.txt tmp/source.txt\"#,\nr#\"    :t new-session -d -s fixture \"sleep 3600\"\"#, r#\"    :p runner:0.0\"#,\nr#\"    :k down \"abc\"\"#, r#\"    :settle -c 2 -d 500ms /foo/x\"#,\nr#\"    :s /foo/x\"#, r#\"\"#, r#\"Notes.\"#, r#\"\"#,].join(\"\\n\"))"
 ---
 Script {
     lines: [
@@ -88,6 +88,21 @@ Script {
                 ],
             },
             raw: "    :k down \"abc\"",
+        },
+        Line {
+            kind: Settle {
+                count: 2,
+                duration: 500ms,
+                filters: [
+                    Filter {
+                        patt: Regex(
+                            "foo",
+                        ),
+                        paint: "x",
+                    },
+                ],
+            },
+            raw: "    :settle -c 2 -d 500ms /foo/x",
         },
         Line {
             kind: Snap {

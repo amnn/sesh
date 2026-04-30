@@ -61,6 +61,18 @@ token=👩🏽‍💻👩🏽‍💻👩🏽‍💻👩🏽‍💻
 
 ```
 
+## Settles without emitting a snapshot
+
+The settle directive uses the same settling and filtering rules as snap, but does not append a
+terminal block when the pane settles.
+
+    :t new-window -d -n settle 'echo "hello settle"; tmux wait-for -S ready-settle; sleep 10' (success)
+    :p 0:settle.0
+    :t resize-window -x 80 -y 2 -t 0:settle (success)
+
+    :t wait-for ready-settle (success)
+    :settle -c 1 /settle/X (settled)
+
 ## Warns for unstable pane content
 
 If repeated pane captures do not settle before the timeout, the runner should

@@ -11,6 +11,7 @@ session starts in that repo and records `@sesh.repo` metadata.
     :t new-session -d -s ui "sesh -r beta"
     :t resize-window -t ui:0 -x 120 -y 10
     :pane ui:0.0
+    :settle -d 2s
 
 Select the discovered repo, set it as the current repo context, then create a
 new session named `zeta`.

@@ -2,7 +2,7 @@
 
 ## Testing
 
-- [ ] Investigate source of issues when running tests concurrently.
+- [x] Investigate source of issues when running tests concurrently.
 
 - [ ] Take SVG snapshots of snapped tmux frames for visual regression testing.
 

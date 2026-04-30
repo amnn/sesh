@@ -29,6 +29,9 @@ Supported directives:
   - Modifiers are canonical uppercase only: `C-`, `M-`, `S-`.
   - `S-` only applies to arrow keys.
   - Anything that doesn't match the above is treated as a literal string to send.
+- `:settle [-c <count>] [-d <duration>] [dregexdgrapheme ...]`
+  - Wait for the current pane to settle without appending a snapshot.
+  - Accepts the same options and filters as `:snap`.
 - `:s` / `:snap [-c <count>] [-d <duration>] [dregexdgrapheme ...]`
   - Capture current pane and append it in a fenced `terminal` code block.
   - `-c` / `--count` sets the required consecutive matching captures and
