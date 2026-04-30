@@ -6,6 +6,8 @@ session.
 
     :bins jj cat tmux
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml
+
     :t rename-session -t 0 runner
     :t new-session -d -s beta "printf 'beta target'; cat"
     :t resize-window -t runner:0 -x 80 -y 10
@@ -18,13 +20,15 @@ shown by the control-mode client.
     :settle -d 2s
 
 Type a query that selects `beta`, wait for the picker to redraw, and accept it.
-The next snapshot should follow the control-mode client to the selected session
-and capture the `beta` pane.
+After accepting the selection, the control-mode client should switch to the selected session.
 
     :k bet
     :snap
+
     :k enter
-    :snap -d 2s
+    :settle -d 2s
+
+    :t display-message -p '#{client_session}'
 
 ---
 vim: set ft=markdown:

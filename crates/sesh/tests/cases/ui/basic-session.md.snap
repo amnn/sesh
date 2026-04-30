@@ -13,6 +13,8 @@ then launches `sesh`.
 > [!NOTE]
 > 'jj', and 'cat' are available.
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
     :t rename-session -t 0 runner (success)
     :t new-session -d -s alpha "cat" (success)
     :t new-session -d -s beta "cat" (success)
@@ -39,6 +41,9 @@ session:
 
 ```
 
+![light](basic-session.md.snap.1.light.svg)
+![dark](basic-session.md.snap.1.dark.svg)
+
 This snapshot shows the picker after typing `bet`, so the selection should move
 to the `beta` session.
 
@@ -57,6 +62,9 @@ session: bet
 
 
 ```
+
+![light](basic-session.md.snap.2.light.svg)
+![dark](basic-session.md.snap.2.dark.svg)
 
 ---
 vim: set ft=markdown:

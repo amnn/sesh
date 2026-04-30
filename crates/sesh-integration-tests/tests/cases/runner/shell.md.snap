@@ -25,6 +25,9 @@ sh$
 
 ```
 
+![light](shell.md.snap.1.light.svg)
+![dark](shell.md.snap.1.dark.svg)
+
 ## New windows also have stable prompt
 
 Creating a new window without a command should still produce the same stable prompt.
@@ -39,6 +42,9 @@ Creating a new window without a command should still produce the same stable pro
 sh$
 
 ```
+
+![light](shell.md.snap.2.light.svg)
+![dark](shell.md.snap.2.dark.svg)
 
 ---
 vim: set ft=markdown:

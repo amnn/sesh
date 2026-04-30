@@ -24,7 +24,7 @@ surrounding literal text should remain unchanged.
     :t resize-window -x 80 -y 2 -t 0:groups
 
     :t wait-for ready-groups
-    :snap -c 1 "/id=([0-9]+) user=([a-z]+)/👩🏽‍💻"
+    :snap -c 1 "/id=([0-9]+) user=([a-z]+)/é"
 
 ## Paints nested capture groups once
 
@@ -36,7 +36,7 @@ painted once.
     :t resize-window -x 80 -y 2 -t 0:nested
 
     :t wait-for ready-nested
-    :snap -c 1 /token=(a(bc)d)/👩🏽‍💻
+    :snap -c 1 /token=(a(bc)d)/é
 
 ## Settles without emitting a snapshot
 

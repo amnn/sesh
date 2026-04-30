@@ -13,6 +13,8 @@ session starts in that repo and records `@sesh.repo` metadata.
 > [!NOTE]
 > 'jj', and 'tmux' are available.
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
     :t rename-session -t 0 runner (success)
     :$ jj git init beta (exit: 0)
     :$ jj describe -R beta -m "beta commit" (exit: 0)
@@ -39,35 +41,12 @@ session: zeta
 
 
 ```
+
+![light](new-session-create-with-repo.md.snap.1.light.svg)
+![dark](new-session-create-with-repo.md.snap.1.dark.svg)
+
     :k C-n
-    :snap -d 2s
-
-```terminal
-sh$
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-```
+    :settle -d 2s (settled)
 
 The client should switch to the new session, and the session should carry the
 selected repo metadata.

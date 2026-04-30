@@ -15,9 +15,12 @@ client to it.
 > [!NOTE]
 > 'jj', and 'tmux' are available.
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
     :t rename-session -t 0 runner (success)
     :$ jj git init beta (exit: 0)
     :$ jj describe -R beta -m "beta commit" (exit: 0)
+
 Launch the picker in a live tmux client and make the repo discoverable.
 
     :t new-session -d -s ui "sesh -r beta" (success)
@@ -35,43 +38,19 @@ session: beta
   1/3 | [C-r] repo: none | [C-n] new
 ▌  beta                                     beta                                                                       ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-│  (empty) beta commit
-◆  wwwwwwww root() hhhhhhhh
+@  beta commit
+◆
+
 
 
 
 ```
+
+![light](repo-session-create.md.snap.1.light.svg)
+![dark](repo-session-create.md.snap.1.dark.svg)
 
     :k enter
-    :snap -d 2s
-
-```terminal
-sh$
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-```
+    :settle -d 2s (settled)
 
 The created session should now be present, attached to the repo, and selected by
 the control-mode client.

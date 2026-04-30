@@ -5,6 +5,8 @@ working directory, so setup commands can rely on default tmux targets and cwd.
 
     :bins jj tmux cat test
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml
+
     :t rename-session -t 0 runner
     :$ jj git init beta
 
@@ -23,7 +25,7 @@ Launch the picker and select the discovered repo entry.
     :t new-session -d -s ui "sesh -r beta"
     :t resize-window -t ui:0 -x 120 -y 10
     :pane ui:0.0
-    :snap
+    :settle
 
     :k beta
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"

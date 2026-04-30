@@ -12,6 +12,8 @@ these long-preview fixtures stay compact and readable.
 
     :bins jj cat python3
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml
+
     :w scripts/mklog.py
 ```python
 from subprocess import run

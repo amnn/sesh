@@ -16,6 +16,8 @@ the test data is generated consistently.
 
     :bins jj cat python3
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml
+
     :w scripts/mklog.py
 ```python
 from subprocess import run
@@ -39,10 +41,10 @@ if __name__ == "__main__":
     :t rename-session -t 0 runner
     :$ jj git init exact
     :$ jj config set --repo -R exact templates.log 'description'
-    :$ python3 scripts/mklog.py exact exact 11
+    :$ python3 scripts/mklog.py exact exact 6
     :$ jj git init overflow
     :$ jj config set --repo -R overflow templates.log 'description'
-    :$ python3 scripts/mklog.py overflow overflow 12
+    :$ python3 scripts/mklog.py overflow overflow 7
     :t new-session -d -s plain "cat"
     :t new-session -d -s ui "sesh -r exact -r overflow"
     :t resize-window -t ui:0 -x 120 -y 12

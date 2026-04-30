@@ -130,3 +130,10 @@ if !cond { bail!(...) }  -> ensure!(cond, ...)
 Avoid building paths using hard-coded separators (e.g., `"/"`). Use
 `std::path::PathBuf` and its `Extend` implementation to add multiple components
 to preserve the portability of the code.
+
+### Markdown Snapshot Cases
+
+In markdown-driven snapshot cases, leave a blank line after directives that
+produce rendered transcript output before writing the next directive. For
+example, put a blank line between `:bins` and a following `:copy` so the note
+emitted by `:bins` does not crowd the next command in the checked-in snapshot.

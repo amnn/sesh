@@ -5,6 +5,8 @@ live tmux sessions, not repo-only entries.
 
     :bins jj tmux cat sleep
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml
+
     :t rename-session -t 0 runner
     :$ jj git init beta
     :$ jj describe -R beta -m "beta commit"

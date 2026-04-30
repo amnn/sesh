@@ -7,9 +7,12 @@ client to it.
 
     :bins jj tmux
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml
+
     :t rename-session -t 0 runner
     :$ jj git init beta
     :$ jj describe -R beta -m "beta commit"
+
 Launch the picker in a live tmux client and make the repo discoverable.
 
     :t new-session -d -s ui "sesh -r beta"
@@ -23,7 +26,7 @@ Type a query that selects `beta`, wait for the picker to redraw, and accept it.
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
     :k enter
-    :snap -d 2s
+    :settle -d 2s
 
 The created session should now be present, attached to the repo, and selected by
 the control-mode client.

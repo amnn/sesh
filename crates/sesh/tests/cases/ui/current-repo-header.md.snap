@@ -13,6 +13,8 @@ the picker header shows the repo inferred from the current working directory.
 > [!NOTE]
 > 'jj', and 'cat' are available.
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
     :t rename-session -t 0 runner (success)
     :$ jj git init alpha (exit: 0)
     :$ jj describe -R alpha -m "alpha commit" (exit: 0)
@@ -38,6 +40,9 @@ session:
 
 
 ```
+
+![light](current-repo-header.md.snap.1.light.svg)
+![dark](current-repo-header.md.snap.1.dark.svg)
 
 ---
 vim: set ft=markdown:

@@ -35,7 +35,7 @@ pub(crate) fn push_repo_path_spans(line: &mut Line<'_>, repo: &Path) {
 /// Append a consistently styled shortcut token for header help text.
 pub(crate) fn push_shortcut_span(line: &mut Line<'_>, code: &str) {
     let dim = Style::new().dim();
-    let key = Style::new().fg(Color::Magenta);
+    let key = Style::new().fg(Color::Yellow);
 
     line.extend([
         Span::styled("[", dim),

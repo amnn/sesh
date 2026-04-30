@@ -6,14 +6,15 @@ input_file: crates/sesh/tests/cases/ui/bell-alert.md
 # Bell alert
 
 This scenario creates one quiet tmux session and one session with a bell alert,
-then launches `sesh`. Pane capture does not expose styling, so these snapshots
-are expected to look the same as non-alerted rows until the runner can assert
-cell styles.
+then launches `sesh`. The markdown transcript remains textual, and the linked
+SVG snapshots cover row styling.
 
     :bins jj cat
 
 > [!NOTE]
 > 'jj', and 'cat' are available.
+
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
 
     :t set-option -g visual-bell both (success)
     :t set-window-option -g monitor-bell on (success)
@@ -24,8 +25,7 @@ cell styles.
     :t resize-window -t ui:0 -x 80 -y 10 (success)
     :pane ui:0.0
 
-The alert row should carry green pip styling, but the textual snapshot should
-not show a difference.
+The alert row should carry green pip styling in the linked SVG snapshot.
 
     :settle (settled)
     :k alert
@@ -44,7 +44,10 @@ session: alert
 
 ```
 
-The quiet row is not alerted and should look textually identical.
+![light](bell-alert.md.snap.1.light.svg)
+![dark](bell-alert.md.snap.1.dark.svg)
+
+The quiet row is not alerted and should not carry the green pip styling.
 
     :k C-u quiet
     :snap
@@ -61,6 +64,9 @@ session: quiet
 
 
 ```
+
+![light](bell-alert.md.snap.2.light.svg)
+![dark](bell-alert.md.snap.2.dark.svg)
 
 ---
 vim: set ft=markdown:

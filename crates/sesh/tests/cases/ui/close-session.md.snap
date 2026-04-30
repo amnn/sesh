@@ -13,6 +13,8 @@ live tmux sessions, not repo-only entries.
 > [!NOTE]
 > 'jj', 'tmux', 'cat', and 'sleep' are available.
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
     :t rename-session -t 0 runner (success)
     :$ jj git init beta (exit: 0)
     :$ jj describe -R beta -m "beta commit" (exit: 0)
@@ -38,6 +40,9 @@ session:
 
 ```
 
+![light](close-session.md.snap.1.light.svg)
+![dark](close-session.md.snap.1.dark.svg)
+
 Filtering to the repo-only `beta` row hides the close shortcut.
 
     :k beta
@@ -48,13 +53,16 @@ session: beta
   1/4 | [C-r] repo: none | [C-n] new
 ▌  beta                                     beta                                                                       ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-│  (empty) beta commit
-◆  wwwwwwww root() hhhhhhhh
+@  beta commit
+◆
+
 
 
 
 ```
+
+![light](close-session.md.snap.2.light.svg)
+![dark](close-session.md.snap.2.dark.svg)
 
 Pressing `C-x` on the live `alpha` session should kill `alpha` and exit without
 switching to it.

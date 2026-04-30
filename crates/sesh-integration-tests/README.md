@@ -1,7 +1,8 @@
 # sesh integration tests
 
 These tests run markdown directives in a headless tmux server and snapshot pane output with
-`tmux capture-pane`.
+`tmux capture-pane`. Each `:snap` also writes linked light and dark SVG snapshots for visual
+style regression coverage.
 
 ## Test case syntax
 
@@ -33,15 +34,18 @@ Supported directives:
   - Wait for the current pane to settle without appending a snapshot.
   - Accepts the same options and filters as `:snap`.
 - `:s` / `:snap [-c <count>] [-d <duration>] [dregexdgrapheme ...]`
-  - Capture current pane and append it in a fenced `terminal` code block.
+  - Capture current pane and append it in a fenced `terminal` code block, followed by linked
+    light and dark SVG snapshots.
   - `-c` / `--count` sets the required consecutive matching captures and
     defaults to `5`.
   - `-d` / `--duration` sets the maximum settle time and defaults to `1s`.
   - Durations use human-readable values such as `100ms` or `5s`.
   - Optional replacement rules are `dregexdgrapheme`, separated by whitespace.
   - Replacements are global and applied in order, painting over matches with the replacement
-     grapheme cluster.
+    grapheme cluster.
   - If the regex has capture groups, only those groups' contents are painted.
+  - Filters match against the plaintext transcript, then the corresponding styled cells are
+    painted before SVG rendering so the original cell styles are preserved.
 
 ## Run tests
 

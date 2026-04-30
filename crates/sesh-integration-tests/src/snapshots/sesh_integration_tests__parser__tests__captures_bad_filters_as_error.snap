@@ -18,19 +18,19 @@ Script {
         },
         Line {
             kind: Error {
-                message: "replacement must be one grapheme",
+                message: "replacement must be one terminal cell wide",
             },
             raw: "    :snap /foo/x/",
         },
         Line {
             kind: Error {
-                message: "replacement must be one grapheme",
+                message: "replacement must be one terminal cell wide",
             },
             raw: "    :snap /foo/bar",
         },
         Line {
             kind: Error {
-                message: "missing replacement grapheme cluster",
+                message: "replacement must be one terminal cell wide",
             },
             raw: "    :snap /foo/",
         },

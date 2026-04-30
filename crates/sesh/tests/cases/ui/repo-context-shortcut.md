@@ -6,6 +6,8 @@ an unfiltered repo row and on a row selected from a multi-match query.
 
     :bins jj cat
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml
+
     :t rename-session -t 0 runner
     :$ jj git init alpha
     :$ jj describe -R alpha -m "alpha commit"

@@ -19,7 +19,7 @@ use anyhow::ensure;
 use clap::Parser as _;
 use nonempty::NonEmpty;
 use regex::Regex;
-use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr as _;
 
 /// Entrypoint for the parsed representation of a test script.
 #[derive(Debug)]
@@ -345,15 +345,15 @@ fn parse_filter(input: String) -> anyhow::Result<Filter> {
     };
 
     ensure!(!patt.is_empty(), "missing pattern");
-
-    let mut gs = repl.graphemes(true);
-    let paint = gs.next().context("missing replacement grapheme cluster")?;
-    ensure!(gs.next().is_none(), "replacement must be one grapheme");
+    ensure!(
+        repl.width() == 1,
+        "replacement must be one terminal cell wide"
+    );
 
     let patt = Regex::new(patt).context("invalid regex pattern")?;
     Ok(Filter {
         patt,
-        paint: paint.to_owned(),
+        paint: repl.to_owned(),
     })
 }
 
@@ -517,7 +517,7 @@ mod tests {
 
     #[test]
     fn parses_snap_with_grapheme_replacement() {
-        insta::assert_debug_snapshot!(Script::parse(&["    :snap /foo/👩🏽‍💻", ""].join("\n")));
+        insta::assert_debug_snapshot!(Script::parse(&["    :snap /foo/é", ""].join("\n")));
     }
 
     #[test]

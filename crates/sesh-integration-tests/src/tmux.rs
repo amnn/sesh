@@ -7,14 +7,18 @@ use std::borrow::Cow;
 use std::collections::VecDeque;
 use std::ffi::OsStr;
 use std::fmt::Write as _;
+use std::io;
 use std::path::Path;
 use std::path::PathBuf;
 use std::process::Stdio;
 
 use anyhow::Context as _;
-use anyhow::anyhow;
 use anyhow::bail;
 use anyhow::ensure;
+use futures::Stream;
+use futures::StreamExt as _;
+use futures::pin_mut;
+use futures::stream;
 use tokio::fs;
 use tokio::io::AsyncBufReadExt as _;
 use tokio::io::AsyncWriteExt as _;
@@ -45,6 +49,21 @@ pub(crate) struct Command {
     line: String,
 }
 
+#[derive(thiserror::Error, Debug)]
+pub(crate) enum Error {
+    #[error("failed to send command: {0}")]
+    Input(io::Error),
+
+    #[error("tmux command failed")]
+    Command,
+
+    #[error(transparent)]
+    Escape(#[from] anyhow::Error),
+
+    #[error("unexpected exit")]
+    Exit,
+}
+
 /// Handle for managing a `tmux` server.
 pub(crate) struct Tmux {
     pane_rx: watch::Receiver<String>,
@@ -65,7 +84,7 @@ struct Request {
     tx: Response,
 }
 
-type Response = mpsc::Sender<anyhow::Result<Vec<u8>>>;
+type Response = mpsc::Sender<Result<Vec<u8>, Error>>;
 
 impl Command {
     /// Add one argument.
@@ -88,40 +107,53 @@ impl Command {
     /// Run this command against the control-mode `tmux` instance it was created from and stream
     /// output lines.
     ///
-    /// The returned channel yields one item per output line while the command is active. When tmux
-    /// emits `%end`, the channel is closed and no additional item is sent. When tmux emits
-    /// `%error`, a final `Err(...)` item is sent and then the channel is closed.
-    pub(crate) async fn output(self) -> anyhow::Result<mpsc::Receiver<anyhow::Result<Vec<u8>>>> {
+    /// The returned stream yields one item per output line while the command is active. When tmux
+    /// emits `%end`, the stream ends. When tmux emits `%error`, a final `Err(...)` item is yielded
+    /// and then the stream ends.
+    pub(crate) async fn output(self) -> anyhow::Result<impl Stream<Item = Result<Vec<u8>, Error>>> {
         let (tx, rx) = mpsc::channel(32);
         self.tx
             .send(Request { cmd: self.line, tx })
             .await
             .context("failed to queue tmux command")?;
 
-        Ok(rx)
+        Ok(stream::unfold(rx, |mut rx| async {
+            rx.recv().await.map(|item| (item, rx))
+        }))
     }
 
     /// Run this command against the control-mode `tmux` instance it was created from and collect
     /// output.
     ///
-    /// Output lines are joined with trailing newlines until the command terminates. `%end` maps to
+    /// Output records are joined by LF until the command terminates. `%end` maps to
     /// `Ok(collected_bytes)`. `%error` maps to `Err(...)`, where the error message is built from
     /// the collected bytes using lossy UTF-8 conversion.
     pub(crate) async fn status(self) -> anyhow::Result<Vec<u8>> {
-        let mut joined = vec![];
-        let mut output = self.output().await?;
-        while let Some(line) = output.recv().await {
+        let stream = self.output().await?;
+        pin_mut!(stream);
+
+        let mut prefix: &[u8] = b"";
+        let mut output = vec![];
+        while let Some(line) = stream.next().await {
+            output.extend(prefix);
+
             match line {
                 Ok(line) => {
-                    joined.extend_from_slice(&line);
-                    joined.push(b'\n');
+                    output.extend(line);
+                    prefix = b"\n";
                 }
 
-                Err(_) => bail!(String::from_utf8_lossy(&joined).into_owned()),
+                Err(Error::Command) => {
+                    bail!(String::from_utf8_lossy(&output).into_owned());
+                }
+
+                Err(e) => {
+                    bail!(e)
+                }
             }
         }
 
-        Ok(joined)
+        Ok(output)
     }
 }
 
@@ -187,6 +219,37 @@ impl Tmux {
             .context("failed to confirm initial current pane")?;
 
         Ok(tmux)
+    }
+
+    /// Capture the current pane's contents.
+    ///
+    /// The result is suitable for writing to a terminal emulator to replicate the pane's output:
+    /// It includes ANSI escape codes, and uses CRLF line terminators to move the terminal's cursor
+    /// to the start of the next line after each line of output.
+    pub(crate) async fn capture_pane(&self) -> anyhow::Result<Vec<u8>> {
+        let output = self
+            .command("capture-pane")
+            .args(["-p", "-e"])
+            .output()
+            .await?;
+
+        pin_mut!(output);
+        let mut lines = vec![];
+        while let Some(line) = output.next().await {
+            match line {
+                Ok(line) => lines.push(line),
+
+                Err(Error::Command) => {
+                    let output = lines.join(&b"\n"[..]);
+                    let output = String::from_utf8_lossy(&output);
+                    bail!("failed to capture pane: {output}");
+                }
+
+                Err(e) => bail!(e),
+            }
+        }
+
+        Ok(lines.join(&b"\r\n"[..]))
     }
 
     /// Create a new `Command` with the given name, that will be run against this `Tmux` instance.
@@ -369,6 +432,7 @@ async fn stdout_task(
         error!("failed to setup control client stdout");
         return;
     };
+
     let mut stdout = BufReader::new(stdout);
     let mut line = Vec::new();
 
@@ -399,7 +463,7 @@ async fn stdout_task(
                     // SAFETY: `request.tx` was pushed to the back of `pending` at the top of this
                     // select arm, and nothing has accessed `pending` since then.
                     let tx = pending.pop_back().unwrap();
-                    let _ = tx.send(Err(anyhow!(e).context("failed to send command"))).await;
+                    let _ = tx.send(Err(Error::Input(e))).await;
                 }
             }
 
@@ -420,21 +484,20 @@ async fn stdout_task(
 
                 if line.ends_with(b"\n") {
                     line.pop();
-                }
-
-                if line.ends_with(b"\r") {
-                    line.pop();
+                } else {
+                    error!("control-mode record missing newline terminator");
+                    break;
                 }
 
                 if let Some(tx) = &active && line.starts_with(b"%error") {
-                    let _ = tx.send(Err(anyhow!("tmux command failed"))).await;
+                    let _ = tx.send(Err(Error::Command)).await;
                     active = None;
                 } else if active.is_some() && line.starts_with(b"%end") {
                     active = None;
                 } else if line.starts_with(b"%output ") {
                     debug!("notification: {}", String::from_utf8_lossy(&line));
                 } else if let Some(tx) = &active {
-                    let _ = tx.send(unescape(line.clone())).await;
+                    let _ = tx.send(unescape(line.clone()).map_err(Into::into)).await;
                 } else if line.starts_with(b"%begin") {
                     active = pending.pop_front();
                 } else if let Some(rest) = line.strip_prefix(b"%subscription-changed runner-pane ")
@@ -457,7 +520,7 @@ async fn stdout_task(
     // If the task is exiting while there are still pending tasks, unblock them by sending an error
     // down their channels.
     for tx in active.into_iter().chain(pending) {
-        let _ = tx.send(Err(anyhow!("unexpected exit"))).await;
+        let _ = tx.send(Err(Error::Exit)).await;
     }
 
     // Kill the control client now that command processing has stopped.

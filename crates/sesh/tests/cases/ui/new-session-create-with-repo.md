@@ -5,6 +5,8 @@ session starts in that repo and records `@sesh.repo` metadata.
 
     :bins jj tmux
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml
+
     :t rename-session -t 0 runner
     :$ jj git init beta
     :$ jj describe -R beta -m "beta commit"
@@ -18,8 +20,9 @@ new session named `zeta`.
 
     :k beta C-r C-u zeta
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
     :k C-n
-    :snap -d 2s
+    :settle -d 2s
 
 The client should switch to the new session, and the session should carry the
 selected repo metadata.

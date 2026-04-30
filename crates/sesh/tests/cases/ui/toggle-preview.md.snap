@@ -12,11 +12,13 @@ This scenario verifies that `C-p` toggles the preview pane.
 > [!NOTE]
 > 'jj', and 'cat' are available.
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
     :t rename-session -t 0 runner (success)
     :$ jj git init alpha (exit: 0)
     :$ jj describe -R alpha -m "alpha commit" (exit: 0)
     :t new-session -d -s ui "sesh -r alpha" (success)
-    :t resize-window -t ui:0 -x 100 -y 8 (success)
+    :t resize-window -t ui:0 -x 100 -y 12 (success)
     :pane ui:0.0
 
 The preview should be visible initially.
@@ -26,13 +28,20 @@ The preview should be visible initially.
 ```terminal
 session:
   3/3 | [C-r] repo: none | [C-x] close
+▌⬤ runner                                                                                          ┃
+ ⬤ ui                                                                                              ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────
 
 
 
 
 
+
+
 ```
+
+![light](toggle-preview.md.snap.1.light.svg)
+![dark](toggle-preview.md.snap.1.dark.svg)
 
 Pressing `C-p` should hide the preview and allow the list to use the full width.
 
@@ -48,7 +57,14 @@ session:                                                                        
                                                                                                    ┃
                                                                                                    ┃
                                                                                                    ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
 ```
+
+![light](toggle-preview.md.snap.2.light.svg)
+![dark](toggle-preview.md.snap.2.dark.svg)
 
 Pressing `C-p` again should restore the preview.
 
@@ -58,13 +74,20 @@ Pressing `C-p` again should restore the preview.
 ```terminal
 session:
   3/3 | [C-r] repo: none | [C-x] close
+▌⬤ runner                                                                                          ┃
+ ⬤ ui                                                                                              ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────
 
 
 
 
 
+
+
 ```
+
+![light](toggle-preview.md.snap.3.light.svg)
+![dark](toggle-preview.md.snap.3.dark.svg)
 
 ---
 vim: set ft=markdown:

@@ -14,12 +14,15 @@ terminal is wide enough they switch to a side-by-side layout.
 > [!NOTE]
 > 'jj', and 'cat' are available.
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
     :t rename-session -t 0 runner (success)
     :$ jj git init alpha (exit: 0)
     :$ jj describe -R alpha -m "alpha commit" (exit: 0)
     :t new-session -d -s ui "sesh -r alpha" (success)
     :t resize-window -t ui:0 -x 120 -y 10 (success)
     :pane ui:0.0
+    :settle (settled)
 
 This snapshot shows the narrow stacked layout, including the horizontal
 separator between the session list and preview.
@@ -32,13 +35,16 @@ session: alpha
   1/3 | [C-r] repo: none | [C-n] new
 ▌  alpha                                    alpha                                                                      ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-│  (empty) alpha commit
-◆  wwwwwwww root() hhhhhhhh
+@  alpha commit
+◆
+
 
 
 
 ```
+
+![light](adaptive-layout.md.snap.1.light.svg)
+![dark](adaptive-layout.md.snap.1.dark.svg)
 
 After widening the terminal, the picker should redraw with the session list and
 preview side by side.
@@ -47,9 +53,9 @@ preview side by side.
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 ```terminal
-session: alpha                                                                                             ┃@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-  1/3 | [C-r] repo: none | [C-n] new                                                                       ┃│  (empty) alpha commit
-▌  alpha                                    alpha                                                          ┃◆  wwwwwwww root() hhhhhhhh
+session: alpha                                                                                             ┃@  alpha commit
+  1/3 | [C-r] repo: none | [C-n] new                                                                       ┃◆
+▌  alpha                                    alpha                                                          ┃
                                                                                                            ┃
                                                                                                            ┃
                                                                                                            ┃
@@ -58,6 +64,9 @@ session: alpha                                                                  
                                                                                                            ┃
                                                                                                            ┃
 ```
+
+![light](adaptive-layout.md.snap.2.light.svg)
+![dark](adaptive-layout.md.snap.2.dark.svg)
 
 ---
 vim: set ft=markdown:

@@ -5,6 +5,8 @@ then launches `sesh`.
 
     :bins jj cat
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml
+
     :t rename-session -t 0 runner
     :t new-session -d -s alpha "cat"
     :t new-session -d -s beta "cat"

@@ -14,6 +14,8 @@ session name using a tilde suffix.
 > [!NOTE]
 > 'jj', 'tmux', and 'cat' are available.
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
     :t rename-session -t 0 runner (success)
     :$ jj git init beta (exit: 0)
     :$ jj describe -R beta -m "beta commit" (exit: 0)
@@ -34,46 +36,23 @@ session: beta
   2/4 | [C-r] repo: none
 ▌  beta~1                                   beta                                                                       ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-│  (empty) beta commit
-◆  wwwwwwww root() hhhhhhhh
+@  beta commit
+◆
+
 
 
 
 ```
+
+![light](repo-session-create-disambiguated.md.snap.1.light.svg)
+![dark](repo-session-create-disambiguated.md.snap.1.dark.svg)
 
 Accepting the repo row should create `beta~2`, attach repo metadata to that
 session, and switch the client there.
 
     :k enter
-    :snap -d 2s
+    :settle -d 2s (settled)
 
-```terminal
-sh$
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-```
     :t display-message -p '#{client_session}' (success)
 
 ```

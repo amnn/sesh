@@ -27,6 +27,9 @@ hello XXXXXX
 
 ```
 
+![light](snap.md.snap.1.light.svg)
+![dark](snap.md.snap.1.dark.svg)
+
 ## Paints multiple capture groups only
 
 When a snap filter has multiple capture groups, only captured ranges should be painted and
@@ -37,12 +40,15 @@ surrounding literal text should remain unchanged.
     :t resize-window -x 80 -y 2 -t 0:groups (success)
 
     :t wait-for ready-groups (success)
-    :snap -c 1 "/id=([0-9]+) user=([a-z]+)/👩🏽‍💻"
+    :snap -c 1 "/id=([0-9]+) user=([a-z]+)/é"
 
 ```terminal
-id=👩🏽‍💻👩🏽‍💻👩🏽‍💻 user=👩🏽‍💻👩🏽‍💻👩🏽‍💻👩🏽‍💻👩🏽‍💻
+id=ééé user=ééééé
 
 ```
+
+![light](snap.md.snap.2.light.svg)
+![dark](snap.md.snap.2.dark.svg)
 
 ## Paints nested capture groups once
 
@@ -54,12 +60,15 @@ painted once.
     :t resize-window -x 80 -y 2 -t 0:nested (success)
 
     :t wait-for ready-nested (success)
-    :snap -c 1 /token=(a(bc)d)/👩🏽‍💻
+    :snap -c 1 /token=(a(bc)d)/é
 
 ```terminal
-token=👩🏽‍💻👩🏽‍💻👩🏽‍💻👩🏽‍💻
+token=éééé
 
 ```
+
+![light](snap.md.snap.3.light.svg)
+![dark](snap.md.snap.3.dark.svg)
 
 ## Settles without emitting a snapshot
 

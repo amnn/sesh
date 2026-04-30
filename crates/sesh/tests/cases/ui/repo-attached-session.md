@@ -18,6 +18,8 @@ it obvious what was normalized:
 
     :bins jj git cat
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml
+
 Create an `alpha` repo that will be attached to a live tmux session.
 
     :t rename-session -t 0 runner

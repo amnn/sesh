@@ -13,6 +13,8 @@ session inherits the current working directory and has no repo metadata.
 > [!NOTE]
 > 'jj', and 'tmux' are available.
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
     :t rename-session -t 0 runner (success)
     :t new-session -d -s ui "sesh" (success)
     :t resize-window -t ui:0 -x 120 -y 10 (success)
@@ -37,35 +39,11 @@ session: zeta
 
 ```
 
+![light](new-session-create.md.snap.1.light.svg)
+![dark](new-session-create.md.snap.1.dark.svg)
+
     :k C-n
-    :snap -d 2s
-
-```terminal
-sh$
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-```
+    :settle -d 2s (settled)
 
 The client should switch to the newly-created session, and no repo metadata
 should be attached.

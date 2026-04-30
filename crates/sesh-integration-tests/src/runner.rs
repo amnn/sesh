@@ -6,25 +6,29 @@
 use std::ffi::OsStr;
 use std::fmt;
 use std::fmt::Write as _;
+use std::fs;
 use std::num::NonZeroUsize;
 use std::path::Path;
+use std::path::PathBuf;
 use std::slice;
 use std::time::Duration;
 
 use anyhow::Context as _;
+use anyhow::anyhow;
 use anyhow::ensure;
 use futures::future;
 use nonempty::NonEmpty;
 use textwrap::Options;
 use tokio::time;
 use tracing::instrument;
-use unicode_segmentation::UnicodeSegmentation;
 
 use crate::env::Env;
 use crate::parser;
 use crate::parser::Key;
 use crate::parser::Line;
 use crate::parser::LineKind;
+use crate::svg::Frame;
+use crate::svg::Theme;
 use crate::tmux::Tmux;
 
 /// Integration-test runner state.
@@ -36,15 +40,29 @@ pub struct Runner {
 
     /// Filesystem and process environment used for each test run.
     env: Env,
+
+    /// One-based index of the next `:snap` directive, used to name SVG artifacts.
+    snap_ix: usize,
+
+    /// Path to the markdown transcript snapshot. SVG snapshots are written alongside it.
+    snapshot_path: PathBuf,
 }
 
 impl Runner {
     /// Construct a runner with an isolated environment and tmux server.
-    pub async fn new(manifest_dir: impl AsRef<Path>) -> anyhow::Result<Self> {
+    pub async fn new(
+        manifest_dir: impl AsRef<Path>,
+        snapshot_path: impl AsRef<Path>,
+    ) -> anyhow::Result<Self> {
         let env = Env::new(manifest_dir.as_ref().to_path_buf()).await?;
         let tmux = Tmux::new(&env).await?;
 
-        Ok(Self { tmux, env })
+        Ok(Self {
+            tmux,
+            env,
+            snap_ix: 0,
+            snapshot_path: snapshot_path.as_ref().to_path_buf(),
+        })
     }
 
     /// Add a binary to the runner environment's `$PATH`.
@@ -78,15 +96,31 @@ impl Runner {
         Ok(())
     }
 
-    /// Capture the active pane and normalize dynamic spans with `filters`.
-    async fn capture_pane(&self, filters: &[parser::Filter]) -> anyhow::Result<String> {
-        let output = self.tmux.command("capture-pane").arg("-p").status().await?;
-        let mut capture = String::from_utf8_lossy(&output).into_owned();
-        for filter in filters {
-            capture = paint_filter(&capture, filter);
-        }
+    /// Capture the active pane as styled cells and normalize dynamic spans with `filters`.
+    async fn capture_frame(&self, filters: &[parser::Filter]) -> anyhow::Result<Frame> {
+        let size = self
+            .tmux
+            .command("display-message")
+            .args(["-p", "#{pane_height} #{pane_width}"])
+            .status()
+            .await?;
 
-        Ok(capture)
+        let size = String::from_utf8_lossy(&size);
+        let (rows, cols) = size
+            .trim()
+            .split_once(' ')
+            .context("tmux did not report pane dimensions")?;
+
+        let rows = rows.parse().context("invalid tmux pane height")?;
+        let cols = cols.parse().context("invalid tmux pane width")?;
+
+        let output = self
+            .tmux
+            .capture_pane()
+            .await
+            .context("failed to capture pane")?;
+
+        Ok(Frame::parse(&output, rows, cols, filters))
     }
 
     /// Resolve requested binaries into the runner environment and report gaps.
@@ -373,14 +407,20 @@ impl Runner {
     /// Capture the current pane in a settled state within `deadline`. Repeatedly takes snapshots
     /// until `count` consecutive snapshots match.
     async fn eval_snap(
-        &self,
+        &mut self,
         w: &mut impl fmt::Write,
         count: NonZeroUsize,
         duration: Duration,
         filters: &[parser::Filter],
     ) -> fmt::Result {
+        self.snap_ix += 1;
         match self.settle(count, duration, filters).await {
-            Ok(capture) => write_fenced_block(w, "terminal", &capture),
+            Ok(frame) => {
+                write_fenced_block(w, "terminal", frame.text())?;
+                writeln!(w)?;
+                write_svg(w, &self.snapshot_path, self.snap_ix, &frame, Theme::Light)?;
+                write_svg(w, &self.snapshot_path, self.snap_ix, &frame, Theme::Dark)
+            }
             Err(e) => write_callout(w, "WARNING", &[&format!("{e:#}")]),
         }
     }
@@ -490,7 +530,7 @@ impl Runner {
         count: NonZeroUsize,
         duration: Duration,
         filters: &[parser::Filter],
-    ) -> anyhow::Result<String> {
+    ) -> anyhow::Result<Frame> {
         const INTERVAL: Duration = Duration::from_millis(25);
 
         let deadline = time::Instant::now() + duration;
@@ -499,10 +539,11 @@ impl Runner {
         let target = count.get();
 
         loop {
-            let pane = self
-                .capture_pane(filters)
+            let frame = self
+                .capture_frame(filters)
                 .await
                 .context("failed to capture pane")?;
+            let pane = frame.text().to_owned();
 
             match &mut capture {
                 _ if pane.trim().is_empty() => {
@@ -525,10 +566,8 @@ impl Runner {
                 }
             }
 
-            if streak >= target
-                && let Some(capture) = capture
-            {
-                return Ok(capture);
+            if streak >= target {
+                return Ok(frame);
             }
 
             time::sleep(INTERVAL).await;
@@ -564,62 +603,6 @@ impl Runner {
             Ok(None)
         }
     }
-}
-
-/// Paint regex matches or capture groups with the configured replacement grapheme.
-fn paint_filter(input: &str, filter: &parser::Filter) -> String {
-    // Convert regex captures to a list of ranges. If there are no groups, the
-    // entire match is treated as a single group.
-    let mut ranges = vec![];
-    for captures in filter.patt.captures_iter(input) {
-        if captures.len() == 1 {
-            let m = captures.get_match();
-            ranges.push(m.start()..m.end());
-        }
-
-        for m in captures.iter().skip(1).flatten() {
-            ranges.push(m.start()..m.end());
-        }
-    }
-
-    // Sort ranges, and then merge overlapping ranges. All merged ranges will
-    // share the same start as the predecessor they were merged into.
-    ranges.sort_by_key(|r| (r.start, r.end));
-
-    let mut i = 0;
-    let mut j = 0;
-    while i + j + 1 < ranges.len() {
-        let (head, tail) = ranges.split_at_mut(i + 1);
-        let a = &mut head[i];
-        let b = &mut tail[j];
-
-        if a.contains(&b.start) {
-            a.end = a.end.max(b.end);
-            b.start = a.start;
-            j += 1;
-        } else {
-            i += j + 1;
-        }
-    }
-
-    // Remove ranges that have been merged into a previous range.
-    ranges.dedup_by_key(|r| r.start);
-
-    fn paint(text: &str, grapheme: &str) -> String {
-        grapheme.repeat(text.graphemes(true).count())
-    }
-
-    // Write output out, painting over matched captures.
-    let mut last = 0;
-    let mut output = String::with_capacity(input.len());
-    for r in ranges {
-        output.push_str(&input[last..r.start]);
-        output.push_str(&paint(&input[r.clone()], &filter.paint));
-        last = r.end;
-    }
-
-    output.push_str(&input[last..]);
-    output
 }
 
 /// Write a GitHub-style markdown callout, wrapping content to the repo line
@@ -661,5 +644,32 @@ fn write_fenced_block(w: &mut impl fmt::Write, label: &str, text: &str) -> fmt::
     }
 
     writeln!(w, "```")?;
+    Ok(())
+}
+
+/// Writes light and dark SVG renderings for a pane snapshot, and embeds them in the transcript.
+fn write_svg(
+    w: &mut impl fmt::Write,
+    snapshot_path: &Path,
+    snap_ix: usize,
+    frame: &Frame,
+    theme: Theme,
+) -> fmt::Result {
+    let theme_name = match theme {
+        Theme::Light => "light",
+        Theme::Dark => "dark",
+    };
+
+    let mut path = snapshot_path.to_owned();
+    path.add_extension(format!("{snap_ix}.{theme_name}.svg"));
+    if let Err(e) = fs::write(&path, frame.render_svg(theme)) {
+        writeln!(w)?;
+        let msg = format!("{:#}", anyhow!(e).context("failed to write SVG snapshot"));
+        write_callout(w, "WARNING", &[&msg])?;
+    } else {
+        let name = path.file_name().expect("SVG path must have a file name");
+        writeln!(w, "![{}]({})", theme_name, name.display())?;
+    }
+
     Ok(())
 }

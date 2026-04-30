@@ -5,6 +5,8 @@ session inherits the current working directory and has no repo metadata.
 
     :bins jj tmux
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml
+
     :t rename-session -t 0 runner
     :t new-session -d -s ui "sesh"
     :t resize-window -t ui:0 -x 120 -y 10
@@ -17,7 +19,7 @@ Type a unique session name and create it with `C-n`.
     :snap
 
     :k C-n
-    :snap -d 2s
+    :settle -d 2s
 
 The client should switch to the newly-created session, and no repo metadata
 should be attached.

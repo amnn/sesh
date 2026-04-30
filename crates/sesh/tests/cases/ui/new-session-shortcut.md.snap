@@ -15,6 +15,8 @@ name.
 > [!NOTE]
 > 'jj', and 'cat' are available.
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
     :t rename-session -t 0 runner (success)
     :$ jj git init alpha (exit: 0)
     :$ jj describe -R alpha -m "alpha commit" (exit: 0)
@@ -48,14 +50,17 @@ session:
 ▌⬤ alpha                                    alpha                                                                      ┃
  ⬤ gamma                                    gamma                                                                      │
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-│  (empty) alpha commit
-◆  wwwwwwww root() hhhhhhhh
+@  alpha commit
+◆
+
 
 
 
 
 ```
+
+![light](new-session-shortcut.md.snap.1.light.svg)
+![dark](new-session-shortcut.md.snap.1.dark.svg)
 
     :k C-n
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
@@ -66,14 +71,17 @@ session:
 ▌⬤ alpha                                    alpha                                                                      ┃
  ⬤ gamma                                    gamma                                                                      │
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-│  (empty) alpha commit
-◆  wwwwwwww root() hhhhhhhh
+@  alpha commit
+◆
+
 
 
 
 
 ```
+
+![light](new-session-shortcut.md.snap.2.light.svg)
+![dark](new-session-shortcut.md.snap.2.dark.svg)
 
 Typing a prefix of the live `alpha` session makes `C-n` visible, because `alp`
 is not an exact live session name.
@@ -87,14 +95,17 @@ session: alp
 ▌⬤ alpha                                    alpha                                                                      ┃
                                                                                                                        ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-│  (empty) alpha commit
-◆  wwwwwwww root() hhhhhhhh
+@  alpha commit
+◆
+
 
 
 
 
 ```
+
+![light](new-session-shortcut.md.snap.3.light.svg)
+![dark](new-session-shortcut.md.snap.3.dark.svg)
 
 Completing the live session name hides `C-n`. Pressing `C-n` again should do
 nothing and leave the picker open.
@@ -108,14 +119,17 @@ session: alpha
 ▌⬤ alpha                                    alpha                                                                      ┃
                                                                                                                        ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-│  (empty) alpha commit
-◆  wwwwwwww root() hhhhhhhh
+@  alpha commit
+◆
+
 
 
 
 
 ```
+
+![light](new-session-shortcut.md.snap.4.light.svg)
+![dark](new-session-shortcut.md.snap.4.dark.svg)
 
     :k C-n
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
@@ -126,14 +140,17 @@ session: alpha
 ▌⬤ alpha                                    alpha                                                                      ┃
                                                                                                                        ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-│  (empty) alpha commit
-◆  wwwwwwww root() hhhhhhhh
+@  alpha commit
+◆
+
 
 
 
 
 ```
+
+![light](new-session-shortcut.md.snap.5.light.svg)
+![dark](new-session-shortcut.md.snap.5.dark.svg)
 
 Completing the name of the non-live `beta` repo makes `C-n` visible again,
 because there is no exact live session named `beta`.
@@ -147,14 +164,17 @@ session: beta
 ▌  beta                                     beta                                                                       ┃
                                                                                                                        ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-│  (empty) beta commit
-◆  wwwwwwww root() hhhhhhhh
+@  beta commit
+◆
+
 
 
 
 
 ```
+
+![light](new-session-shortcut.md.snap.6.light.svg)
+![dark](new-session-shortcut.md.snap.6.dark.svg)
 
 ---
 vim: set ft=markdown:

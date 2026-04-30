@@ -6,6 +6,8 @@ session name using a tilde suffix.
 
     :bins jj tmux cat
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml
+
     :t rename-session -t 0 runner
     :$ jj git init beta
     :$ jj describe -R beta -m "beta commit"
@@ -25,7 +27,8 @@ Accepting the repo row should create `beta~2`, attach repo metadata to that
 session, and switch the client there.
 
     :k enter
-    :snap -d 2s
+    :settle -d 2s
+
     :t display-message -p '#{client_session}'
     :t list-sessions -F '#{session_name}:#{@sesh.repo}'
 

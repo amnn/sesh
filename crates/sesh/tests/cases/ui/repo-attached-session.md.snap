@@ -26,6 +26,8 @@ it obvious what was normalized:
 > [!NOTE]
 > 'jj', 'git', and 'cat' are available.
 
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
 Create an `alpha` repo that will be attached to a live tmux session.
 
     :t rename-session -t 0 runner (success)
@@ -66,14 +68,17 @@ session:
 ▌⬤ alpha-live                               alpha                                                                      ┃
  ⬤ runner                                                                                                              │
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-│  (empty) alpha commit
-◆  wwwwwwww root() hhhhhhhh
+@  alpha commit
+◆
+
 
 
 
 
 ```
+
+![light](repo-attached-session.md.snap.1.light.svg)
+![dark](repo-attached-session.md.snap.1.dark.svg)
 
 This snapshot shows the picker after typing `beta`, so the selection should
 move away from the initial attached-session result and onto the discovered
@@ -88,14 +93,17 @@ session: beta
 ▌  beta                                     beta                                                                       ┃
                                                                                                                        ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
-│  (empty) beta commit
-◆  wwwwwwww root() hhhhhhhh
+@  beta commit
+◆
+
 
 
 
 
 ```
+
+![light](repo-attached-session.md.snap.2.light.svg)
+![dark](repo-attached-session.md.snap.2.dark.svg)
 
 This snapshot shows the picker after clearing the query with `C-u` and typing
 `mono`, so the selection should switch to the discovered `mono` entries.
@@ -109,14 +117,17 @@ session: mono
 ▌  mono                                     mono                                                                       ┃
    mono-ws                                  mono-ws                                                                    ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-@  wwwwwwww (no email set) ttttttttttttttttttt default@ hhhhhhhh
-│  (empty) mono commit
-│ ○  wwwwwwww (no email set) ttttttttttttttttttt mono-ws@ hhhhhhhh
-├─╯  (empty) mono workspace commit
-◆  wwwwwwww root() hhhhhhhh
+@  mono commit
+│ ○  mono workspace commit
+├─╯
+◆
+
 
 
 ```
+
+![light](repo-attached-session.md.snap.3.light.svg)
+![dark](repo-attached-session.md.snap.3.dark.svg)
 
 ---
 vim: set ft=markdown:
