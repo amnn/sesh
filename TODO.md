@@ -1,14 +1,6 @@
 # TODO
 
-## Testing
-
-- [x] Investigate source of issues when running tests concurrently.
-
-- [x] Take SVG snapshots of snapped tmux frames for visual regression testing.
-
 ## Rendering
-
-- [x] Get rid of `popup` command (it is redundant).
 
 - [/] Render the tmux pip green when the session has an undismissed bell/notification.
   - [x] Track bell state per tmux session.
@@ -30,25 +22,12 @@
 - [ ] Scroll the contents of session list items so that the last matched
   character is visible.
 
-- [x] Re-adjust frame split:
-  - The preview should be given 80 characters
-  - If the overall screen real-estate is not at least 140 characters, switch to
-    a vertical stacked view.
-
 ## Matching
 
-- [ ] Split fuzzy matching over multiple columns
-  - State (bells), name, repo, PR info etc should sent as separate columns.
-  - Send truncated repo path even though the rendering is compacted.
+- [ ] Fuzzy match over truncated repo path (even if only compacted path is
+  rendered by default).
 
 ## Session and Repo Lifecycle
-
-- [x] Set-up windows in new session.
-  - Editor
-  - Agent Harness
-  - Shell
-
-- [x] Add `C-x` to close the selected session.
 
 - [ ] Add `C-d` to delete the selected session/workspace.
   - Destroy the underlying workspace too, if applicable.
@@ -71,12 +50,6 @@
   to a PR.
 
 ## Configuration
-
-- [x] Add a TOML-based config system.
-  - Define config file location(s), defaults, and merge/override precedence.
-  - Move hard-coded UI/runtime values (for example preview sizing) into config.
-
-- [x] Configure new session set-up
 
 - [ ] Configure previews
 
