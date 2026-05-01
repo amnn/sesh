@@ -1,7 +1,8 @@
 # New session create
 
-`C-n` creates a session named by the query. Without repo context, the new tmux
-session inherits the current working directory and has no repo metadata.
+Selecting the ephemeral new-session row creates a session named by the query.
+Without repo context, the new tmux session inherits the current working
+directory and has no repo metadata.
 
     :bins jj tmux
 
@@ -13,12 +14,12 @@ session inherits the current working directory and has no repo metadata.
     :pane ui:0.0
     :settle -d 2s
 
-Type a unique session name and create it with `C-n`.
+Type a unique session name and accept the new-session row.
 
     :k zeta
     :snap
 
-    :k C-n
+    :k Enter
     :settle -d 2s
 
 The client should switch to the newly-created session, and no repo metadata

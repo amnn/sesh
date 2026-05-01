@@ -5,8 +5,9 @@ input_file: crates/sesh/tests/cases/ui/new-session-create.md
 ---
 # New session create
 
-`C-n` creates a session named by the query. Without repo context, the new tmux
-session inherits the current working directory and has no repo metadata.
+Selecting the ephemeral new-session row creates a session named by the query.
+Without repo context, the new tmux session inherits the current working
+directory and has no repo metadata.
 
     :bins jj tmux
 
@@ -21,15 +22,15 @@ session inherits the current working directory and has no repo metadata.
     :pane ui:0.0
     :settle -d 2s (settled)
 
-Type a unique session name and create it with `C-n`.
+Type a unique session name and accept the new-session row.
 
     :k zeta
     :snap
 
 ```terminal
 session: zeta
-  0/2 | [C-r] repo: none | [C-n] new
-                                                                                                                       ┃
+  0/2 | [C-r] repo: none
+▌  zeta                                                                                                                ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 
@@ -42,7 +43,7 @@ session: zeta
 ![light](new-session-create.md.snap.1.light.svg)
 ![dark](new-session-create.md.snap.1.dark.svg)
 
-    :k C-n
+    :k Enter
     :settle -d 2s (settled)
 
 The client should switch to the newly-created session, and no repo metadata

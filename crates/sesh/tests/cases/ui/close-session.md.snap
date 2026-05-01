@@ -50,7 +50,7 @@ Filtering to the repo-only `beta` row hides the close shortcut.
 
 ```terminal
 session: beta
-  1/4 | [C-r] repo: none | [C-n] new
+  1/4 | [C-r] repo: none
 ▌  beta                                     beta                                                                       ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 @  beta commit

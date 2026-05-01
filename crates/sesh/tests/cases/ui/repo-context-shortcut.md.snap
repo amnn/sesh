@@ -100,7 +100,7 @@ filtered list.
 
 ```terminal
 session: a
-  3/5 | [C-r] repo: ../gamma | [C-n] new
+  3/5 | [C-r] repo: ../gamma
 ▌  gamma                                    ../gamma                                     ┃
 ──────────────────────────────────────────────────────────────────────────────────────────
 @  gamma commit

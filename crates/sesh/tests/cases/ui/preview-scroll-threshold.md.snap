@@ -67,9 +67,9 @@ scrollbar should be visible.
 
 ```terminal
 session: exact
-  1/5 | [C-r] repo: none | [C-n] new
+  1/5 | [C-r] repo: none
+   exact                                                                                                               ┃
 ▌  exact                                    exact                                                                      ┃
-                                                                                                                       ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 @  exact 01
 │  exact 02
@@ -91,9 +91,9 @@ preview scrollbar should now be visible.
 
 ```terminal
 session: overflow
-  1/5 | [C-r] repo: none | [C-n] new
+  1/5 | [C-r] repo: none
+   overflow                                                                                                            ┃
 ▌  overflow                                 overflow                                                                   ┃
-                                                                                                                       ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 @  overflow 01                                                                                                         ┃
 │  overflow 02                                                                                                         ┃
@@ -115,9 +115,9 @@ preview content by one line.
 
 ```terminal
 session: overflow
-  1/5 | [C-r] repo: none | [C-n] new
+  1/5 | [C-r] repo: none
+   overflow                                                                                                            ┃
 ▌  overflow                                 overflow                                                                   ┃
-                                                                                                                       ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 │  overflow 02                                                                                                         │
 │  overflow 03                                                                                                         ┃

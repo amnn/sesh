@@ -51,9 +51,9 @@ scrollbar thumb should start at the top of the scroll area.
 
 ```terminal
 session: long
-  1/4 | [C-r] repo: none | [C-n] new
+  1/4 | [C-r] repo: none
+   long                                                                                                                ┃
 ▌  long                                     long                                                                       ┃
-                                                                                                                       ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 @  line 01                                                                                                             ┃
 │  line 02                                                                                                             ┃
@@ -75,9 +75,9 @@ scrollbar thumb should reach the bottom of the scroll area.
 
 ```terminal
 session: long
-  1/4 | [C-r] repo: none | [C-n] new
+  1/4 | [C-r] repo: none
+   long                                                                                                                ┃
 ▌  long                                     long                                                                       ┃
-                                                                                                                       ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 │  line 13                                                                                                             │
 │  line 14                                                                                                             │

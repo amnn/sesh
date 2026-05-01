@@ -52,7 +52,7 @@ to the `beta` session.
 
 ```terminal
 session: bet
-  1/5 | [C-r] repo: none | [C-n] new | [C-x] close
+  1/5 | [C-r] repo: none | [C-x] close
 ▌⬤ beta                                                                        ┃
 ────────────────────────────────────────────────────────────────────────────────
 

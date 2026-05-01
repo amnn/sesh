@@ -1,9 +1,9 @@
-# New session shortcut
+# New session row
 
 This scenario creates several repo-backed picker entries, with both live tmux
 sessions and discoverable repos that do not have live sessions. It verifies that
-`C-n` is only offered when the query is non-empty and not an exact live session
-name.
+the ephemeral new-session row is only selectable when the query is non-empty and
+not an exact live session name.
 
     :bins jj cat
 
@@ -29,24 +29,24 @@ repo-only entries discovered through the CLI globs.
     :t new-session -d -s ui "sesh -r 'alpha' -r 'beta' -r 'gamma' -r 'delta'"
     :t resize-window -t ui:0 -x 120 -y 12
     :pane ui:0.0
+    :settle
 
-Initially the query is empty, so the `C-n` shortcut should not be visible.
-Pressing `C-n` should also do nothing and leave the picker open in the same
-state.
+Initially the query is empty, so the top row is an unselectable spacer.
+Pressing `C-n` should do nothing and leave the picker open in the same state.
 
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
     :k C-n
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
-Typing a prefix of the live `alpha` session makes `C-n` visible, because `alp`
-is not an exact live session name.
+Typing a prefix of the live `alpha` session makes the new-session row selectable,
+because `alp` is not an exact live session name.
 
     :k alp
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
-Completing the live session name hides `C-n`. Pressing `C-n` again should do
-nothing and leave the picker open.
+Completing the live session name replaces the new-session row with a spacer.
+Pressing `C-n` again should do nothing and leave the picker open.
 
     :k ha
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
@@ -54,8 +54,8 @@ nothing and leave the picker open.
     :k C-n
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
-Completing the name of the non-live `beta` repo makes `C-n` visible again,
-because there is no exact live session named `beta`.
+Completing the name of the non-live `beta` repo makes the new-session row
+selectable again, because there is no exact live session named `beta`.
 
     :k C-u beta
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"

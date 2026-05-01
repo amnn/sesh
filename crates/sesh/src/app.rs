@@ -16,6 +16,7 @@ use crossterm::event::KeyEventKind;
 use crossterm::event::KeyModifiers;
 use nucleo::Item;
 use nucleo::Snapshot;
+use nucleo::Utf32String;
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 use ratatui::layout::Rect;
@@ -26,6 +27,7 @@ use ratatui::text::Span;
 use ratatui::text::Text;
 use ratatui::widgets::HighlightSpacing;
 use ratatui::widgets::List;
+use ratatui::widgets::ListItem;
 use ratatui::widgets::ListState;
 use ratatui::widgets::Paragraph;
 use ratatui::widgets::Scrollbar;
@@ -183,14 +185,6 @@ impl App {
         }
     }
 
-    /// Set the current selection to a new session built from the current query and repo context.
-    fn create_new_session(&mut self) {
-        self.selected = Some(Session::new(
-            self.picker.query().to_owned(),
-            self.repo.clone(),
-        ));
-    }
-
     /// Draw the UI into the provided frame based on the current application state.
     ///
     /// The frame is split up into regions, each with its own widget. The `preview` region and its
@@ -202,49 +196,46 @@ impl App {
         let (status, snapshot, query) = self.picker.refresh();
         let items: Vec<_> = snapshot.matched_items(..).collect();
 
-        // If the list does not have a selection, set it to the first visible item.
-        if self.list.selected().is_none() && !items.is_empty() {
-            let first = self.list.offset().min(items.len() - 1);
-            self.list.select(Some(first));
-        }
+        // The tool supports creating a new session if the query is non-empty and does not match
+        // any live session. A placeholder row always reserves its slot at the top so matches do not
+        // jump when the query becomes a valid new session name.
+        self.session_new = !query.is_empty()
+            && !items
+                .iter()
+                .any(|i| i.data.is_tmux() && i.data.name() == query);
+
+        let new_session = self
+            .session_new
+            .then(|| Session::new(query.to_owned(), self.repo.clone()));
+        let row_count = items.len() + 1;
+        normalize_selection(&mut self.list, row_count, new_session.is_some());
+        let selected_row = self.list.selected();
 
         f.render_stateful_widget(
-            session_list_widget(snapshot, self.list.selected()),
+            session_list_widget(&items, new_session.as_ref(), selected_row),
             l.sessions,
             &mut self.list,
         );
 
         // Rendering corrects the list's selected index, so we find the selected item, and can use
         // that to render the header, etc.
-        let selected = self.list.selected().and_then(|s| items.get(s));
-        self.selected = selected.map(|i| i.data.clone());
-
-        // The tool supports creating a new session if the query is non-empty and does not match
-        // any live session.
-        self.session_new = !query.is_empty()
-            && !items
-                .iter()
-                .any(|i| i.data.is_tmux() && i.data.name() == query);
+        let selected = selected_session(selected_row, &items, new_session.as_ref());
+        self.selected = selected.cloned();
 
         // The tool supports closing the current session if it is a live tmux session.
-        self.session_close = selected.is_some_and(|i| i.data.is_tmux());
+        self.session_close = selected.is_some_and(Session::is_tmux);
 
         f.render_widget(prompt_widget(query), l.prompt);
         f.render_stateful_widget(Loading(status.running), l.loading, &mut self.load);
 
         f.render_widget(
-            header_widget(
-                snapshot,
-                self.repo.as_deref(),
-                self.session_new,
-                self.session_close,
-            ),
+            header_widget(snapshot, self.repo.as_deref(), self.session_close),
             l.header,
         );
 
         let height = l.sessions.height as usize;
         let mut session_scroll = ScrollbarState::default()
-            .content_length(items.len().saturating_sub(height).max(1))
+            .content_length(row_count.saturating_sub(height).max(1))
             .viewport_content_length(height)
             .position(self.list.offset());
 
@@ -258,7 +249,7 @@ impl App {
             f.render_widget(separator_widget(), separator);
         }
 
-        let text = preview_widget(&self.cache, selected);
+        let text = preview_widget(&self.cache, selected, selected_row == Some(0));
 
         self.preview_scroll = self
             .preview_scroll
@@ -295,11 +286,6 @@ impl App {
             KC::Char('g' | 'c') if key.modifiers.contains(CTRL) => return Some(Action::Cancel),
 
             // Session actions
-            KC::Char('n') if key.modifiers.contains(CTRL) && self.session_new => {
-                self.create_new_session();
-                return self.selected.take().map(Action::Switch);
-            }
-
             KC::Char('x') if key.modifiers.contains(CTRL) && self.session_close => {
                 return self.selected.take().map(Action::Close);
             }
@@ -523,7 +509,6 @@ impl App {
 fn header_widget(
     snapshot: &Snapshot<Session>,
     repo: Option<&Path>,
-    new_session: bool,
     close_session: bool,
 ) -> impl Widget {
     let found = snapshot.matched_items(..).count();
@@ -548,12 +533,6 @@ fn header_widget(
         line += Span::styled("none", dim);
     }
 
-    if new_session {
-        line += Span::styled(" | ", dim);
-        push_shortcut_span(&mut line, "C-n");
-        line += Span::raw(" new");
-    }
-
     if close_session {
         line += Span::styled(" | ", dim);
         push_shortcut_span(&mut line, "C-x");
@@ -563,16 +542,38 @@ fn header_widget(
     line
 }
 
+/// Keep the current selection on a selectable row.
+fn normalize_selection(list: &mut ListState, row_count: usize, can_select_new_session: bool) {
+    let selected = list.selected();
+    let selection = if row_count == 0 {
+        None
+    } else if can_select_new_session {
+        Some(selected.unwrap_or(0).min(row_count - 1))
+    } else if row_count == 1 {
+        None
+    } else {
+        Some(selected.unwrap_or(1).clamp(1, row_count - 1))
+    };
+
+    list.select(selection);
+}
+
 /// Build the preview text for the selected session, including loading and error states.
 fn preview_widget(
     cache: &PreviewCache<Session>,
-    selected: Option<&Item<'_, Session>>,
+    selected: Option<&Session>,
+    selected_new_session: bool,
 ) -> Text<'static> {
     let Some(session) = selected else {
         return Text::from("");
     };
 
-    let Some(preview) = cache.get(&session.matcher_columns[0]) else {
+    if selected_new_session {
+        return Text::from("");
+    }
+
+    let key = Utf32String::from(session.text());
+    let Some(preview) = cache.get(&key) else {
         return Text::from("Loading...");
     };
 
@@ -600,6 +601,19 @@ fn scrollbar_widget() -> impl StatefulWidget<State = ScrollbarState> {
         .thumb_symbol("┃")
 }
 
+/// Return the session represented by the selected row.
+fn selected_session<'a>(
+    selected: Option<usize>,
+    items: &'a [Item<'a, Session>],
+    new_session: Option<&'a Session>,
+) -> Option<&'a Session> {
+    match selected {
+        Some(0) => new_session,
+        Some(row) => items.get(row - 1).map(|item| item.data),
+        None => None,
+    }
+}
+
 /// Build the horizontal separator between the stacked session list and preview.
 fn separator_widget() -> impl Widget {
     Block::new('─')
@@ -607,15 +621,25 @@ fn separator_widget() -> impl Widget {
 
 /// Build the session list widget for the current fuzzy-match snapshot.
 fn session_list_widget(
-    snapshot: &Snapshot<Session>,
+    items: &[Item<'_, Session>],
+    new_session: Option<&Session>,
     selected: Option<usize>,
-) -> impl StatefulWidget<State = ListState> {
-    List::new(
-        snapshot
-            .matched_items(..)
+) -> impl StatefulWidget<State = ListState> + use<> {
+    let mut rows = Vec::with_capacity(items.len() + 1);
+
+    rows.push(match new_session {
+        Some(session) => session.render(selected == Some(0)),
+        None => ListItem::new(""),
+    });
+
+    rows.extend(
+        items
+            .iter()
             .enumerate()
-            .map(|(index, item)| item.data.render(selected == Some(index))),
-    )
-    .highlight_symbol(Span::styled("▌", Style::new().bg(Color::Red)))
-    .highlight_spacing(HighlightSpacing::Always)
+            .map(|(index, item)| item.data.render(selected == Some(index + 1))),
+    );
+
+    List::new(rows)
+        .highlight_symbol(Span::styled("▌", Style::new().bg(Color::Red)))
+        .highlight_spacing(HighlightSpacing::Always)
 }
