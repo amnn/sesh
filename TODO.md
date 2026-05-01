@@ -2,11 +2,11 @@
 
 ## Rendering
 
-- [ ] Generate a line/entry for the "new" session instead of having a dedicated
+- [x] Generate a line/entry for the "new" session instead of having a dedicated
   key combination to create it.
-  - Introduce key combinations to go to the top or bottom of the session list
-    instead (this session will go at the top).
-  - Leave an empty row (visual spacer) at the top of the list if a valid
+  - [x] Introduce key combinations to go to the top or bottom of the session
+    list instead (this session will go at the top).
+  - [x] Leave an empty row (visual spacer) at the top of the list if a valid
     new session cannot be created, to prevent the other results from jumping
     around.
 
