@@ -5,7 +5,6 @@
 
 use std::collections::BTreeSet;
 use std::env;
-use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Context as _;
@@ -82,28 +81,6 @@ async fn main() -> anyhow::Result<()> {
     match app.run()? {
         Action::Cancel => Ok(()),
         Action::Close(session) => tmux::kill_session(&session.name()).await,
-        Action::Switch(session) => {
-            prepare_session(&session, &cwd, &config).await?;
-            tmux::switch_client(&session.switch_target()).await
-        }
+        Action::Switch(session) => session.switch(&cwd, &config.tmux.setup).await,
     }
-}
-
-/// Ensure the tmux session we are switching to is ready.
-async fn prepare_session(session: &Session, cwd: &Path, config: &SeshConfig) -> anyhow::Result<()> {
-    if session.is_tmux() {
-        return Ok(());
-    }
-
-    let target = session.name();
-    let cwd = session.repo().unwrap_or(cwd);
-    tmux::new_session(&target, cwd).await?;
-
-    if let Some(repo) = session.repo() {
-        tmux::set_option(&target, "@sesh.repo", repo).await?;
-    }
-
-    tmux::run_shell(&format!("{target}:0"), cwd, &config.tmux.setup).await?;
-
-    Ok(())
 }

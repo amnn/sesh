@@ -38,6 +38,9 @@ execution belong in `crates/sesh/src/jj.rs`. Other modules may decide when to
 request an operation, but the binary-specific modules should abstract how that
 operation is performed.
 
+When moving behavior onto domain types, keep configuration arguments narrow:
+pass only the values the method needs rather than the full `SeshConfig`.
+
 ## Truth Seeking
 
 Default to verified claims over plausible guesses.

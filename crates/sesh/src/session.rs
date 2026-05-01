@@ -17,6 +17,7 @@ use crate::cache::Preview;
 use crate::jj;
 use crate::path::TruncatedExt as _;
 use crate::picker::Item;
+use crate::tmux;
 use crate::ui::push_repo_path_spans;
 
 const NAME_WIDTH: usize = 40;
@@ -57,7 +58,7 @@ impl Session {
     /// Construct a potential session from information extracted from `tmux`.
     ///
     /// `name` is a tmux session name, `repo` is an optional path to a jj repository attached as a
-    /// user-option on the tmux session, and `alerts` is a list of windows in the sssion that have
+    /// user-option on the tmux session, and `alerts` is a list of windows in the session that have
     /// an active bell alert.
     pub fn from_tmux(name: String, repo: Option<PathBuf>, alerts: Vec<String>) -> Self {
         if let Some((name, suffix)) = name.rsplit_once(SUFFIX_DELIM) {
@@ -114,10 +115,35 @@ impl Session {
         self.suffix = Some(suffix);
     }
 
+    /// Switch the current tmux client to this session, creating the session first if needed.
+    pub async fn switch(&self, cwd: &Path, setup: &str) -> anyhow::Result<()> {
+        self.ensure_tmux(cwd, setup).await?;
+        tmux::switch_client(&self.switch_target()).await
+    }
+
+    /// Ensure the tmux session we are switching to is ready.
+    async fn ensure_tmux(&self, cwd: &Path, setup: &str) -> anyhow::Result<()> {
+        if self.tmux {
+            return Ok(());
+        }
+
+        let target = self.name();
+        let cwd = self.repo().unwrap_or(cwd);
+        tmux::new_session(&target, cwd).await?;
+
+        if let Some(repo) = self.repo() {
+            tmux::set_option(&target, "@sesh.repo", repo).await?;
+        }
+
+        tmux::run_shell(&format!("{target}:0"), cwd, setup).await?;
+
+        Ok(())
+    }
+
     /// Return the tmux target for switching to this session.
-    pub fn switch_target(&self) -> String {
+    fn switch_target(&self) -> String {
         let session = self.name();
-        if let Some(window) = &self.alerts.first() {
+        if let Some(window) = self.alerts.first() {
             format!("{session}:{window}")
         } else {
             session
