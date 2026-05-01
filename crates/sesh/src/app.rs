@@ -300,6 +300,8 @@ impl App {
             }
 
             // Session list selection
+            KC::Up if key.modifiers.contains(KM::ALT) => self.list.select_first(),
+            KC::Down if key.modifiers.contains(KM::ALT) => self.list.select_last(),
             KC::Up => self.list.select_previous(),
             KC::Down => self.list.select_next(),
 

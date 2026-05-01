@@ -48,6 +48,8 @@
 
 ## Configuration
 
+- [ ] Add dedicated `help` output sections for key bindings and configuration.
+
 - [ ] Configure previews
 
 - [ ] Configure repo detection

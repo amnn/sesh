@@ -1,0 +1,230 @@
+---
+source: crates/sesh/tests/test.rs
+expression: output
+input_file: crates/sesh/tests/cases/ui/list-extreme-navigation.md
+---
+# List extreme navigation
+
+`M-up` and `M-down` jump to the first and last selectable rows in the session
+list. The top spacer for an unavailable new session is not selectable, while a
+valid new-session row is selectable.
+
+    :bins jj cat
+
+> [!NOTE]
+> 'jj', and 'cat' are available.
+
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
+    :t rename-session -t 0 runner (success)
+    :t new-session -d -s beta "cat" (success)
+    :t new-session -d -s delta "cat" (success)
+    :t new-session -d -s ta "cat" (success)
+    :t new-session -d -s zeta "cat" (success)
+    :t new-session -d -s ui "sesh" (success)
+    :t resize-window -t ui:0 -x 100 -y 12 (success)
+    :pane ui:0.0
+    :settle (settled)
+
+Hide the preview so the session list has enough room to show several entries.
+With no query, the top row is an unselectable spacer; `M-down` jumps to the
+last row and `M-up` jumps back to the first selectable session.
+
+    :k C-p
+    :snap
+
+```terminal
+session:                                                                                           ┃
+  6/6 | [C-r] repo: none | [C-x] close                                                             ┃
+                                                                                                   ┃
+▌⬤ beta                                                                                            ┃
+ ⬤ delta                                                                                           ┃
+ ⬤ runner                                                                                          ┃
+ ⬤ ta                                                                                              ┃
+ ⬤ ui                                                                                              ┃
+ ⬤ zeta                                                                                            ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+```
+
+![light](list-extreme-navigation.md.snap.1.light.svg)
+![dark](list-extreme-navigation.md.snap.1.dark.svg)
+
+    :k M-down
+    :snap
+
+```terminal
+session:                                                                                           ┃
+  6/6 | [C-r] repo: none | [C-x] close                                                             ┃
+                                                                                                   ┃
+ ⬤ beta                                                                                            ┃
+ ⬤ delta                                                                                           ┃
+ ⬤ runner                                                                                          ┃
+ ⬤ ta                                                                                              ┃
+ ⬤ ui                                                                                              ┃
+▌⬤ zeta                                                                                            ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+```
+
+![light](list-extreme-navigation.md.snap.2.light.svg)
+![dark](list-extreme-navigation.md.snap.2.dark.svg)
+
+    :k M-up
+    :snap
+
+```terminal
+session:                                                                                           ┃
+  6/6 | [C-r] repo: none | [C-x] close                                                             ┃
+                                                                                                   ┃
+▌⬤ beta                                                                                            ┃
+ ⬤ delta                                                                                           ┃
+ ⬤ runner                                                                                          ┃
+ ⬤ ta                                                                                              ┃
+ ⬤ ui                                                                                              ┃
+ ⬤ zeta                                                                                            ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+```
+
+![light](list-extreme-navigation.md.snap.3.light.svg)
+![dark](list-extreme-navigation.md.snap.3.dark.svg)
+
+A query for `et` keeps multiple existing matches and also allows a new session.
+The new-session row is selectable, so `M-up` jumps to that row.
+
+    :k et
+    :snap
+
+```terminal
+session: et                                                                                        ┃
+  3/6 | [C-r] repo: none | [C-x] close                                                             ┃
+   et                                                                                              ┃
+▌⬤ beta                                                                                            ┃
+ ⬤ zeta                                                                                            ┃
+ ⬤ delta                                                                                           ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+```
+
+![light](list-extreme-navigation.md.snap.4.light.svg)
+![dark](list-extreme-navigation.md.snap.4.dark.svg)
+
+    :k M-down
+    :snap
+
+```terminal
+session: et                                                                                        ┃
+  3/6 | [C-r] repo: none | [C-x] close                                                             ┃
+   et                                                                                              ┃
+ ⬤ beta                                                                                            ┃
+ ⬤ zeta                                                                                            ┃
+▌⬤ delta                                                                                           ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+```
+
+![light](list-extreme-navigation.md.snap.5.light.svg)
+![dark](list-extreme-navigation.md.snap.5.dark.svg)
+
+    :k M-up
+    :snap
+
+```terminal
+session: et                                                                                        ┃
+  3/6 | [C-r] repo: none                                                                           ┃
+▌  et                                                                                              ┃
+ ⬤ beta                                                                                            ┃
+ ⬤ zeta                                                                                            ┃
+ ⬤ delta                                                                                           ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+```
+
+![light](list-extreme-navigation.md.snap.6.light.svg)
+![dark](list-extreme-navigation.md.snap.6.dark.svg)
+
+A query for `ta` also keeps multiple matches, but it exactly names the live
+`ta` session. The new-session row is replaced by an unselectable spacer, so
+`M-up` jumps to the first existing match instead.
+
+    :k C-u ta
+    :snap
+
+```terminal
+session: ta                                                                                        ┃
+  4/6 | [C-r] repo: none | [C-x] close                                                             ┃
+                                                                                                   ┃
+▌⬤ ta                                                                                              ┃
+ ⬤ beta                                                                                            ┃
+ ⬤ zeta                                                                                            ┃
+ ⬤ delta                                                                                           ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+```
+
+![light](list-extreme-navigation.md.snap.7.light.svg)
+![dark](list-extreme-navigation.md.snap.7.dark.svg)
+
+    :k M-down
+    :snap
+
+```terminal
+session: ta                                                                                        ┃
+  4/6 | [C-r] repo: none | [C-x] close                                                             ┃
+                                                                                                   ┃
+ ⬤ ta                                                                                              ┃
+ ⬤ beta                                                                                            ┃
+ ⬤ zeta                                                                                            ┃
+▌⬤ delta                                                                                           ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+```
+
+![light](list-extreme-navigation.md.snap.8.light.svg)
+![dark](list-extreme-navigation.md.snap.8.dark.svg)
+
+    :k M-up
+    :snap
+
+```terminal
+session: ta                                                                                        ┃
+  4/6 | [C-r] repo: none | [C-x] close                                                             ┃
+                                                                                                   ┃
+▌⬤ ta                                                                                              ┃
+ ⬤ beta                                                                                            ┃
+ ⬤ zeta                                                                                            ┃
+ ⬤ delta                                                                                           ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+```
+
+![light](list-extreme-navigation.md.snap.9.light.svg)
+![dark](list-extreme-navigation.md.snap.9.dark.svg)
+
+---
+vim: set ft=markdown:
