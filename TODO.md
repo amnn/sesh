@@ -31,6 +31,8 @@
 - [ ] Add `C-t` to pick trunk (the commit used as the base for new workspaces).
   - Define trunk resolution rules for mixed repo types.
 
+- [ ] Add a shortcut to clear/reset the repo.
+
 - [ ] Add workspace creation for new repo-backed work.
   - Name is derived from repo name + workspace name.
   - Create a workspace
