@@ -26,7 +26,7 @@ then launches `sesh`.
 This snapshot shows the initial picker state before any query is typed, so it
 should list all discovered tmux sessions.
 
-    :snap
+    :snap --color
 
 ```terminal
 session:
@@ -62,9 +62,6 @@ session: bet
 
 
 ```
-
-![light](basic-session.md.snap.2.light.svg)
-![dark](basic-session.md.snap.2.dark.svg)
 
 ---
 vim: set ft=markdown:

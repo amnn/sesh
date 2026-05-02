@@ -43,9 +43,6 @@ session: alpha
 
 ```
 
-![light](adaptive-layout.md.snap.1.light.svg)
-![dark](adaptive-layout.md.snap.1.dark.svg)
-
 After widening the terminal, the picker should redraw with the session list and
 preview side by side.
 
@@ -64,9 +61,6 @@ session: alpha                                                                  
                                                                                                            ┃
                                                                                                            ┃
 ```
-
-![light](adaptive-layout.md.snap.2.light.svg)
-![dark](adaptive-layout.md.snap.2.dark.svg)
 
 ---
 vim: set ft=markdown:

@@ -1,7 +1,7 @@
 # sesh integration tests
 
 These tests run markdown directives in a headless tmux server and snapshot pane output with
-`tmux capture-pane`. Each `:snap` also writes linked light and dark SVG snapshots for visual
+`tmux capture-pane`. `:snap --color` also writes linked light and dark SVG snapshots for visual
 style regression coverage.
 
 ## Test case syntax
@@ -32,10 +32,10 @@ Supported directives:
   - Anything that doesn't match the above is treated as a literal string to send.
 - `:settle [-c <count>] [-d <duration>] [dregexdgrapheme ...]`
   - Wait for the current pane to settle without appending a snapshot.
-  - Accepts the same options and filters as `:snap`.
-- `:s` / `:snap [-c <count>] [-d <duration>] [dregexdgrapheme ...]`
-  - Capture current pane and append it in a fenced `terminal` code block, followed by linked
-    light and dark SVG snapshots.
+  - Accepts the same settle options and filters as `:snap`, but does not accept `--color`.
+- `:s` / `:snap [--color] [-c <count>] [-d <duration>] [dregexdgrapheme ...]`
+  - Capture current pane and append it in a fenced `terminal` code block.
+  - `--color` additionally writes linked light and dark SVG snapshots.
   - `-c` / `--count` sets the required consecutive matching captures and
     defaults to `5`.
   - `-d` / `--duration` sets the maximum settle time and defaults to `1s`.

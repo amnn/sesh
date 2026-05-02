@@ -5,7 +5,7 @@
 If repeated pane captures settle to five identical filtered snapshots before
 the timeout, the settled capture should be emitted as the snapshot.
 
-    :bins echo sleep
+    :bins echo sleep python3
 
     :t new-window -d -n stable 'echo "hello stable"; tmux wait-for -S ready-stable; sleep 10'
     :p 0:stable.0
@@ -38,6 +38,31 @@ painted once.
     :t wait-for ready-nested
     :snap -c 1 /token=(a(bc)d)/é
 
+## Preserves colors when painting filtered output
+
+A colorized snap should apply filter replacement characters on top of the pane cell styles, so the
+linked SVG snapshot keeps the replacements colorized across multiple source colors.
+
+    :w scripts/rainbow.py
+
+```python
+from subprocess import run
+
+colors = [31, 32, 33, 34, 35, 36, 91, 92, 93]
+for color, char in zip(colors, "colorized", strict=True):
+    print(f"\033[{color}m{char}", end="")
+print("\033[0m", flush=True)
+run(["tmux", "wait-for", "-S", "ready-color"], check=True)
+```
+
+
+    :t new-window -d -n color 'python3 scripts/rainbow.py; sleep 10'
+    :p 0:color.0
+    :t resize-window -x 80 -y 2 -t 0:color
+
+    :t wait-for ready-color
+    :snap --color -c 1 /colorized/X
+
 ## Settles without emitting a snapshot
 
 The settle directive uses the same settling and filtering rules as snap, but does not append a
@@ -54,8 +79,6 @@ terminal block when the pane settles.
 
 If repeated pane captures do not settle before the timeout, the runner should
 emit a warning instead of a snapshot.
-
-    :bins python3
 
     :w scripts/unstable.py
 

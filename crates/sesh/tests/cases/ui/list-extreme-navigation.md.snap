@@ -48,9 +48,6 @@ session:                                                                        
                                                                                                    ┃
 ```
 
-![light](list-extreme-navigation.md.snap.1.light.svg)
-![dark](list-extreme-navigation.md.snap.1.dark.svg)
-
     :k M-down
     :snap
 
@@ -69,9 +66,6 @@ session:                                                                        
                                                                                                    ┃
 ```
 
-![light](list-extreme-navigation.md.snap.2.light.svg)
-![dark](list-extreme-navigation.md.snap.2.dark.svg)
-
     :k M-up
     :snap
 
@@ -89,9 +83,6 @@ session:                                                                        
                                                                                                    ┃
                                                                                                    ┃
 ```
-
-![light](list-extreme-navigation.md.snap.3.light.svg)
-![dark](list-extreme-navigation.md.snap.3.dark.svg)
 
 A query for `et` keeps multiple existing matches and also allows a new session.
 The new-session row is selectable, so `M-up` jumps to that row.
@@ -114,9 +105,6 @@ session: et                                                                     
                                                                                                    ┃
 ```
 
-![light](list-extreme-navigation.md.snap.4.light.svg)
-![dark](list-extreme-navigation.md.snap.4.dark.svg)
-
     :k M-down
     :snap
 
@@ -135,9 +123,6 @@ session: et                                                                     
                                                                                                    ┃
 ```
 
-![light](list-extreme-navigation.md.snap.5.light.svg)
-![dark](list-extreme-navigation.md.snap.5.dark.svg)
-
     :k M-up
     :snap
 
@@ -155,9 +140,6 @@ session: et                                                                     
                                                                                                    ┃
                                                                                                    ┃
 ```
-
-![light](list-extreme-navigation.md.snap.6.light.svg)
-![dark](list-extreme-navigation.md.snap.6.dark.svg)
 
 A query for `ta` also keeps multiple matches, but it exactly names the live
 `ta` session. The new-session row is replaced by an unselectable spacer, so
@@ -181,9 +163,6 @@ session: ta                                                                     
                                                                                                    ┃
 ```
 
-![light](list-extreme-navigation.md.snap.7.light.svg)
-![dark](list-extreme-navigation.md.snap.7.dark.svg)
-
     :k M-down
     :snap
 
@@ -202,9 +181,6 @@ session: ta                                                                     
                                                                                                    ┃
 ```
 
-![light](list-extreme-navigation.md.snap.8.light.svg)
-![dark](list-extreme-navigation.md.snap.8.dark.svg)
-
     :k M-up
     :snap
 
@@ -222,9 +198,6 @@ session: ta                                                                     
                                                                                                    ┃
                                                                                                    ┃
 ```
-
-![light](list-extreme-navigation.md.snap.9.light.svg)
-![dark](list-extreme-navigation.md.snap.9.dark.svg)
 
 ---
 vim: set ft=markdown:

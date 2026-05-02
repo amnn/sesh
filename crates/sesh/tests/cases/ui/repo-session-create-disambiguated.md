@@ -21,7 +21,7 @@ session with the same name.
     :pane ui:0.0
     :settle -d 2s
     :k beta down
-    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+    :snap --color "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 Accepting the repo row should create `beta~2`, attach repo metadata to that
 session, and switch the client there.

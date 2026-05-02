@@ -64,9 +64,6 @@ session: long
 │  line 07                                                                                                             │
 ```
 
-![light](preview-scroll.md.snap.1.light.svg)
-![dark](preview-scroll.md.snap.1.dark.svg)
-
 This snapshot shows the preview after repeated `S-down` presses. The preview
 scrollbar thumb should reach the bottom of the scroll area.
 
@@ -87,9 +84,6 @@ session: long
 │  line 18                                                                                                             ┃
 ◆                                                                                                                      ┃
 ```
-
-![light](preview-scroll.md.snap.2.light.svg)
-![dark](preview-scroll.md.snap.2.dark.svg)
 
 ---
 vim: set ft=markdown:

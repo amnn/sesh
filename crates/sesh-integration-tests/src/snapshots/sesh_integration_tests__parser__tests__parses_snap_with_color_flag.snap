@@ -1,14 +1,14 @@
 ---
 source: crates/sesh-integration-tests/src/parser.rs
-expression: "Script::parse(&[\"    :snap --duration 100ms /foo/x\", \"\"].join(\"\\n\"))"
+expression: "Script::parse(&[\"    :snap --color /foo/x\", \"\"].join(\"\\n\"))"
 ---
 Script {
     lines: [
         Line {
             kind: Snap {
                 count: 5,
-                duration: 100ms,
-                color: false,
+                duration: 1s,
+                color: true,
                 filters: [
                     Filter {
                         patt: Regex(
@@ -18,7 +18,7 @@ Script {
                     },
                 ],
             },
-            raw: "    :snap --duration 100ms /foo/x",
+            raw: "    :snap --color /foo/x",
         },
     ],
 }

@@ -46,9 +46,6 @@ session: bet
 
 ```
 
-![light](session-switch.md.snap.1.light.svg)
-![dark](session-switch.md.snap.1.dark.svg)
-
     :k enter
     :settle -d 2s (settled)
 

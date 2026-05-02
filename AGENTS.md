@@ -20,6 +20,9 @@ For markdown-driven snapshot changes, refresh the checked-in `.snap` files with
 `cargo insta test --accept` using the appropriate package/test selection, and
 remove any leftover `.snap.new` artifacts before finishing.
 
+Use `:snap --color` only when terminal colour is part of the behavior under
+test; plain `:snap` intentionally skips SVG artifacts.
+
 When a UI test sends keys immediately after starting or switching to a `sesh`
 pane, use an explicit `:settle` directive before `:keys` to ensure the UI has
 reached a stable state.

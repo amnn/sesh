@@ -59,9 +59,6 @@ session:
 
 ```
 
-![light](new-session-shortcut.md.snap.1.light.svg)
-![dark](new-session-shortcut.md.snap.1.dark.svg)
-
     :k C-n
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
@@ -79,9 +76,6 @@ session:
 
 
 ```
-
-![light](new-session-shortcut.md.snap.2.light.svg)
-![dark](new-session-shortcut.md.snap.2.dark.svg)
 
 Typing a prefix of the live `alpha` session makes the new-session row selectable,
 because `alp` is not an exact live session name.
@@ -104,9 +98,6 @@ session: alp
 
 ```
 
-![light](new-session-shortcut.md.snap.3.light.svg)
-![dark](new-session-shortcut.md.snap.3.dark.svg)
-
 Completing the live session name replaces the new-session row with a spacer.
 Pressing `C-n` again should do nothing and leave the picker open.
 
@@ -128,9 +119,6 @@ session: alpha
 
 ```
 
-![light](new-session-shortcut.md.snap.4.light.svg)
-![dark](new-session-shortcut.md.snap.4.dark.svg)
-
     :k C-n
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
@@ -148,9 +136,6 @@ session: alpha
 
 
 ```
-
-![light](new-session-shortcut.md.snap.5.light.svg)
-![dark](new-session-shortcut.md.snap.5.dark.svg)
 
 Completing the name of the non-live `beta` repo makes the new-session row
 selectable again, because there is no exact live session named `beta`.
@@ -172,9 +157,6 @@ session: beta
 
 
 ```
-
-![light](new-session-shortcut.md.snap.6.light.svg)
-![dark](new-session-shortcut.md.snap.6.dark.svg)
 
 ---
 vim: set ft=markdown:

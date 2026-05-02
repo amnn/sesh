@@ -21,12 +21,12 @@ The alert row should carry green pip styling in the linked SVG snapshot.
 
     :settle
     :k alert
-    :snap
+    :snap --color
 
 The quiet row is not alerted and should not carry the green pip styling.
 
     :k C-u quiet
-    :snap
+    :snap --color
 
 ---
 vim: set ft=markdown:

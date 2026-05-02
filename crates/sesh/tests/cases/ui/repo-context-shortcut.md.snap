@@ -45,9 +45,6 @@ session:
 
 ```
 
-![light](repo-context-shortcut.md.snap.1.light.svg)
-![dark](repo-context-shortcut.md.snap.1.dark.svg)
-
 Move the cursor to the discovered `beta` repo row.
 
     :k down down down
@@ -65,9 +62,6 @@ session:
 
 
 ```
-
-![light](repo-context-shortcut.md.snap.2.light.svg)
-![dark](repo-context-shortcut.md.snap.2.dark.svg)
 
 Press `C-r` to set repo context from the selected row. The header should update
 to `beta` while the selected row stays on `beta` after the picker refreshes.
@@ -88,9 +82,6 @@ session:
 
 ```
 
-![light](repo-context-shortcut.md.snap.3.light.svg)
-![dark](repo-context-shortcut.md.snap.3.dark.svg)
-
 This snapshot applies the query `a`, which still matches multiple repo rows,
 moves to `gamma`, and then uses `C-r` to update the current repo from the
 filtered list.
@@ -110,9 +101,6 @@ session: a
 
 
 ```
-
-![light](repo-context-shortcut.md.snap.4.light.svg)
-![dark](repo-context-shortcut.md.snap.4.dark.svg)
 
 ---
 vim: set ft=markdown:

@@ -104,6 +104,7 @@ pub(crate) enum LineKind {
     Snap {
         count: NonZeroUsize,
         duration: Duration,
+        color: bool,
         filters: Vec<Filter>,
     },
 
@@ -111,7 +112,7 @@ pub(crate) enum LineKind {
     Error { message: String },
 }
 
-/// Parsed arguments for `:snap` and `:settle`.
+/// Parsed arguments for `:settle`.
 #[derive(clap::Parser)]
 struct SettleArgs {
     /// Number of consecutive identical samples required before a snap settles.
@@ -126,6 +127,31 @@ struct SettleArgs {
         value_parser = parse_duration
     )]
     duration: Duration,
+
+    /// Regex replacement filters applied to each captured pane sample.
+    #[arg(value_name = "FILTER")]
+    filters: Vec<String>,
+}
+
+/// Parsed arguments for `:snap`.
+#[derive(clap::Parser)]
+struct SnapArgs {
+    /// Number of consecutive identical samples required before a snap settles.
+    #[arg(short = 'c', long = "count", default_value = "5")]
+    count: NonZeroUsize,
+
+    /// Maximum time to wait for pane output to settle.
+    #[arg(
+        short = 'd',
+        long = "duration",
+        default_value = "1s",
+        value_parser = parse_duration
+    )]
+    duration: Duration,
+
+    /// Emit linked light and dark SVG snapshots preserving terminal colours.
+    #[arg(long = "color")]
+    color: bool,
 
     /// Regex replacement filters applied to each captured pane sample.
     #[arg(value_name = "FILTER")]
@@ -267,12 +293,13 @@ impl LineKind {
             }
 
             "s" | "snap" => {
-                let args = parse_settle_args(":snap", args)?;
+                let args = parse_snap_args(":snap", args)?;
                 let filters: anyhow::Result<Vec<_>> =
                     args.filters.into_iter().map(parse_filter).collect();
                 LineKind::Snap {
                     count: args.count,
                     duration: args.duration,
+                    color: args.color,
                     filters: filters?,
                 }
             }
@@ -431,9 +458,119 @@ fn parse_settle_args(name: &str, args: Vec<String>) -> anyhow::Result<SettleArgs
     SettleArgs::try_parse_from(argv).map_err(|error| anyhow::anyhow!(error.render().to_string()))
 }
 
+/// Parse snap arguments with Clap so diagnostics match real CLI parsing.
+fn parse_snap_args(name: &str, args: Vec<String>) -> anyhow::Result<SnapArgs> {
+    let argv = std::iter::once(name.to_owned()).chain(args);
+    SnapArgs::try_parse_from(argv).map_err(|error| anyhow::anyhow!(error.render().to_string()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn captures_bad_filters_as_error() {
+        insta::assert_debug_snapshot!(Script::parse(
+            &[
+                r#"    :snap """#,
+                r#"    :snap /foo"#,
+                r#"    :snap /foo/x/"#,
+                r#"    :snap /foo/bar"#,
+                r#"    :snap /foo/"#,
+            ]
+            .join("\n")
+        ));
+    }
+
+    #[test]
+    fn captures_bad_shlex_as_error() {
+        insta::assert_debug_snapshot!(Script::parse(
+            &[r#"    :sh "unterminated"#, r#""#].join("\n")
+        ));
+    }
+
+    #[test]
+    fn captures_invalid_modified_text_keys_as_error() {
+        insta::assert_debug_snapshot!(Script::parse(
+            &[r#"    :k C-ab"#, r#"    :k M-é"#, r#"    :k S-"""#, r#""#,].join("\n")
+        ));
+    }
+
+    #[test]
+    fn captures_invalid_snap_count_as_error() {
+        insta::assert_debug_snapshot!(Script::parse(&["    :snap --count 0", ""].join("\n")));
+    }
+
+    #[test]
+    fn captures_invalid_snap_duration_as_error() {
+        insta::assert_debug_snapshot!(Script::parse(&["    :snap --duration soon", ""].join("\n")));
+    }
+
+    #[test]
+    fn captures_invalid_snap_regex_as_error() {
+        insta::assert_debug_snapshot!(Script::parse(
+            &["    :snap /(unterminated/x", ""].join("\n")
+        ));
+    }
+
+    #[test]
+    fn captures_unknown_directive_as_error() {
+        insta::assert_debug_snapshot!(Script::parse(&["    :unknown abc", ""].join("\n")));
+    }
+
+    #[test]
+    fn captures_unterminated_keys_string_as_error() {
+        insta::assert_debug_snapshot!(Script::parse(
+            &[r#"    :k "unterminated"#, r#""#].join("\n")
+        ));
+    }
+
+    #[test]
+    fn leaves_unindented_colon_lines_as_text() {
+        insta::assert_debug_snapshot!(Script::parse(&[":sh echo nope", ""].join("\n")));
+    }
+
+    #[test]
+    fn parses_copy_directive() {
+        insta::assert_debug_snapshot!(Script::parse(
+            &["    :copy scripts/tmcap tmp/tmcap", ""].join("\n")
+        ));
+    }
+
+    #[test]
+    fn parses_empty_script() {
+        insta::assert_debug_snapshot!(Script::parse(""));
+    }
+
+    #[test]
+    fn parses_keys_with_escaped_backslash_followed_by_escaped_quote() {
+        insta::assert_debug_snapshot!(Script::parse(&[r#"    :k "a\\\"b""#, r#""#].join("\n")));
+    }
+
+    #[test]
+    fn parses_keys_with_escaped_backslash_followed_by_quote() {
+        insta::assert_debug_snapshot!(Script::parse(&[r#"    :k "a\\""#, r#""#].join("\n")));
+    }
+
+    #[test]
+    fn parses_keys_with_escaped_backslash_text() {
+        insta::assert_debug_snapshot!(Script::parse(&[r#"    :k "a\\b""#, r#""#].join("\n")));
+    }
+
+    #[test]
+    fn parses_keys_with_escaped_quote_text() {
+        insta::assert_debug_snapshot!(Script::parse(&[r#"    :k "a\"b""#, r#""#].join("\n")));
+    }
+
+    #[test]
+    fn parses_keys_with_single_modifier() {
+        insta::assert_debug_snapshot!(Script::parse(&[r#"    :k C-a"#, r#""#].join("\n")));
+    }
+
+    #[test]
+    fn parses_keys_with_stacked_modifiers() {
+        insta::assert_debug_snapshot!(Script::parse(&[r#"    :k C-M-S-up"#, r#""#].join("\n")));
+    }
 
     #[test]
     fn parses_mixed_text_and_directives() {
@@ -461,70 +598,8 @@ mod tests {
     }
 
     #[test]
-    fn parses_empty_script() {
-        insta::assert_debug_snapshot!(Script::parse(""));
-    }
-
-    #[test]
-    fn captures_unknown_directive_as_error() {
-        insta::assert_debug_snapshot!(Script::parse(&["    :unknown abc", ""].join("\n")));
-    }
-
-    #[test]
-    fn captures_bad_shlex_as_error() {
-        insta::assert_debug_snapshot!(Script::parse(
-            &[r#"    :sh "unterminated"#, r#""#].join("\n")
-        ));
-    }
-
-    #[test]
-    fn captures_unterminated_keys_string_as_error() {
-        insta::assert_debug_snapshot!(Script::parse(
-            &[r#"    :k "unterminated"#, r#""#].join("\n")
-        ));
-    }
-
-    #[test]
-    fn captures_bad_filters_as_error() {
-        insta::assert_debug_snapshot!(Script::parse(
-            &[
-                r#"    :snap """#,
-                r#"    :snap /foo"#,
-                r#"    :snap /foo/x/"#,
-                r#"    :snap /foo/bar"#,
-                r#"    :snap /foo/"#,
-            ]
-            .join("\n")
-        ));
-    }
-
-    #[test]
-    fn captures_invalid_snap_regex_as_error() {
-        insta::assert_debug_snapshot!(Script::parse(
-            &["    :snap /(unterminated/x", ""].join("\n")
-        ));
-    }
-
-    #[test]
-    fn parses_snap_with_multiple_filters() {
-        insta::assert_debug_snapshot!(Script::parse(&["    :snap /foo/x  |baz|q", ""].join("\n")));
-    }
-
-    #[test]
-    fn parses_snap_with_multiple_capture_groups() {
-        insta::assert_debug_snapshot!(Script::parse(&["    :snap /(a)(b)/x", ""].join("\n")));
-    }
-
-    #[test]
-    fn parses_snap_with_grapheme_replacement() {
-        insta::assert_debug_snapshot!(Script::parse(&["    :snap /foo/é", ""].join("\n")));
-    }
-
-    #[test]
-    fn parses_snap_with_duration_flag() {
-        insta::assert_debug_snapshot!(Script::parse(
-            &["    :snap --duration 100ms /foo/x", ""].join("\n")
-        ));
+    fn parses_snap_with_color_flag() {
+        insta::assert_debug_snapshot!(Script::parse(&["    :snap --color /foo/x", ""].join("\n")));
     }
 
     #[test]
@@ -535,50 +610,25 @@ mod tests {
     }
 
     #[test]
-    fn captures_invalid_snap_duration_as_error() {
-        insta::assert_debug_snapshot!(Script::parse(&["    :snap --duration soon", ""].join("\n")));
-    }
-
-    #[test]
-    fn captures_invalid_snap_count_as_error() {
-        insta::assert_debug_snapshot!(Script::parse(&["    :snap --count 0", ""].join("\n")));
-    }
-
-    #[test]
-    fn parses_keys_with_escaped_quote_text() {
-        insta::assert_debug_snapshot!(Script::parse(&[r#"    :k "a\"b""#, r#""#].join("\n")));
-    }
-
-    #[test]
-    fn parses_keys_with_escaped_backslash_text() {
-        insta::assert_debug_snapshot!(Script::parse(&[r#"    :k "a\\b""#, r#""#].join("\n")));
-    }
-
-    #[test]
-    fn parses_keys_with_escaped_backslash_followed_by_escaped_quote() {
-        insta::assert_debug_snapshot!(Script::parse(&[r#"    :k "a\\\"b""#, r#""#].join("\n")));
-    }
-
-    #[test]
-    fn parses_keys_with_escaped_backslash_followed_by_quote() {
-        insta::assert_debug_snapshot!(Script::parse(&[r#"    :k "a\\""#, r#""#].join("\n")));
-    }
-
-    #[test]
-    fn parses_keys_with_single_modifier() {
-        insta::assert_debug_snapshot!(Script::parse(&[r#"    :k C-a"#, r#""#].join("\n")));
-    }
-
-    #[test]
-    fn parses_keys_with_stacked_modifiers() {
-        insta::assert_debug_snapshot!(Script::parse(&[r#"    :k C-M-S-up"#, r#""#].join("\n")));
-    }
-
-    #[test]
-    fn captures_invalid_modified_text_keys_as_error() {
+    fn parses_snap_with_duration_flag() {
         insta::assert_debug_snapshot!(Script::parse(
-            &[r#"    :k C-ab"#, r#"    :k M-é"#, r#"    :k S-"""#, r#""#,].join("\n")
+            &["    :snap --duration 100ms /foo/x", ""].join("\n")
         ));
+    }
+
+    #[test]
+    fn parses_snap_with_grapheme_replacement() {
+        insta::assert_debug_snapshot!(Script::parse(&["    :snap /foo/é", ""].join("\n")));
+    }
+
+    #[test]
+    fn parses_snap_with_multiple_capture_groups() {
+        insta::assert_debug_snapshot!(Script::parse(&["    :snap /(a)(b)/x", ""].join("\n")));
+    }
+
+    #[test]
+    fn parses_snap_with_multiple_filters() {
+        insta::assert_debug_snapshot!(Script::parse(&["    :snap /foo/x  |baz|q", ""].join("\n")));
     }
 
     #[test]
@@ -587,14 +637,9 @@ mod tests {
     }
 
     #[test]
-    fn parses_copy_directive() {
+    fn rejects_color_flag_on_settle() {
         insta::assert_debug_snapshot!(Script::parse(
-            &["    :copy scripts/tmcap tmp/tmcap", ""].join("\n")
+            &["    :settle --color /foo/x", ""].join("\n")
         ));
-    }
-
-    #[test]
-    fn leaves_unindented_colon_lines_as_text() {
-        insta::assert_debug_snapshot!(Script::parse(&[":sh echo nope", ""].join("\n")));
     }
 }

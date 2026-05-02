@@ -40,9 +40,6 @@ session:
 
 ```
 
-![light](close-session.md.snap.1.light.svg)
-![dark](close-session.md.snap.1.dark.svg)
-
 Filtering to the repo-only `beta` row hides the close shortcut.
 
     :k beta
@@ -60,9 +57,6 @@ session: beta
 
 
 ```
-
-![light](close-session.md.snap.2.light.svg)
-![dark](close-session.md.snap.2.dark.svg)
 
 Pressing `C-x` on the live `alpha` session should kill `alpha` and exit without
 switching to it.

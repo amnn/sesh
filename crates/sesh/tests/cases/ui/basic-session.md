@@ -18,7 +18,7 @@ then launches `sesh`.
 This snapshot shows the initial picker state before any query is typed, so it
 should list all discovered tmux sessions.
 
-    :snap
+    :snap --color
 
 This snapshot shows the picker after typing `bet`, so the selection should move
 to the `beta` session.

@@ -108,6 +108,7 @@ Script {
             kind: Snap {
                 count: 5,
                 duration: 1s,
+                color: false,
                 filters: [
                     Filter {
                         patt: Regex(

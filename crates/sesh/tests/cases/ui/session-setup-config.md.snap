@@ -51,9 +51,6 @@ session: beta
 
 ```
 
-![light](session-setup-config.md.snap.1.light.svg)
-![dark](session-setup-config.md.snap.1.dark.svg)
-
     :k enter
     :$ sh -c 'until test -f beta/new-window-touched; do :; done' (exit: 0)
 

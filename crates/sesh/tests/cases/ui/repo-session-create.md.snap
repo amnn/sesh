@@ -46,9 +46,6 @@ session: beta
 
 ```
 
-![light](repo-session-create.md.snap.1.light.svg)
-![dark](repo-session-create.md.snap.1.dark.svg)
-
     :k enter
     :settle -d 2s (settled)
 

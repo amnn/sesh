@@ -10,10 +10,10 @@ input_file: crates/sesh-integration-tests/tests/cases/runner/snap.md
 If repeated pane captures settle to five identical filtered snapshots before
 the timeout, the settled capture should be emitted as the snapshot.
 
-    :bins echo sleep
+    :bins echo sleep python3
 
 > [!NOTE]
-> 'echo', and 'sleep' are available.
+> 'echo', 'sleep', and 'python3' are available.
 
     :t new-window -d -n stable 'echo "hello stable"; tmux wait-for -S ready-stable; sleep 10' (success)
     :p 0:stable.0
@@ -26,9 +26,6 @@ the timeout, the settled capture should be emitted as the snapshot.
 hello XXXXXX
 
 ```
-
-![light](snap.md.snap.1.light.svg)
-![dark](snap.md.snap.1.dark.svg)
 
 ## Paints multiple capture groups only
 
@@ -47,9 +44,6 @@ id=ééé user=ééééé
 
 ```
 
-![light](snap.md.snap.2.light.svg)
-![dark](snap.md.snap.2.dark.svg)
-
 ## Paints nested capture groups once
 
 Nested capture groups overlap; painting should merge overlapping captured ranges so characters are
@@ -67,8 +61,38 @@ token=éééé
 
 ```
 
-![light](snap.md.snap.3.light.svg)
-![dark](snap.md.snap.3.dark.svg)
+## Preserves colors when painting filtered output
+
+A colorized snap should apply filter replacement characters on top of the pane cell styles, so the
+linked SVG snapshot keeps the replacements colorized across multiple source colors.
+
+    :w scripts/rainbow.py (written)
+
+```python
+from subprocess import run
+
+colors = [31, 32, 33, 34, 35, 36, 91, 92, 93]
+for color, char in zip(colors, "colorized", strict=True):
+    print(f"\033[{color}m{char}", end="")
+print("\033[0m", flush=True)
+run(["tmux", "wait-for", "-S", "ready-color"], check=True)
+```
+
+
+    :t new-window -d -n color 'python3 scripts/rainbow.py; sleep 10' (success)
+    :p 0:color.0
+    :t resize-window -x 80 -y 2 -t 0:color (success)
+
+    :t wait-for ready-color (success)
+    :snap --color -c 1 /colorized/X
+
+```terminal
+XXXXXXXXX
+
+```
+
+![light](snap.md.snap.4.light.svg)
+![dark](snap.md.snap.4.dark.svg)
 
 ## Settles without emitting a snapshot
 
@@ -86,11 +110,6 @@ terminal block when the pane settles.
 
 If repeated pane captures do not settle before the timeout, the runner should
 emit a warning instead of a snapshot.
-
-    :bins python3
-
-> [!NOTE]
-> 'python3' is available.
 
     :w scripts/unstable.py (written)
 

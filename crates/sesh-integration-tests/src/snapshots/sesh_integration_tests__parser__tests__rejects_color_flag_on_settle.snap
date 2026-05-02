@@ -1,0 +1,14 @@
+---
+source: crates/sesh-integration-tests/src/parser.rs
+expression: "Script::parse(&[\"    :settle --color /foo/x\", \"\"].join(\"\\n\"))"
+---
+Script {
+    lines: [
+        Line {
+            kind: Error {
+                message: "error: unexpected argument '--color' found\n\n  tip: to pass '--color' as a value, use '-- --color'\n\nUsage: :settle [OPTIONS] [FILTER]...\n\nFor more information, try '--help'.\n",
+            },
+            raw: "    :settle --color /foo/x",
+        },
+    ],
+}

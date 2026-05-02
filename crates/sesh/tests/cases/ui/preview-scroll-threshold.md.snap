@@ -80,9 +80,6 @@ session: exact
 ◆
 ```
 
-![light](preview-scroll-threshold.md.snap.1.light.svg)
-![dark](preview-scroll-threshold.md.snap.1.dark.svg)
-
 This snapshot shows a preview that is one line taller than the viewport, so the
 preview scrollbar should now be visible.
 
@@ -104,9 +101,6 @@ session: overflow
 │  overflow 07                                                                                                         │
 ```
 
-![light](preview-scroll-threshold.md.snap.2.light.svg)
-![dark](preview-scroll-threshold.md.snap.2.dark.svg)
-
 This snapshot shows that once the scrollbar appears, `S-down` scrolls the
 preview content by one line.
 
@@ -127,9 +121,6 @@ session: overflow
 │  overflow 07                                                                                                         ┃
 ◆                                                                                                                      ┃
 ```
-
-![light](preview-scroll-threshold.md.snap.3.light.svg)
-![dark](preview-scroll-threshold.md.snap.3.dark.svg)
 
 ---
 vim: set ft=markdown:

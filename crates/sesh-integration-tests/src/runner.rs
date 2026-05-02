@@ -277,11 +277,13 @@ impl Runner {
             LineKind::Snap {
                 count,
                 duration,
+                color,
                 filters,
             } => {
                 writeln!(w, "{}", line.raw)?;
                 writeln!(w)?;
-                self.eval_snap(w, *count, *duration, filters).await?;
+                self.eval_snap(w, *count, *duration, *color, filters)
+                    .await?;
             }
         }
 
@@ -411,15 +413,19 @@ impl Runner {
         w: &mut impl fmt::Write,
         count: NonZeroUsize,
         duration: Duration,
+        color: bool,
         filters: &[parser::Filter],
     ) -> fmt::Result {
         self.snap_ix += 1;
         match self.settle(count, duration, filters).await {
             Ok(frame) => {
                 write_fenced_block(w, "terminal", frame.text())?;
-                writeln!(w)?;
-                write_svg(w, &self.snapshot_path, self.snap_ix, &frame, Theme::Light)?;
-                write_svg(w, &self.snapshot_path, self.snap_ix, &frame, Theme::Dark)
+                if color {
+                    writeln!(w)?;
+                    write_svg(w, &self.snapshot_path, self.snap_ix, &frame, Theme::Light)?;
+                    write_svg(w, &self.snapshot_path, self.snap_ix, &frame, Theme::Dark)?;
+                }
+                Ok(())
             }
             Err(e) => write_callout(w, "WARNING", &[&format!("{e:#}")]),
         }
@@ -647,7 +653,7 @@ fn write_fenced_block(w: &mut impl fmt::Write, label: &str, text: &str) -> fmt::
     Ok(())
 }
 
-/// Writes light and dark SVG renderings for a pane snapshot, and embeds them in the transcript.
+/// Writes one SVG rendering for a pane snapshot, and embeds it in the transcript.
 fn write_svg(
     w: &mut impl fmt::Write,
     snapshot_path: &Path,

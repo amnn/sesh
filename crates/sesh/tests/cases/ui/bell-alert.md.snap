@@ -29,7 +29,7 @@ The alert row should carry green pip styling in the linked SVG snapshot.
 
     :settle (settled)
     :k alert
-    :snap
+    :snap --color
 
 ```terminal
 session: alert
@@ -50,7 +50,7 @@ session: alert
 The quiet row is not alerted and should not carry the green pip styling.
 
     :k C-u quiet
-    :snap
+    :snap --color
 
 ```terminal
 session: quiet

@@ -40,9 +40,6 @@ session: zeta
 
 ```
 
-![light](new-session-create.md.snap.1.light.svg)
-![dark](new-session-create.md.snap.1.dark.svg)
-
     :k Enter
     :settle -d 2s (settled)
 
