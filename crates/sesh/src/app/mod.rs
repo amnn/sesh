@@ -117,7 +117,7 @@ impl App {
         f.render_widget(prompt::widget(query), l.prompt);
         f.render_stateful_widget(Loading::new(status.running), l.loading, &mut self.load);
 
-        let can_new = !name_collision(&query, &items);
+        let can_new = !name_collision(query, &items);
         let sessions = Sessions::new(
             can_new.then(|| Session::new(query.to_owned(), self.repo.clone())),
             &items,
@@ -157,7 +157,10 @@ impl App {
     fn handle_key(&mut self, key: KeyEvent) -> Option<Action> {
         use KeyCode as KC;
         use KeyModifiers as KM;
+
+        const ALT: KM = KM::ALT;
         const CTRL: KM = KM::CONTROL;
+        const SHIFT: KM = KM::SHIFT;
 
         match key.code {
             // Accept the selected row.
@@ -173,21 +176,21 @@ impl App {
             }
 
             // Scroll preview
-            KC::Up if key.modifiers.contains(KM::SHIFT) => {
+            KC::Up if key.modifiers.contains(SHIFT) => {
                 self.preview.scroll_up();
             }
 
-            KC::Down if key.modifiers.contains(KM::SHIFT) => {
+            KC::Down if key.modifiers.contains(SHIFT) => {
                 self.preview.scroll_down();
             }
 
             // Session list selection
-            KC::Up if key.modifiers.contains(KM::ALT) => {
+            KC::Up if key.modifiers.contains(ALT) => {
                 self.sessions.select_first();
                 self.preview.first();
             }
 
-            KC::Down if key.modifiers.contains(KM::ALT) => {
+            KC::Down if key.modifiers.contains(ALT) => {
                 self.sessions.select_last();
                 self.preview.first();
             }

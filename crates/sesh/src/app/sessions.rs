@@ -40,7 +40,7 @@ impl<'s> Sessions<'s> {
     pub(super) fn draw(&self, f: &mut Frame<'_>, list: Rect, scroll: Rect, state: &mut State) {
         let mut rows = Vec::with_capacity(self.rest.len() + 1);
 
-        state.selected = match (state.list.selected_mut(), &self.new, &self.rest[..]) {
+        state.selected = match (state.list.selected_mut(), &self.new, self.rest) {
             // If the list is completely empty, then clear the selection. After this case, we can
             // assume that there is at least one session between `new` and `rest`.
             (s, None, []) => {
