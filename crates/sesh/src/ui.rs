@@ -9,13 +9,71 @@ use std::path::Path;
 
 use ratatui::style::Color;
 use ratatui::style::Style;
-use ratatui::text::Line;
 use ratatui::text::Span;
 
 use crate::path::TruncatedExt as _;
 
+static HIGHLIGHT: Style = Style::new().blue().bold();
+
+/// Overlay fuzzy match highlighting onto `spans`, preserving each span's existing style.
+///
+/// `indices` must be sorted character indices into the concatenated span text.
+pub(crate) fn highlight(input: Vec<Span<'static>>, indices: &[u32]) -> Vec<Span<'static>> {
+    if indices.is_empty() {
+        return input;
+    }
+
+    let mut output = Vec::with_capacity(input.len());
+    let mut is = indices.iter().copied().peekable();
+    let mut cs = input
+        .iter()
+        .flat_map(|s| s.content.chars().map(|ch| (ch, s.style)))
+        .enumerate()
+        .peekable();
+
+    loop {
+        let Some(&(_, (_, base))) = cs.peek() else {
+            break;
+        };
+
+        // Consume all the non-highlighted characters before the next highlighted index.
+        let next = is.peek().copied().unwrap_or(u32::MAX);
+        let mut content = String::new();
+        while let Some((pos, (ch, style))) = cs.peek()
+            && next > *pos as u32
+            && style == &base
+        {
+            content.push(*ch);
+            cs.next();
+        }
+
+        // If there is an unhighlighted prefix, push it and then restart the outer loop, because
+        // the next character may still be unhighlighted but with a different style.
+        if !content.is_empty() {
+            output.push(Span::styled(content, base));
+            continue;
+        }
+
+        // Gather the prefix of highlighted characters, overriding their style.
+        let mut highlighted = String::new();
+        while let (Some((pos, (ch, _))), Some(ix)) = (cs.peek(), is.peek())
+            && *ix == *pos as u32
+        {
+            highlighted.push(*ch);
+            cs.next();
+            is.next();
+        }
+
+        if !highlighted.is_empty() {
+            output.push(Span::styled(highlighted, HIGHLIGHT))
+        }
+    }
+
+    output
+}
+
 /// Append a compact repository path, dimming the parent prefix and leaving the basename undimmed.
-pub(crate) fn push_repo_path_spans(line: &mut Line<'_>, repo: &Path) {
+pub(crate) fn push_repo_path_spans<'a>(spans: &mut impl Extend<Span<'a>>, repo: &Path) {
     let repo = repo.truncated().compact();
     let (parent, base) = repo.split_last();
 
@@ -27,17 +85,19 @@ pub(crate) fn push_repo_path_spans(line: &mut Line<'_>, repo: &Path) {
     };
 
     let dim = Style::new().dim();
-    *line += Span::styled(parent, dim);
-    *line += Span::styled(separator, dim);
-    *line += Span::raw(base.display().to_string());
+    spans.extend([
+        Span::styled(parent, dim),
+        Span::styled(separator, dim),
+        Span::raw(base.display().to_string()),
+    ]);
 }
 
 /// Append a consistently styled shortcut token for header help text.
-pub(crate) fn push_shortcut_span(line: &mut Line<'_>, code: &str) {
+pub(crate) fn push_shortcut_span<'a>(spans: &mut impl Extend<Span<'a>>, code: &str) {
     let dim = Style::new().dim();
     let key = Style::new().fg(Color::Yellow);
 
-    line.extend([
+    spans.extend([
         Span::styled("[", dim),
         Span::styled(code.to_owned(), key),
         Span::styled("]", dim),
@@ -48,7 +108,29 @@ pub(crate) fn push_shortcut_span(line: &mut Line<'_>, code: &str) {
 mod tests {
     use std::path::Path;
 
+    use ratatui::text::Line;
+
     use super::*;
+
+    #[test]
+    fn highlight_match_indices_overlays_existing_span_styles() {
+        let spans = highlight(
+            vec![
+                Span::styled("ab", Style::new().dim()),
+                Span::styled("cd", Style::new().fg(Color::Green)),
+            ],
+            &[1, 2],
+        );
+
+        assert_eq!(
+            spans,
+            vec![
+                Span::styled("a", Style::new().dim()),
+                Span::styled("bc", HIGHLIGHT),
+                Span::styled("d", Style::new().fg(Color::Green)),
+            ]
+        );
+    }
 
     #[test]
     fn repo_path_keeps_relative_basename_unprefixed() {

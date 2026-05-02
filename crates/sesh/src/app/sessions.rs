@@ -3,7 +3,10 @@
 
 //! Component and state for rendering the session list.
 
+use nucleo::Config;
 use nucleo::Item;
+use nucleo::Matcher;
+use nucleo::pattern::Pattern;
 use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::style::Color;
@@ -22,6 +25,7 @@ use crate::session::Session;
 pub(super) struct Sessions<'s> {
     new: Option<Session>,
     rest: &'s [Item<'s, Session>],
+    pattern: &'s Pattern,
 }
 
 #[derive(Default)]
@@ -31,12 +35,18 @@ pub(super) struct State {
 }
 
 impl<'s> Sessions<'s> {
-    /// Create a new `Session` component with `new` representing the potential new session, and
-    /// `rest` being the other candidates.
-    pub(super) fn new(new: Option<Session>, rest: &'s [Item<'s, Session>]) -> Self {
-        Self { new, rest }
+    /// Create a new `Sessions` component with `new` representing the potential new session, and
+    /// `rest` being the other candidates. The `pattern` is what was used to filter down to these
+    /// candidates, and is used to highlight the matching parts of candidate text.
+    pub(super) fn new(
+        new: Option<Session>,
+        rest: &'s [Item<'s, Session>],
+        pattern: &'s Pattern,
+    ) -> Self {
+        Self { new, pattern, rest }
     }
 
+    /// Render the session rows and keep the selected session state in sync with the list.
     pub(super) fn draw(&self, f: &mut Frame<'_>, list: Rect, scroll: Rect, state: &mut State) {
         let mut rows = Vec::with_capacity(self.rest.len() + 1);
 
@@ -81,13 +91,21 @@ impl<'s> Sessions<'s> {
 
         let selected = state.list.selected();
         if let Some(session) = &self.new {
-            rows.push(session.render(selected == Some(0)))
+            rows.push(session.render(selected == Some(0), &[]))
         } else {
             rows.push(ListItem::new(""))
         }
 
         for (i, item) in (1..).zip(self.rest) {
-            rows.push(item.data.render(selected == Some(i)))
+            let mut matcher = Matcher::new(Config::DEFAULT);
+            let mut indices = Vec::new();
+            let text = item.matcher_columns[0].slice(..);
+
+            self.pattern.indices(text, &mut matcher, &mut indices);
+            indices.sort_unstable();
+            indices.dedup();
+
+            rows.push(item.data.render(selected == Some(i), &indices))
         }
 
         let height = list.height as usize;

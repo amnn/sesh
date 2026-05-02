@@ -1,0 +1,79 @@
+---
+source: crates/sesh/tests/test.rs
+expression: output
+input_file: crates/sesh/tests/cases/ui/match-highlight-overlays.md
+---
+# Match highlight overlays
+
+Fuzzy match highlighting should overlay the styles already used by each part of
+a session row. This case matches characters in the dim session suffix, the dim
+repo parent path, and the plain repo basename; the linked SVG snapshot preserves
+those combined styles.
+
+    :bins jj cat mkdir
+
+> [!NOTE]
+> 'jj', 'cat', and 'mkdir' are available.
+
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
+    :t rename-session -t 0 runner (success)
+    :$ mkdir code (exit: 0)
+    :$ jj git init code/blue (exit: 0)
+    :$ jj describe -R code/blue -m "blue commit" (exit: 0)
+    :t new-session -d -s tone~one "cat" (success)
+    :t set-option -t tone~one @sesh.repo code/blue (success)
+    :t new-session -d -s ui "sesh" (success)
+    :t resize-window -t ui:0 -x 100 -y 10 (success)
+    :pane ui:0.0
+    :settle (settled)
+
+Hide the preview so the color snapshot focuses on the list row. The query
+`onecb` crosses the suffix (`one`), compact repo parent (`c`), and basename
+(`b`) spans.
+
+    :k C-p
+    :settle (settled)
+    :k onecb
+    :snap --color
+
+```terminal
+session: onecb                                                                                     ┃
+  1/3 | [C-r] repo: none | [C-x] close                                                             ┃
+▌⬤ tone~one                                 c/blue                                                 ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+```
+
+![light](match-highlight-overlays.md.snap.1.light.svg)
+![dark](match-highlight-overlays.md.snap.1.dark.svg)
+
+Then, move selection to the new-session row so the matched live-session row is
+not reversed, making its overlaid span styles visible in the SVG.
+
+    :k M-up
+    :snap --color
+
+```terminal
+session: onecb                                                                                     ┃
+  1/3 | [C-r] repo: none                                                                           ┃
+▌  onecb                                                                                           ┃
+ ⬤ tone~one                                 c/blue                                                 ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+```
+
+![light](match-highlight-overlays.md.snap.2.light.svg)
+![dark](match-highlight-overlays.md.snap.2.dark.svg)
+
+---
+vim: set ft=markdown:

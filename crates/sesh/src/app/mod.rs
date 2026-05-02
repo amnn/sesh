@@ -121,6 +121,7 @@ impl App {
         let sessions = Sessions::new(
             can_new.then(|| Session::new(query.to_owned(), self.repo.clone())),
             &items,
+            snapshot.pattern().column_pattern(0),
         );
 
         // (2) Render session list. This also updates `self.sessions`, so that the selected index
@@ -206,7 +207,7 @@ impl App {
             }
 
             // App state
-            KC::Char('r') if key.modifiers.contains(ALT) => self.clear_current_repo(),
+            KC::Char('r') if key.modifiers.contains(ALT) => self.reset_current_repo(),
             KC::Char('r') if key.modifiers.contains(CTRL) => self.set_current_repo(),
 
             // View state
@@ -226,7 +227,7 @@ impl App {
     }
 
     /// Clear the current repo.
-    fn clear_current_repo(&mut self) {
+    fn reset_current_repo(&mut self) {
         self.repo = None;
     }
 

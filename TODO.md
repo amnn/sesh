@@ -10,7 +10,7 @@
     new session cannot be created, to prevent the other results from jumping
     around.
 
-- [ ] Highlight the matched portion of the item.
+- [x] Highlight the matched portion of the item.
 
 - [ ] Expand contracted portion of repo paths when they are matched against.
 

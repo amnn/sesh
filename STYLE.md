@@ -16,8 +16,11 @@ Each Rust module should follow the following order:
 - Module-level functions
 - Test module
 
-Entries in each section are in decreasing order of visibility, and then
-sorted lexicographically.
+The entries in each of the above sections should be ordered by decreasing
+visibility, and then lexicographically. However, this ordering rule should not
+be applied inside item bodies or signatures. For example, struct fields and
+function parameters should be ordered by domain logic and readability, not
+alphabetically.
 
 For `impl` and trait `impl` sections, treat member items (for example methods,
 associated consts, and associated types) as entries and apply the same rule:
