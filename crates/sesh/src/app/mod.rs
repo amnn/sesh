@@ -4,6 +4,7 @@
 //! Picker UI state, rendering, and input handling.
 
 mod block;
+mod header;
 mod layout;
 mod loading;
 mod preview;
@@ -12,7 +13,6 @@ mod scrollbar;
 mod sessions;
 
 use std::io;
-use std::path::Path;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -22,23 +22,17 @@ use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
 use crossterm::event::KeyModifiers;
-use nucleo::Snapshot;
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
-use ratatui::style::Style;
-use ratatui::text::Line;
-use ratatui::text::Span;
-use ratatui::widgets::Widget;
 
 use crate::app::block::Block;
+use crate::app::header::Header;
 use crate::app::loading::Loading;
 use crate::app::preview::Preview;
 use crate::app::sessions::Sessions;
 use crate::picker::Picker;
 use crate::session::Session;
 use crate::terminal::AlternateScreenGuard;
-use crate::ui::push_repo_path_spans;
-use crate::ui::push_shortcut_span;
 
 /// Timeout for waiting for a key event.
 const POLL_TIMEOUT: Duration = Duration::from_millis(16);
@@ -62,7 +56,6 @@ pub struct App {
     preview: preview::State,
     repo: Option<PathBuf>,
     sessions: sessions::State,
-    session_close: bool,
 }
 
 impl App {
@@ -72,7 +65,6 @@ impl App {
         let picker = Picker::new(sessions.clone());
         let preview = preview::State::new(sessions);
         let sessions = sessions::State::new();
-        let session_close = false;
 
         Self {
             load,
@@ -80,7 +72,6 @@ impl App {
             preview,
             repo,
             sessions,
-            session_close,
         }
     }
 
@@ -132,16 +123,19 @@ impl App {
 
         Sessions::new(new, &items).draw(f, l.sessions, l.scroll, &mut self.sessions);
 
-        // The tool supports closing the current session if it is a live tmux session.
-        self.session_close = self.sessions.selected().is_some_and(Session::is_tmux);
+        let can_close = self.sessions.selected().is_some_and(Session::is_tmux);
 
         f.render_widget(prompt::widget(query), l.prompt);
         f.render_stateful_widget(Loading::new(status.running), l.loading, &mut self.load);
 
-        f.render_widget(
-            header_widget(snapshot, self.repo.as_deref(), self.session_close),
-            l.header,
+        let header = Header::new(
+            can_close,
+            items.len(),
+            self.repo.as_deref(),
+            snapshot.item_count() as usize,
         );
+
+        header.draw(f, l.header);
 
         let Some(l_preview) = l.preview else {
             return;
@@ -169,7 +163,10 @@ impl App {
             KC::Char('g' | 'c') if key.modifiers.contains(CTRL) => return Some(Action::Cancel),
 
             // Session actions
-            KC::Char('x') if key.modifiers.contains(CTRL) && self.session_close => {
+            KC::Char('x')
+                if key.modifiers.contains(CTRL)
+                    && self.sessions.selected().is_some_and(Session::is_tmux) =>
+            {
                 return self.sessions.take_selected().map(Action::Close);
             }
 
@@ -232,41 +229,4 @@ impl App {
             .selected()
             .and_then(|s| s.repo().map(|p| p.to_owned()));
     }
-}
-
-/// Build the header widget with match counts and current repo context.
-fn header_widget(
-    snapshot: &Snapshot<Session>,
-    repo: Option<&Path>,
-    close_session: bool,
-) -> impl Widget {
-    let found = snapshot.matched_items(..).count();
-    let total = snapshot.item_count();
-    let width = if total == 0 {
-        1
-    } else {
-        total.ilog10() as usize + 1
-    };
-
-    let mut line = Line::default();
-    let dim = Style::new().dim();
-
-    line += Span::raw(format!(" {found:>width$}"));
-    line += Span::styled(format!("/{total} | "), dim);
-    push_shortcut_span(&mut line, "C-r");
-    line += Span::raw(" repo: ");
-
-    if let Some(repo) = repo {
-        push_repo_path_spans(&mut line, repo);
-    } else {
-        line += Span::styled("none", dim);
-    }
-
-    if close_session {
-        line += Span::styled(" | ", dim);
-        push_shortcut_span(&mut line, "C-x");
-        line += Span::raw(" close");
-    }
-
-    line
 }
