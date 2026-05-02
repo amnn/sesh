@@ -109,7 +109,7 @@ This snapshot shows the picker after clearing the query with `C-u` and typing
 session: mono
   2/6 | [C-r] repo: none
    mono                                                                                                                ┃
-▌  mono                                     mono                                                                       ┃
+▌  mono                                     mono                                                                       │
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 @  mono commit
 │ ○  mono workspace commit
