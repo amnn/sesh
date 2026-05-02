@@ -32,6 +32,8 @@ use ratatui::widgets::Widget;
 
 use crate::app::block::Block;
 use crate::app::loading::Loading;
+use crate::app::preview::Preview;
+use crate::app::sessions::Sessions;
 use crate::picker::Picker;
 use crate::session::Session;
 use crate::terminal::AlternateScreenGuard;
@@ -128,7 +130,7 @@ impl App {
 
         let new = new_valid.then(|| Session::new(query.to_owned(), self.repo.clone()));
 
-        sessions::Sessions::new(new, &items).draw(f, l.sessions, l.scroll, &mut self.sessions);
+        Sessions::new(new, &items).draw(f, l.sessions, l.scroll, &mut self.sessions);
 
         // The tool supports closing the current session if it is a live tmux session.
         self.session_close = self.sessions.selected().is_some_and(Session::is_tmux);
@@ -146,10 +148,10 @@ impl App {
         };
 
         if let Some(separator) = l.separator {
-            f.render_widget(separator_widget(), separator);
+            f.render_widget(Block::new('─'), separator);
         }
 
-        preview::Preview::new(self.sessions.preview()).draw(f, l_preview, &mut self.preview);
+        Preview::new(self.sessions.preview()).draw(f, l_preview, &mut self.preview);
     }
 
     /// Handle a single keyboard event, returning the consequent application action.
@@ -267,9 +269,4 @@ fn header_widget(
     }
 
     line
-}
-
-/// Build the horizontal separator between the stacked session list and preview.
-fn separator_widget() -> impl Widget {
-    Block::new('─')
 }
