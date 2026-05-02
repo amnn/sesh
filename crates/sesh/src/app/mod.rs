@@ -6,6 +6,8 @@
 mod block;
 mod layout;
 mod loading;
+mod preview;
+mod scrollbar;
 
 use std::io;
 use std::path::Path;
@@ -20,21 +22,16 @@ use crossterm::event::KeyEventKind;
 use crossterm::event::KeyModifiers;
 use nucleo::Item;
 use nucleo::Snapshot;
-use nucleo::Utf32String;
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 use ratatui::style::Color;
 use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::text::Span;
-use ratatui::text::Text;
 use ratatui::widgets::HighlightSpacing;
 use ratatui::widgets::List;
 use ratatui::widgets::ListItem;
 use ratatui::widgets::ListState;
-use ratatui::widgets::Paragraph;
-use ratatui::widgets::Scrollbar;
-use ratatui::widgets::ScrollbarOrientation;
 use ratatui::widgets::ScrollbarState;
 use ratatui::widgets::StatefulWidget;
 use ratatui::widgets::Widget;
@@ -42,7 +39,6 @@ use ratatui::widgets::Widget;
 use crate::app::block::Block;
 use crate::app::loading::Loading;
 use crate::app::loading::LoadingState;
-use crate::cache::PreviewCache;
 use crate::picker::Item as _;
 use crate::picker::Picker;
 use crate::session::Session;
@@ -65,12 +61,10 @@ pub enum Action {
 
 /// Session picker state, caches, and UI behavior.
 pub struct App {
-    cache: PreviewCache<Session>,
     list: ListState,
     load: LoadingState,
     picker: Picker<Session>,
-    preview: bool,
-    preview_scroll: usize,
+    preview: preview::State,
     repo: Option<PathBuf>,
     selected: Option<Session>,
     session_close: bool,
@@ -80,23 +74,19 @@ pub struct App {
 impl App {
     /// Construct application state for the provided repo context.
     pub fn new(sessions: Vec<Session>, repo: Option<PathBuf>) -> Self {
-        let cache = PreviewCache::new(sessions.clone());
         let list = ListState::default();
         let load = LoadingState::new();
-        let picker = Picker::new(sessions);
-        let preview = true;
-        let preview_scroll = 0;
+        let picker = Picker::new(sessions.clone());
+        let preview = preview::State::new(sessions);
         let selected = None;
         let session_new = false;
         let session_close = false;
 
         Self {
-            cache,
             list,
             load,
             picker,
             preview,
-            preview_scroll,
             repo,
             selected,
             session_close,
@@ -135,7 +125,7 @@ impl App {
     /// The frame is split up into regions, each with its own widget. The `preview` region and its
     /// scroll bar are only visible when the preview is toggled on (defaults to visible).
     fn draw(&mut self, f: &mut ratatui::Frame<'_>) {
-        let l = layout::Layout::new(f.area(), self.preview);
+        let l = layout::Layout::new(f.area(), self.preview.visible());
 
         // Poll the picker for its latest state, and build the data model.
         let (status, snapshot, query) = self.picker.refresh();
@@ -184,9 +174,9 @@ impl App {
             .viewport_content_length(height)
             .position(self.list.offset());
 
-        f.render_stateful_widget(scrollbar_widget(), l.scroll, &mut session_scroll);
+        f.render_stateful_widget(scrollbar::widget(), l.scroll, &mut session_scroll);
 
-        let Some(preview) = l.preview else {
+        let Some(l_preview) = l.preview else {
             return;
         };
 
@@ -194,26 +184,13 @@ impl App {
             f.render_widget(separator_widget(), separator);
         }
 
-        let text = preview_widget(&self.cache, selected, selected_row == Some(0));
+        let selected = if selected_row == Some(0) {
+            None
+        } else {
+            selected
+        };
 
-        self.preview_scroll = self
-            .preview_scroll
-            .clamp(0, text.height().saturating_sub(preview.height as usize));
-
-        let preview_content_length = text
-            .height()
-            .checked_sub(preview.height as usize + 1)
-            .map_or(0, |n| n + 2);
-
-        let mut preview_scroll = ScrollbarState::default()
-            .content_length(preview_content_length)
-            .viewport_content_length(preview.height as usize)
-            .position(self.preview_scroll);
-
-        f.render_stateful_widget(scrollbar_widget(), preview, &mut preview_scroll);
-
-        let preview_para = Paragraph::new(text).scroll((self.preview_scroll as u16, 0));
-        f.render_widget(preview_para, preview);
+        preview::Preview::new(selected).draw(f, l_preview, &mut self.preview);
     }
 
     /// Handle a single keyboard event, returning the consequent application action.
@@ -237,26 +214,40 @@ impl App {
 
             // Scroll preview
             KC::Up if key.modifiers.contains(KM::SHIFT) => {
-                self.preview_scroll = self.preview_scroll.saturating_sub(1);
+                self.preview.scroll_up();
             }
 
             KC::Down if key.modifiers.contains(KM::SHIFT) => {
-                self.preview_scroll = self.preview_scroll.saturating_add(1);
+                self.preview.scroll_down();
             }
 
             // Session list selection
-            KC::Up if key.modifiers.contains(KM::ALT) => self.list.select_first(),
-            KC::Down if key.modifiers.contains(KM::ALT) => self.list.select_last(),
-            KC::Up => self.list.select_previous(),
-            KC::Down => self.list.select_next(),
+            KC::Up if key.modifiers.contains(KM::ALT) => {
+                self.list.select_first();
+                self.preview.first();
+            }
+
+            KC::Down if key.modifiers.contains(KM::ALT) => {
+                self.list.select_last();
+                self.preview.first();
+            }
+
+            KC::Up => {
+                self.list.select_previous();
+                self.preview.first();
+            }
+
+            KC::Down => {
+                self.list.select_next();
+                self.preview.first();
+            }
 
             // App state
             KC::Char('r') if key.modifiers.contains(CTRL) => self.set_current_repo(),
 
             // View state
             KC::Char('p') if key.modifiers.contains(CTRL) => {
-                self.preview_scroll = 0;
-                self.preview = !self.preview;
+                self.preview.toggle();
             }
 
             // Edit query
@@ -335,47 +326,12 @@ fn normalize_selection(list: &mut ListState, row_count: usize, can_select_new_se
     list.select(selection);
 }
 
-/// Build the preview text for the selected session, including loading and error states.
-fn preview_widget(
-    cache: &PreviewCache<Session>,
-    selected: Option<&Session>,
-    selected_new_session: bool,
-) -> Text<'static> {
-    let Some(session) = selected else {
-        return Text::from("");
-    };
-
-    if selected_new_session {
-        return Text::from("");
-    }
-
-    let key = Utf32String::from(session.text());
-    let Some(preview) = cache.get(&key) else {
-        return Text::from("Loading...");
-    };
-
-    match preview.as_ref() {
-        Ok(preview) => preview.clone(),
-        Err(err) => Text::from(format!("Error: {err}")),
-    }
-}
-
 /// Build the prompt widget for the active query string.
 fn prompt_widget(query: &str) -> impl Widget {
     Line::from(vec![
         Span::styled("session: ", Style::new().dim()),
         Span::raw(query.to_owned()),
     ])
-}
-
-/// Build the scrollbar widget that visually separates the session list from the
-/// preview.
-fn scrollbar_widget() -> impl StatefulWidget<State = ScrollbarState> {
-    Scrollbar::new(ScrollbarOrientation::VerticalRight)
-        .begin_symbol(None)
-        .end_symbol(None)
-        .track_symbol(Some("│"))
-        .thumb_symbol("┃")
 }
 
 /// Return the session represented by the selected row.
