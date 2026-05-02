@@ -42,5 +42,10 @@ filtered list.
     :k C-u a down down C-r
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
+Press `M-r` to clear the current repo without changing the selected row.
+
+    :k M-r
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+
 ---
 vim: set ft=markdown:

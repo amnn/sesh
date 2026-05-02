@@ -206,6 +206,7 @@ impl App {
             }
 
             // App state
+            KC::Char('r') if key.modifiers.contains(ALT) => self.clear_current_repo(),
             KC::Char('r') if key.modifiers.contains(CTRL) => self.set_current_repo(),
 
             // View state
@@ -222,6 +223,11 @@ impl App {
         };
 
         None
+    }
+
+    /// Clear the current repo.
+    fn clear_current_repo(&mut self) {
+        self.repo = None;
     }
 
     /// Set the current repo from the currently selected session.

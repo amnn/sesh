@@ -28,10 +28,11 @@
   - Destroy the underlying workspace too, if applicable.
   - Confirm destructive behavior, if possible.
 
-- [ ] Add `C-t` to pick trunk (the commit used as the base for new workspaces).
-  - Define trunk resolution rules for mixed repo types.
+- [ ] Add `C-b` to pick the base commit used for new workspaces.
+  - Label this as `base:` in the header and user-facing text.
+  - Define base resolution rules for mixed repo types.
 
-- [ ] Add a shortcut to clear/reset the repo.
+- [x] Add `M-r` to clear/reset the repo.
 
 - [ ] Add workspace creation for new repo-backed work.
   - Name is derived from repo name + workspace name.
@@ -49,6 +50,7 @@
 ## Configuration
 
 - [ ] Add dedicated `help` output sections for key bindings and configuration.
+  - Include `M-r` to clear/reset the repo.
 
 - [ ] Configure previews
 
