@@ -3,6 +3,8 @@
 
 //! Picker UI state, rendering, and input handling.
 
+mod layout;
+
 use std::io;
 use std::path::Path;
 use std::path::PathBuf;
@@ -19,7 +21,6 @@ use nucleo::Snapshot;
 use nucleo::Utf32String;
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
-use ratatui::layout::Rect;
 use ratatui::style::Color;
 use ratatui::style::Style;
 use ratatui::text::Line;
@@ -47,20 +48,8 @@ use crate::widget::Block;
 use crate::widget::Loading;
 use crate::widget::LoadingState;
 
-/// Percentage of space to give to the preview pane when in horizontal split mode.
-const PERC_H_PREVIEW: u16 = 60;
-
-/// Percentage of space to give to the preview pane when in vertical split mode.
-const PERC_V_PREVIEW: u16 = 40;
-
 /// Timeout for waiting for a key event.
 const POLL_TIMEOUT: Duration = Duration::from_millis(16);
-
-/// The largest the preview pane gets.
-const WIDTH_MAX_PREVIEW: u16 = 100;
-
-/// The minimum width to support a vertical split layout (session list and preview side-by-side).
-const WIDTH_MIN_VSPLIT: u16 = 160;
 
 /// Completed action chosen from the picker.
 pub enum Action {
@@ -84,52 +73,6 @@ pub struct App {
     selected: Option<Session>,
     session_close: bool,
     session_new: bool,
-}
-
-/// Regions to render each component into, each houses its own widget. When there is enough
-/// horizontal space, the layout is as follows:
-///
-/// ```text
-/// +-----------------+-+--------------+
-/// | prompt          |s| preview      |
-/// +-+---------------+c| ...          |
-/// |l| header        |r|              |
-/// +-+---------------+o|              |
-/// | sessions        |l|              |
-/// | ...             |l|              |
-/// |                 | |              |
-/// |                 | |              |
-/// |                 | |              |
-/// +-----------------+-+--------------+
-/// ```
-///
-/// When the display is too narrow, it stacks vertically:
-///
-/// ```text
-/// +--------------------------+
-/// | prompt                   |
-/// +-+------------------------+
-/// |l| header                 |
-/// +-+----------------------+-|
-/// | sessions               |s|
-/// | ...                    |c|
-/// |                        |r|
-/// +------------------------+-+
-/// | separator                |
-/// +--------------------------+
-/// | preview                  |
-/// | ...                      |
-/// |                          |
-/// +--------------------------+
-/// ```
-struct Layout {
-    header: Rect,
-    loading: Rect,
-    preview: Option<Rect>,
-    prompt: Rect,
-    scroll: Rect,
-    separator: Option<Rect>,
-    sessions: Rect,
 }
 
 impl App {
@@ -190,7 +133,7 @@ impl App {
     /// The frame is split up into regions, each with its own widget. The `preview` region and its
     /// scroll bar are only visible when the preview is toggled on (defaults to visible).
     fn draw(&mut self, f: &mut ratatui::Frame<'_>) {
-        let l = self.layout(f.area());
+        let l = layout::Layout::new(f.area(), self.preview);
 
         // Poll the picker for its latest state, and build the data model.
         let (status, snapshot, query) = self.picker.refresh();
@@ -323,176 +266,6 @@ impl App {
         };
 
         None
-    }
-
-    /// Split the given area into sub-regions to layout the app.
-    fn layout(&self, area: Rect) -> Layout {
-        use ratatui::layout::Constraint as C;
-        use ratatui::layout::Direction as D;
-        use ratatui::layout::Layout as L;
-
-        if !self.preview {
-            let cols = L::default()
-                .direction(D::Horizontal)
-                .constraints([C::Min(0), C::Length(1)])
-                .split(area);
-
-            let &[content, scroll] = &cols[..] else {
-                panic!("expected two columns in the layout");
-            };
-
-            let rows = L::default()
-                .direction(D::Vertical)
-                .constraints([C::Length(1), C::Length(1), C::Min(0)])
-                .split(content);
-
-            let &[prompt, header, sessions] = &rows[..] else {
-                panic!("expected three rows in the layout")
-            };
-
-            let cols = L::default()
-                .direction(D::Horizontal)
-                .constraints([C::Length(1), C::Min(0)])
-                .split(header);
-
-            let &[loading, header] = &cols[..] else {
-                panic!("expected two columns in header");
-            };
-
-            Layout {
-                header,
-                loading,
-                preview: None,
-                prompt,
-                scroll,
-                separator: None,
-                sessions,
-            }
-        } else if area.width > 100 * WIDTH_MAX_PREVIEW / PERC_V_PREVIEW {
-            let cols = L::default()
-                .direction(D::Horizontal)
-                .constraints([C::Min(0), C::Length(1), C::Length(WIDTH_MAX_PREVIEW)])
-                .split(area);
-
-            let &[content, scroll, preview] = &cols[..] else {
-                panic!("expected three columns in the layout");
-            };
-
-            let rows = L::default()
-                .direction(D::Vertical)
-                .constraints([C::Length(1), C::Length(1), C::Min(0)])
-                .split(content);
-
-            let &[prompt, header, sessions] = &rows[..] else {
-                panic!("expected three rows in the layout")
-            };
-
-            let cols = L::default()
-                .direction(D::Horizontal)
-                .constraints([C::Length(1), C::Min(0)])
-                .split(header);
-
-            let &[loading, header] = &cols[..] else {
-                panic!("expected two columns in header");
-            };
-
-            Layout {
-                header,
-                loading,
-                preview: Some(preview),
-                prompt,
-                scroll,
-                separator: None,
-                sessions,
-            }
-        } else if area.width >= WIDTH_MIN_VSPLIT {
-            let cols = L::default()
-                .direction(D::Horizontal)
-                .constraints([
-                    C::Percentage(100 - PERC_V_PREVIEW),
-                    C::Length(1),
-                    C::Percentage(PERC_V_PREVIEW),
-                ])
-                .split(area);
-
-            let &[content, scroll, preview] = &cols[..] else {
-                panic!("expected three columns in the layout");
-            };
-
-            let rows = L::default()
-                .direction(D::Vertical)
-                .constraints([C::Length(1), C::Length(1), C::Min(0)])
-                .split(content);
-
-            let &[prompt, header, sessions] = &rows[..] else {
-                panic!("expected three rows in the layout")
-            };
-
-            let cols = L::default()
-                .direction(D::Horizontal)
-                .constraints([C::Length(1), C::Min(0)])
-                .split(header);
-
-            let &[loading, header] = &cols[..] else {
-                panic!("expected two columns in header");
-            };
-
-            Layout {
-                header,
-                loading,
-                preview: Some(preview),
-                prompt,
-                scroll,
-                separator: None,
-                sessions,
-            }
-        } else {
-            let rows = L::default()
-                .direction(D::Vertical)
-                .constraints([C::Min(0), C::Length(1), C::Percentage(PERC_H_PREVIEW)])
-                .split(area);
-
-            let &[content, separator, preview] = &rows[..] else {
-                panic!("expected three rows in the layout");
-            };
-
-            let rows = L::default()
-                .direction(D::Vertical)
-                .constraints([C::Length(1), C::Length(1), C::Min(0)])
-                .split(content);
-
-            let &[prompt, header, sessions] = &rows[..] else {
-                panic!("expected three rows in the layout")
-            };
-
-            let cols = L::default()
-                .direction(D::Horizontal)
-                .constraints([C::Length(1), C::Min(0)])
-                .split(header);
-
-            let &[loading, header] = &cols[..] else {
-                panic!("expected two columns in header");
-            };
-
-            let cols = L::default()
-                .direction(D::Horizontal)
-                .constraints([C::Min(0), C::Length(1)])
-                .split(sessions);
-
-            let &[sessions, scroll] = &cols[..] else {
-                panic!("expected two columns in the layout");
-            };
-
-            Layout {
-                header,
-                loading,
-                preview: Some(preview),
-                prompt,
-                scroll,
-                separator: Some(separator),
-                sessions,
-            }
-        }
     }
 
     /// Set the current repo from the currently selected session.
