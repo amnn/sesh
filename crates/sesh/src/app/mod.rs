@@ -7,6 +7,7 @@ mod block;
 mod layout;
 mod loading;
 mod preview;
+mod prompt;
 mod scrollbar;
 
 use std::io;
@@ -38,7 +39,6 @@ use ratatui::widgets::Widget;
 
 use crate::app::block::Block;
 use crate::app::loading::Loading;
-use crate::app::loading::LoadingState;
 use crate::picker::Item as _;
 use crate::picker::Picker;
 use crate::session::Session;
@@ -62,7 +62,7 @@ pub enum Action {
 /// Session picker state, caches, and UI behavior.
 pub struct App {
     list: ListState,
-    load: LoadingState,
+    load: loading::State,
     picker: Picker<Session>,
     preview: preview::State,
     repo: Option<PathBuf>,
@@ -75,7 +75,7 @@ impl App {
     /// Construct application state for the provided repo context.
     pub fn new(sessions: Vec<Session>, repo: Option<PathBuf>) -> Self {
         let list = ListState::default();
-        let load = LoadingState::new();
+        let load = loading::State::new();
         let picker = Picker::new(sessions.clone());
         let preview = preview::State::new(sessions);
         let selected = None;
@@ -160,8 +160,8 @@ impl App {
         // The tool supports closing the current session if it is a live tmux session.
         self.session_close = selected.is_some_and(Session::is_tmux);
 
-        f.render_widget(prompt_widget(query), l.prompt);
-        f.render_stateful_widget(Loading(status.running), l.loading, &mut self.load);
+        f.render_widget(prompt::widget(query), l.prompt);
+        f.render_stateful_widget(Loading::new(status.running), l.loading, &mut self.load);
 
         f.render_widget(
             header_widget(snapshot, self.repo.as_deref(), self.session_close),
@@ -324,14 +324,6 @@ fn normalize_selection(list: &mut ListState, row_count: usize, can_select_new_se
     };
 
     list.select(selection);
-}
-
-/// Build the prompt widget for the active query string.
-fn prompt_widget(query: &str) -> impl Widget {
-    Line::from(vec![
-        Span::styled("session: ", Style::new().dim()),
-        Span::raw(query.to_owned()),
-    ])
 }
 
 /// Return the session represented by the selected row.

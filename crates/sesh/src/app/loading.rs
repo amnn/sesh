@@ -14,17 +14,23 @@ const FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"
 const FRAME_DURATION: Duration = Duration::from_millis(100);
 
 /// An animated loading spinner.
-pub(crate) struct Loading(pub bool);
+pub(crate) struct Loading(bool);
 
 /// The state of the loading spinner. This remembers when the animation started. Animation duration
 /// and therefore frame calculation is based on this start time.
-pub(crate) struct LoadingState {
+pub(crate) struct State {
     start: Instant,
 }
 
-impl LoadingState {
+impl Loading {
+    pub(super) fn new(enabled: bool) -> Self {
+        Self(enabled)
+    }
+}
+
+impl State {
     /// Create a fresh loading state, for an inactive loading spinner.
-    pub(crate) fn new() -> Self {
+    pub(super) fn new() -> Self {
         Self {
             start: Instant::now(),
         }
@@ -32,7 +38,7 @@ impl LoadingState {
 }
 
 impl StatefulWidget for Loading {
-    type State = LoadingState;
+    type State = State;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         let area = area.intersection(buf.area);
