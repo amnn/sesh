@@ -14,7 +14,6 @@ mod picker;
 mod session;
 mod terminal;
 mod ui;
-mod widget;
 
 pub use crate::app::Action;
 pub use crate::app::App;

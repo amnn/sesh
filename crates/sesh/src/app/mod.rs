@@ -3,7 +3,9 @@
 
 //! Picker UI state, rendering, and input handling.
 
+mod block;
 mod layout;
+mod loading;
 
 use std::io;
 use std::path::Path;
@@ -37,6 +39,9 @@ use ratatui::widgets::ScrollbarState;
 use ratatui::widgets::StatefulWidget;
 use ratatui::widgets::Widget;
 
+use crate::app::block::Block;
+use crate::app::loading::Loading;
+use crate::app::loading::LoadingState;
 use crate::cache::PreviewCache;
 use crate::picker::Item as _;
 use crate::picker::Picker;
@@ -44,9 +49,6 @@ use crate::session::Session;
 use crate::terminal::AlternateScreenGuard;
 use crate::ui::push_repo_path_spans;
 use crate::ui::push_shortcut_span;
-use crate::widget::Block;
-use crate::widget::Loading;
-use crate::widget::LoadingState;
 
 /// Timeout for waiting for a key event.
 const POLL_TIMEOUT: Duration = Duration::from_millis(16);
