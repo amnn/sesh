@@ -22,6 +22,7 @@ use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
 use crossterm::event::KeyModifiers;
+use nucleo::Item;
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 
@@ -112,29 +113,29 @@ impl App {
         let (status, snapshot, query) = self.picker.refresh();
         let items: Vec<_> = snapshot.matched_items(..).collect();
 
-        // The tool supports creating a new session if the query is non-empty and does not match
-        // any live session.
-        let new_valid = !query.is_empty()
-            && !items
-                .iter()
-                .any(|i| i.data.is_tmux() && i.data.name() == query);
-
-        let new = new_valid.then(|| Session::new(query.to_owned(), self.repo.clone()));
-
-        Sessions::new(new, &items).draw(f, l.sessions, l.scroll, &mut self.sessions);
-
-        let can_close = self.sessions.selected().is_some_and(Session::is_tmux);
-
+        // (1) Render picker state
         f.render_widget(prompt::widget(query), l.prompt);
         f.render_stateful_widget(Loading::new(status.running), l.loading, &mut self.load);
 
+        let can_new = !name_collision(&query, &items);
+        let sessions = Sessions::new(
+            can_new.then(|| Session::new(query.to_owned(), self.repo.clone())),
+            &items,
+        );
+
+        // (2) Render session list. This also updates `self.sessions`, so that the selected index
+        // and session are up-to-date and valid.
+        sessions.draw(f, l.sessions, l.scroll, &mut self.sessions);
+
         let header = Header::new(
-            can_close,
+            self.sessions.can_close(),
             items.len(),
             self.repo.as_deref(),
             snapshot.item_count() as usize,
         );
 
+        // (3) Render the header, which depends on the currently selected session (so must happen
+        // after session list rendering).
         header.draw(f, l.header);
 
         let Some(l_preview) = l.preview else {
@@ -145,7 +146,11 @@ impl App {
             f.render_widget(Block::new('─'), separator);
         }
 
-        Preview::new(self.sessions.preview()).draw(f, l_preview, &mut self.preview);
+        let preview = Preview::new(self.sessions.preview());
+
+        // (4) Render the preview, if it is toggled on. This also depends on whatever the currently
+        // selected session is, so it must be rendered after the session list.
+        preview.draw(f, l_preview, &mut self.preview);
     }
 
     /// Handle a single keyboard event, returning the consequent application action.
@@ -163,10 +168,7 @@ impl App {
             KC::Char('g' | 'c') if key.modifiers.contains(CTRL) => return Some(Action::Cancel),
 
             // Session actions
-            KC::Char('x')
-                if key.modifiers.contains(CTRL)
-                    && self.sessions.selected().is_some_and(Session::is_tmux) =>
-            {
+            KC::Char('x') if key.modifiers.contains(CTRL) && self.sessions.can_close() => {
                 return self.sessions.take_selected().map(Action::Close);
             }
 
@@ -229,4 +231,14 @@ impl App {
             .selected()
             .and_then(|s| s.repo().map(|p| p.to_owned()));
     }
+}
+
+/// Whether `name` collides with the candidate sessions.
+///
+/// Names can collide if they are empty, or if they match the name of an existing tmux session.
+fn name_collision(name: &str, items: &[Item<'_, Session>]) -> bool {
+    name.is_empty()
+        || items
+            .iter()
+            .any(|i| i.data.is_tmux() && i.data.name() == name)
 }

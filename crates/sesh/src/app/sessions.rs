@@ -110,6 +110,11 @@ impl State {
         Self::default()
     }
 
+    /// Whether the currently selected session can be closed.
+    pub(super) fn can_close(&self) -> bool {
+        self.selected.as_ref().is_some_and(Session::is_tmux)
+    }
+
     /// The session to preview. This is similar to [`State::selected`], but if the currently
     /// selected session is the new one, then that also returns `None`, as there will not be a
     /// prepared preview for this session.
