@@ -219,6 +219,7 @@ impl App {
             KC::Backspace => self.picker.pop(),
             KC::Char('u') if key.modifiers.contains(CTRL) => self.picker.clear(),
             KC::Char(c) if key.modifiers.is_empty() => self.picker.push(c),
+            KC::Char(c) if key.modifiers.contains(SHIFT) => self.picker.push(c),
 
             _ => {}
         };
