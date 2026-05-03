@@ -8,8 +8,10 @@ use std::path::Path;
 use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::style::Style;
-use ratatui::text::{Line, Span};
+use ratatui::text::Line;
+use ratatui::text::Span;
 
+use crate::ui::Highlight;
 use crate::ui::push_repo_path_spans;
 use crate::ui::push_shortcut_span;
 
@@ -46,7 +48,7 @@ impl<'r> Header<'r> {
         line += Span::raw(" repo: ");
 
         if let Some(repo) = self.repo {
-            push_repo_path_spans(&mut line, repo);
+            push_repo_path_spans(&mut line, repo, &mut Highlight::none());
         } else {
             line += Span::styled("none", dim);
         }

@@ -21,6 +21,7 @@ use ratatui::widgets::ScrollbarState;
 use crate::app::scrollbar;
 use crate::picker::Item as _;
 use crate::session::Session;
+use crate::ui::Highlight;
 
 pub(super) struct Sessions<'s> {
     new: Option<Session>,
@@ -91,7 +92,7 @@ impl<'s> Sessions<'s> {
 
         let selected = state.list.selected();
         if let Some(session) = &self.new {
-            rows.push(session.render(selected == Some(0), &[]))
+            rows.push(session.render(selected == Some(0), Highlight::none()))
         } else {
             rows.push(ListItem::new(""))
         }
@@ -102,10 +103,11 @@ impl<'s> Sessions<'s> {
             let text = item.matcher_columns[0].slice(..);
 
             self.pattern.indices(text, &mut matcher, &mut indices);
-            indices.sort_unstable();
-            indices.dedup();
 
-            rows.push(item.data.render(selected == Some(i), &indices))
+            rows.push(
+                item.data
+                    .render(selected == Some(i), Highlight::new(indices)),
+            )
         }
 
         let height = list.height as usize;

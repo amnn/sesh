@@ -12,17 +12,24 @@
 
 - [x] Highlight the matched portion of the item.
 
-- [ ] Expand contracted portion of repo paths when they are matched against.
+- [x] Expand contracted portion of repo paths when they are matched against.
 
 - [ ] Scroll the contents of session list items so that the last matched
   character is visible.
 
 ## Matching
 
-- [ ] Fuzzy match over truncated repo path (even if only compacted path is
+- [x] Fuzzy match over truncated repo path (even if only compacted path is
   rendered by default).
 
 ## Session and Repo Lifecycle
+
+- [ ]  `C-x` should not close the entire app -- just trigger a reset of some
+  kind.
+
+- [ ] Add workspace creation for new repo-backed work.
+  - Name is derived from repo name + workspace name.
+  - Create a workspace
 
 - [ ] Add `C-d` to delete the selected session/workspace.
   - Destroy the underlying workspace too, if applicable.
@@ -33,10 +40,6 @@
   - Define base resolution rules for mixed repo types.
 
 - [x] Add `M-r` to clear/reset the repo.
-
-- [ ] Add workspace creation for new repo-backed work.
-  - Name is derived from repo name + workspace name.
-  - Create a workspace
 
 ## GitHub
 

@@ -75,5 +75,28 @@ session: onecb                                                                  
 ![light](match-highlight-overlays.md.snap.2.light.svg)
 ![dark](match-highlight-overlays.md.snap.2.dark.svg)
 
+A second query matches the normally contracted `o` in the repo parent path. The
+row should still match, and rendering should expand that parent component enough
+to show and highlight the matched `o`.
+
+    :k C-u oneob
+    :snap --color
+
+```terminal
+session: oneob                                                                                     ┃
+  1/3 | [C-r] repo: none | [C-x] close                                                             ┃
+   oneob                                                                                           ┃
+▌⬤ tone~one                                 co/blue                                                ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+```
+
+![light](match-highlight-overlays.md.snap.3.light.svg)
+![dark](match-highlight-overlays.md.snap.3.dark.svg)
+
 ---
 vim: set ft=markdown:

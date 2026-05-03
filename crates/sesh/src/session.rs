@@ -12,14 +12,14 @@ use ratatui::style::Style;
 use ratatui::text::Line;
 use ratatui::text::Span;
 use ratatui::widgets::ListItem;
+use unicode_width::UnicodeWidthStr as _;
 
 use crate::cache::Preview;
 use crate::jj;
 use crate::path::TruncatedExt as _;
 use crate::picker::Item;
-use crate::picker::MatchIndices;
 use crate::tmux;
-use crate::ui::highlight;
+use crate::ui::Highlight;
 use crate::ui::push_repo_path_spans;
 
 const NAME_WIDTH: usize = 40;
@@ -154,20 +154,16 @@ impl Session {
 }
 
 impl Item for Session {
-    fn render(&self, highlighted: bool, matches: &MatchIndices) -> ListItem<'static> {
+    fn render(&self, highlighted: bool, mut hl: Highlight) -> ListItem<'static> {
         let mut line = Line::default();
         push_live_session_pip(&mut line, self.tmux, !self.alerts.is_empty(), highlighted);
-
-        let mut spans = Vec::new();
-        push_session_name_spans(&mut spans, self);
+        push_session_name_spans(&mut line, self, &mut hl);
 
         if let Some(repo) = &self.repo {
-            let padding = NAME_WIDTH.saturating_sub(self.name().len()) + 1;
-            spans.push(Span::raw(" ".repeat(padding)));
-            push_repo_path_spans(&mut spans, repo);
+            let padding = NAME_WIDTH.saturating_sub(self.name().width()) + 1;
+            line.extend(hl.highlight(Span::raw(" ".repeat(padding))));
+            push_repo_path_spans(&mut line, repo, &mut hl);
         };
-
-        line.extend(highlight(spans, matches));
 
         let item = ListItem::new(line);
         if highlighted {
@@ -185,7 +181,7 @@ impl Item for Session {
         format!(
             "{:<NAME_WIDTH$} {}",
             self.name(),
-            repo.truncated().compact().display()
+            repo.truncated().display()
         )
     }
 }
@@ -219,13 +215,17 @@ fn push_live_session_pip(line: &mut Line<'static>, live: bool, alert: bool, high
     *line += Span::styled(PIP_TMUX, style);
 }
 
-fn push_session_name_spans<'a>(spans: &mut impl Extend<Span<'a>>, session: &Session) {
-    spans.extend([Span::raw(session.name.clone())]);
+fn push_session_name_spans<'a>(
+    spans: &mut impl Extend<Span<'a>>,
+    session: &Session,
+    hl: &mut Highlight,
+) {
+    spans.extend(hl.highlight(Span::raw(session.name.clone())));
 
     if let Some(suffix) = &session.suffix {
-        spans.extend([Span::styled(
+        spans.extend(hl.highlight(Span::styled(
             format!("{SUFFIX_DELIM}{suffix}"),
             Style::new().dim(),
-        )]);
+        )));
     }
 }

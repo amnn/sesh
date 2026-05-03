@@ -35,5 +35,12 @@ not reversed, making its overlaid span styles visible in the SVG.
     :k M-up
     :snap --color
 
+A second query matches the normally contracted `o` in the repo parent path. The
+row should still match, and rendering should expand that parent component enough
+to show and highlight the matched `o`.
+
+    :k C-u oneob
+    :snap --color
+
 ---
 vim: set ft=markdown:
