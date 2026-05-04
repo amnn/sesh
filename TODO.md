@@ -14,7 +14,7 @@
 
 - [x] Expand contracted portion of repo paths when they are matched against.
 
-- [ ] Scroll the contents of session list items so that the last matched
+- [x] Scroll the contents of session list items so that the last matched
   character is visible.
 
 ## Matching
@@ -24,7 +24,7 @@
 
 ## Session and Repo Lifecycle
 
-- [ ]  `C-x` should not close the entire app -- just trigger a reset of some
+- [ ] `C-x` should not close the entire app -- just trigger a reset of some
   kind.
 
 - [ ] Add workspace creation for new repo-backed work.

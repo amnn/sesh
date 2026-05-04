@@ -23,6 +23,10 @@ remove any leftover `.snap.new` artifacts before finishing.
 Use `:snap --color` only when terminal colour is part of the behavior under
 test; plain `:snap` intentionally skips SVG artifacts.
 
+When reviewing SVG snapshot diffs, inspect the actual SVG text/span changes and
+compare old versus new before describing behavior. Distinguish visual movement
+from changes in span ownership or styling of the same visible cells.
+
 When a UI test sends keys immediately after starting or switching to a `sesh`
 pane, use an explicit `:settle` directive before `:keys` to ensure the UI has
 reached a stable state.
@@ -52,9 +56,6 @@ Default to verified claims over plausible guesses.
   when they can be checked directly.
 - Validate assumptions with repo evidence first (for example file reads,
   searches, tests, or command output) before acting on them.
-- When asked to undo or narrowly adjust a change, preserve all unrelated text
-  and operands exactly. Re-read the edited hunk or diff before reporting so the
-  response does not claim a narrower change than was actually made.
 - Do not justify or retain defensive changes from speculation. If a change is
   based on a plausible failure mode rather than observed evidence, either
   reproduce the failure, remove the change, or clearly call out the uncertainty
@@ -65,8 +66,17 @@ Default to verified claims over plausible guesses.
 - If a key fact cannot be verified safely, call out the uncertainty explicitly,
   state the recommended default, and explain what would change if that default
   is wrong.
-- Keep questions targeted and minimal: only ask when the missing fact would
-  materially change the implementation or create risk.
+
+## Change Stewardship
+
+Preserve user intent and unrelated work when changing files.
+
+- When asked to undo or narrowly adjust a change, preserve all unrelated text
+  and operands exactly. Re-read the edited hunk or diff before reporting so the
+  response does not claim a narrower change than was actually made.
+- When the user manually edits code on top of agent changes, treat those edits
+  as authoritative design feedback. Inspect the current diff and build on the
+  user's version instead of reverting to an earlier agent approach.
 
 ## Licensing
 

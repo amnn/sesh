@@ -12,16 +12,17 @@ use nucleo::Status;
 use nucleo::Utf32String;
 use nucleo::pattern::CaseMatching;
 use nucleo::pattern::Normalization;
-use ratatui::widgets::ListItem;
-
-use crate::ui::Highlight;
+use ratatui::widgets::Widget;
 
 const TICK_TIMEOUT_MS: u64 = 10;
 
 /// Items that can be displayed and matched in the picker.
 pub(crate) trait Item {
+    /// Widget used to render this item in the picker list.
+    type Widget: Widget;
+
     /// Render this item for the picker list.
-    fn render(&self, highlighted: bool, matches: Highlight) -> ListItem<'static>;
+    fn render(&self, highlighted: bool, matches: &[u32]) -> Self::Widget;
 
     /// Return the text shown for this item in the picker list.
     fn text(&self) -> String;

@@ -6,29 +6,28 @@
 use nucleo::Config;
 use nucleo::Item;
 use nucleo::Matcher;
+use nucleo::Utf32Str;
 use nucleo::pattern::Pattern;
 use ratatui::Frame;
 use ratatui::layout::Rect;
-use ratatui::style::Color;
-use ratatui::style::Style;
-use ratatui::text::Span;
-use ratatui::widgets::HighlightSpacing;
-use ratatui::widgets::List;
-use ratatui::widgets::ListItem;
 use ratatui::widgets::ListState;
 use ratatui::widgets::ScrollbarState;
+use unicode_width::UnicodeWidthStr as _;
 
+use crate::app::list::List;
+use crate::app::row::Row;
 use crate::app::scrollbar;
 use crate::picker::Item as _;
 use crate::session::Session;
-use crate::ui::Highlight;
 
+/// Session-list component, backed by fuzzy-matched rows and an optional new session candidate.
 pub(super) struct Sessions<'s> {
     new: Option<Session>,
     rest: &'s [Item<'s, Session>],
     pattern: &'s Pattern,
 }
 
+/// Persistent selection and scroll state for the session list.
 #[derive(Default)]
 pub(super) struct State {
     list: ListState,
@@ -73,7 +72,7 @@ impl<'s> Sessions<'s> {
                 Some(new.clone())
             }
 
-            // Otherwise, if this is no selection, default to the first `rest` session.
+            // Otherwise, if there is no selection, default to the first `rest` session.
             (s @ None, _, [fst, ..]) => {
                 *s = Some(1);
                 Some(fst.data.clone())
@@ -92,9 +91,9 @@ impl<'s> Sessions<'s> {
 
         let selected = state.list.selected();
         if let Some(session) = &self.new {
-            rows.push(session.render(selected == Some(0), Highlight::none()))
+            rows.push(session.render(selected == Some(0), &[]))
         } else {
-            rows.push(ListItem::new(""))
+            rows.push(Row::empty())
         }
 
         for (i, item) in (1..).zip(self.rest) {
@@ -103,11 +102,12 @@ impl<'s> Sessions<'s> {
             let text = item.matcher_columns[0].slice(..);
 
             self.pattern.indices(text, &mut matcher, &mut indices);
+            indices.sort_unstable();
+            indices.dedup();
 
-            rows.push(
-                item.data
-                    .render(selected == Some(i), Highlight::new(indices)),
-            )
+            let row = item.data.render(selected == Some(i), &indices);
+            let margin = indices.last().copied().map(|off| right_margin(text, off));
+            rows.push(row.with_right_margin(margin));
         }
 
         let height = list.height as usize;
@@ -116,16 +116,13 @@ impl<'s> Sessions<'s> {
             .viewport_content_length(height)
             .position(state.list.offset());
 
-        let sessions = List::new(rows)
-            .highlight_symbol(Span::styled("▌", Style::new().bg(Color::Red)))
-            .highlight_spacing(HighlightSpacing::Always);
-
-        f.render_stateful_widget(sessions, list, &mut state.list);
+        f.render_stateful_widget(List::new(rows), list, &mut state.list);
         f.render_stateful_widget(scrollbar::widget(), scroll, &mut scroll_state);
     }
 }
 
 impl State {
+    /// Create empty session-list state.
     pub(super) fn new() -> Self {
         Self::default()
     }
@@ -179,4 +176,12 @@ impl State {
     pub(super) fn take_selected(&mut self) -> Option<Session> {
         self.selected.take()
     }
+}
+
+/// If `text` were laid out on a single line, calculate the column that would contain the glyph
+/// after the glyph corresponding to the character at `offset` (an offset in terms of code points,
+/// not bytes).
+fn right_margin(text: Utf32Str<'_>, offset: u32) -> u16 {
+    let matched: String = text.chars().take(offset as usize + 1).collect();
+    matched.width() as u16
 }

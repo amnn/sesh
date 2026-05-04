@@ -1,0 +1,55 @@
+---
+source: crates/sesh/tests/test.rs
+expression: output
+input_file: crates/sesh/tests/cases/ui/list-match-scroll.md
+---
+# List match scroll
+
+When a fuzzy match lands beyond the visible width of a long session row, the row
+content should scroll horizontally far enough to keep the last matched character
+visible.
+
+    :bins cat jj mkdir
+
+> [!NOTE]
+> 'cat', 'jj', and 'mkdir' are available.
+
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
+    :t rename-session -t 0 runner (success)
+    :$ mkdir -p code/alpha-supercalifragilistic-expialidocious-alpha-supercalifragilistic-expialidocious-z (exit: 0)
+    :$ jj git init code/alpha-supercalifragilistic-expialidocious-alpha-supercalifragilistic-expialidocious-z (exit: 0)
+    :t new-session -d -s alpha "cat" (success)
+    :t set-option -t alpha @sesh.repo code/alpha-supercalifragilistic-expialidocious-alpha-supercalifragilistic-expialidocious-z (success)
+    :t new-session -d -s ui "sesh" (success)
+    :t resize-window -t ui:0 -x 80 -y 10 (success)
+    :pane ui:0.0
+    :settle (settled)
+
+Hide the preview, then search for the unique trailing `z`. The matched live
+session row should show the end of the long repo path rather than only its
+prefix.
+
+    :k C-p
+    :settle (settled)
+    :k z
+    :snap --color
+
+```terminal
+session: z                                                                     ┃
+  1/3 | [C-r] repo: none | [C-x] close                                         ┃
+▌⬤ alifragilistic-expialidocious-alpha-supercalifragilistic-expialidocious-z   ┃
+                                                                               ┃
+                                                                               ┃
+                                                                               ┃
+                                                                               ┃
+                                                                               ┃
+                                                                               ┃
+                                                                               ┃
+```
+
+![light](list-match-scroll.md.snap.1.light.svg)
+![dark](list-match-scroll.md.snap.1.dark.svg)
+
+---
+vim: set ft=markdown:

@@ -3,9 +3,12 @@
 
 //! Picker UI state, rendering, and input handling.
 
+pub(crate) mod row;
+
 mod block;
 mod header;
 mod layout;
+mod list;
 mod loading;
 mod preview;
 mod prompt;

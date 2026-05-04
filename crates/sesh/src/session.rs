@@ -7,13 +7,13 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Context as _;
-use ratatui::style::Color;
 use ratatui::style::Style;
+use ratatui::style::Stylize as _;
 use ratatui::text::Line;
 use ratatui::text::Span;
-use ratatui::widgets::ListItem;
 use unicode_width::UnicodeWidthStr as _;
 
+use crate::app::row::Row;
 use crate::cache::Preview;
 use crate::jj;
 use crate::path::TruncatedExt as _;
@@ -23,8 +23,7 @@ use crate::ui::Highlight;
 use crate::ui::push_repo_path_spans;
 
 const NAME_WIDTH: usize = 40;
-const PIP_REPO: &str = "  ";
-const PIP_TMUX: &str = "⬤ ";
+const SIGIL_TMUX: &str = "⬤";
 const SUFFIX_DELIM: &str = "~";
 
 /// A tmux session and optional repo metadata.
@@ -154,9 +153,11 @@ impl Session {
 }
 
 impl Item for Session {
-    fn render(&self, highlighted: bool, mut hl: Highlight) -> ListItem<'static> {
+    type Widget = Row;
+
+    fn render(&self, highlighted: bool, matches: &[u32]) -> Self::Widget {
+        let mut hl = Highlight::new(matches.to_vec());
         let mut line = Line::default();
-        push_live_session_pip(&mut line, self.tmux, !self.alerts.is_empty(), highlighted);
         push_session_name_spans(&mut line, self, &mut hl);
 
         if let Some(repo) = &self.repo {
@@ -165,11 +166,16 @@ impl Item for Session {
             push_repo_path_spans(&mut line, repo, &mut hl);
         };
 
-        let item = ListItem::new(line);
-        if highlighted {
-            item.style(Style::new().reversed())
+        let row = Row::new(line);
+        let alert = !self.alerts.is_empty();
+        if !self.tmux {
+            row
+        } else if alert && highlighted {
+            row.with_sigil(Span::raw(SIGIL_TMUX).on_green())
+        } else if alert {
+            row.with_sigil(Span::raw(SIGIL_TMUX).green())
         } else {
-            item
+            row.with_sigil(Span::raw(SIGIL_TMUX).dim())
         }
     }
 
@@ -196,23 +202,6 @@ impl Preview for Session {
         jj::log(repo)
             .with_context(|| format!("failed to build preview for repo '{}'", repo.display()))
     }
-}
-
-fn push_live_session_pip(line: &mut Line<'static>, live: bool, alert: bool, highlighted: bool) {
-    if !live {
-        *line += Span::raw(PIP_REPO);
-        return;
-    }
-
-    let style = if alert && highlighted {
-        Style::new().bg(Color::Green)
-    } else if alert {
-        Style::new().fg(Color::Green)
-    } else {
-        Style::new().dim()
-    };
-
-    *line += Span::styled(PIP_TMUX, style);
 }
 
 fn push_session_name_spans<'a>(
