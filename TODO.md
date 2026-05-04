@@ -1,27 +1,5 @@
 # TODO
 
-## Rendering
-
-- [x] Generate a line/entry for the "new" session instead of having a dedicated
-  key combination to create it.
-  - [x] Introduce key combinations to go to the top or bottom of the session
-    list instead (this session will go at the top).
-  - [x] Leave an empty row (visual spacer) at the top of the list if a valid
-    new session cannot be created, to prevent the other results from jumping
-    around.
-
-- [x] Highlight the matched portion of the item.
-
-- [x] Expand contracted portion of repo paths when they are matched against.
-
-- [x] Scroll the contents of session list items so that the last matched
-  character is visible.
-
-## Matching
-
-- [x] Fuzzy match over truncated repo path (even if only compacted path is
-  rendered by default).
-
 ## Session and Repo Lifecycle
 
 - [ ] `C-x` should not close the entire app -- just trigger a reset of some
@@ -38,8 +16,6 @@
 - [ ] Add `C-b` to pick the base commit used for new workspaces.
   - Label this as `base:` in the header and user-facing text.
   - Define base resolution rules for mixed repo types.
-
-- [x] Add `M-r` to clear/reset the repo.
 
 ## GitHub
 
