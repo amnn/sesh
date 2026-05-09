@@ -8,6 +8,7 @@ use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Context as _;
+use async_trait::async_trait;
 use ratatui::style::Style;
 use ratatui::style::Stylize as _;
 use ratatui::text::Line;
@@ -230,14 +231,16 @@ impl Item for Session {
     }
 }
 
+#[async_trait]
 impl Preview for Session {
     /// Render a `jj log` preview for this session's attached repository.
-    fn preview(&self) -> anyhow::Result<String> {
+    async fn preview(&self) -> anyhow::Result<String> {
         let Some(repo) = &self.repo else {
             return Ok(String::new());
         };
 
         jj::log(repo)
+            .await
             .with_context(|| format!("failed to build preview for repo '{}'", repo.display()))
     }
 }

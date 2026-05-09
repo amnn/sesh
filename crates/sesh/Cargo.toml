@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 ansi-to-tui.workspace = true
 anyhow.workspace = true
+async-trait.workspace = true
 clap.workspace = true
 crossterm.workspace = true
 dashmap.workspace = true

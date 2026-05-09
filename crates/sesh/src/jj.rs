@@ -6,10 +6,9 @@
 use std::collections::BTreeSet;
 use std::path::Path;
 use std::path::PathBuf;
-use std::process::Command;
-
 use anyhow::Context as _;
 use anyhow::ensure;
+use tokio::process::Command;
 use which::which;
 
 /// Validate that `jj` is available on `$PATH`.
@@ -19,7 +18,7 @@ pub fn ensure() -> anyhow::Result<()> {
 }
 
 /// Fetch `jj log` output from the repository at `repo`.
-pub fn log(repo: &Path) -> anyhow::Result<String> {
+pub async fn log(repo: &Path) -> anyhow::Result<String> {
     let output = Command::new("jj")
         .arg("log")
         .arg("-R")
@@ -27,6 +26,7 @@ pub fn log(repo: &Path) -> anyhow::Result<String> {
         .arg("--color")
         .arg("always")
         .output()
+        .await
         .with_context(|| format!("failed to run 'jj log' for repo '{}'", repo.display()))?;
 
     Ok(if output.status.success() {
