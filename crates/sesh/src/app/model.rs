@@ -48,9 +48,11 @@ impl Model {
             let mut session = Session::from_repo(repo)?;
 
             // Make sure the name that will be used for a new session associated with this repo
-            // will be unambiguous by adding a suffix.
+            // is disambiguated from names already used by live tmux sessions. Repository-backed
+            // candidates do not reserve names from each other; their paths distinguish them in the
+            // picker, and they should all use the same suffix for a given live-session set.
             let mut i = 1;
-            while !model.seen_names.insert(session.name()) {
+            while model.seen_names.contains(&session.name()) {
                 session.set_suffix(i.to_string());
                 i += 1;
             }
