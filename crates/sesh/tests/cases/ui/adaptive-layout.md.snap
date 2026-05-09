@@ -33,7 +33,7 @@ separator between the session list and preview.
 ```terminal
 session: alpha
   1/3 | [C-r] repo: none
-▌  alpha                                    alpha                                                                      ┃
+▌  alpha                                    ~/alpha                                                                    ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 @  alpha commit
 ◆
@@ -52,7 +52,7 @@ preview side by side.
 ```terminal
 session: alpha                                                                                             ┃@  alpha commit
   1/3 | [C-r] repo: none                                                                                   ┃◆
-▌  alpha                                    alpha                                                          ┃
+▌  alpha                                    ~/alpha                                                        ┃
                                                                                                            ┃
                                                                                                            ┃
                                                                                                            ┃

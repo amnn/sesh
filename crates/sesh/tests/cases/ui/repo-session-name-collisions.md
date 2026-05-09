@@ -19,7 +19,8 @@ suffixes.
 
 Launch the picker with both repos discoverable. Both inactive repo rows should
 show `beta~1`; the second repo should not be assigned `beta~2` just because
-the first repo candidate already uses `beta~1`.
+the first repo candidate already uses `beta~1`. Similarly the new-session row
+will also show `beta~1`:
 
     :t new-session -d -s ui "sesh -r '*/beta'"
     :t resize-window -t ui:0 -x 120 -y 12

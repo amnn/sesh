@@ -38,23 +38,15 @@ pub struct Session {
 }
 
 impl Session {
-    /// Construct a potential session from a repository path.
-    ///
-    /// The session's root name is derived from the repository's root directory name.
-    pub fn from_repo(path: PathBuf) -> anyhow::Result<Self> {
-        let name = path
-            .file_name()
-            .context("invalid repo: no directory name")?
-            .to_string_lossy()
-            .into_owned();
-
-        Ok(Self {
+    /// Construct a potential session from a repository path and session name.
+    pub fn from_repo(name: String, path: PathBuf) -> Self {
+        Self {
             name,
             repo: Some(path),
             suffix: None,
             alerts: vec![],
             tmux: false,
-        })
+        }
     }
 
     /// Construct a potential session from information extracted from `tmux`.

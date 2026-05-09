@@ -41,7 +41,7 @@ Launch the picker and select the discovered repo entry.
 ```terminal
 session: beta
   1/3 | [C-r] repo: none
-▌  beta                                     beta                                                                       ┃
+▌  beta                                     ~/beta                                                                     ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 @
 ◆

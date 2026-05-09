@@ -64,7 +64,7 @@ including the attached `alpha-live` session and the glob-discovered repos.
 
 ```terminal
 session:
-  6/6 | [C-r] repo: none | [C-x] close
+  7/7 | [C-r] repo: none | [C-x] close
                                                                                                                        ┃
 ▌⬤ alpha-live                               alpha                                                                      │
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -86,9 +86,9 @@ move away from the initial attached-session result and onto the discovered
 
 ```terminal
 session: beta
-  1/6 | [C-r] repo: none
+  1/7 | [C-r] repo: none
    beta                                                                                                                ┃
-▌  beta                                     beta                                                                       ┃
+▌  beta                                     ~/beta                                                                     ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 @  beta commit
 ◆
@@ -107,9 +107,9 @@ This snapshot shows the picker after clearing the query with `C-u` and typing
 
 ```terminal
 session: mono
-  2/6 | [C-r] repo: none
+  2/7 | [C-r] repo: none
    mono                                                                                                                ┃
-▌  mono                                     mono                                                                       │
+▌  mono                                     ~/mono                                                                     │
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 @  mono commit
 │ ○  mono workspace commit

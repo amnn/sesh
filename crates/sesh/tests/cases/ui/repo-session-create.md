@@ -33,7 +33,7 @@ the control-mode client.
 
     :t display-message -p '#{client_session}'
 
-    :t list-sessions -F '#{session_name}:#{@sesh.repo}'
+    :t list-sessions -F '#{session_name}:#{b:@sesh.repo}'
 
 ---
 vim: set ft=markdown:

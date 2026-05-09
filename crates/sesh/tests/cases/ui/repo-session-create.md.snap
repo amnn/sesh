@@ -36,7 +36,7 @@ Type a query that selects `beta`, wait for the picker to redraw, and accept it.
 ```terminal
 session: beta
   1/3 | [C-r] repo: none
-▌  beta                                     beta                                                                       ┃
+▌  beta                                     ~/beta                                                                     ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 @  beta commit
 ◆
@@ -58,7 +58,7 @@ the control-mode client.
 beta
 ```
 
-    :t list-sessions -F '#{session_name}:#{@sesh.repo}' (success)
+    :t list-sessions -F '#{session_name}:#{b:@sesh.repo}' (success)
 
 ```
 beta:beta

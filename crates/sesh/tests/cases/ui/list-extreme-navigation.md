@@ -44,8 +44,8 @@ The new-session row is selectable, so `M-up` jumps to that row.
     :snap
 
 A query for `ta` also keeps multiple matches, but it exactly names the live
-`ta` session. The new-session row is replaced by an unselectable spacer, so
-`M-up` jumps to the first existing match instead.
+`ta` session. The new-session row contains a disambiguated name, so `M-up`
+still jumps to it.
 
     :k C-u ta
     :snap

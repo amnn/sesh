@@ -3,9 +3,11 @@
 
 //! Helpers for interacting with `jj` repositories.
 
+use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::path::Path;
 use std::path::PathBuf;
+
 use anyhow::Context as _;
 use anyhow::ensure;
 use tokio::process::Command;
@@ -54,6 +56,7 @@ pub fn repos(globs: &[String]) -> anyhow::Result<BTreeSet<PathBuf>> {
         for path in glob::glob(pattern).with_context(|| format!("invalid glob: '{pattern}'"))? {
             if let Ok(path) = path
                 && path.join(".jj").is_dir()
+                && let Ok(path) = path.canonicalize()
             {
                 repos.insert(path);
             }
@@ -61,6 +64,48 @@ pub fn repos(globs: &[String]) -> anyhow::Result<BTreeSet<PathBuf>> {
     }
 
     Ok(repos)
+}
+
+/// List all workspaces registered for the repository containing `repo`.
+pub async fn workspaces(repo: &Path) -> anyhow::Result<BTreeMap<String, Option<PathBuf>>> {
+    let output = Command::new("jj")
+        .args(["workspace", "list"])
+        .arg("-R")
+        .arg(repo)
+        .arg("--no-pager")
+        .args(["--color", "never"])
+        .args(["--template", "name ++ '\t' ++ root ++ '\n'"])
+        .output()
+        .await
+        .with_context(|| {
+            format!(
+                "failed to run 'jj workspace list' for repo '{}'",
+                repo.display()
+            )
+        })?;
+
+    ensure!(
+        output.status.success(),
+        "error running 'jj workspace list': {}",
+        String::from_utf8_lossy(&output.stderr).trim()
+    );
+
+    let mut workspaces = BTreeMap::new();
+    for line in String::from_utf8_lossy(&output.stdout).lines() {
+        let Some((name, root)) = line.split_once('\t') else {
+            continue;
+        };
+
+        let root = if root.starts_with("<Error:") {
+            None
+        } else {
+            Some(PathBuf::from(root))
+        };
+
+        workspaces.insert(name.to_owned(), root);
+    }
+
+    Ok(workspaces)
 }
 
 #[cfg(test)]
@@ -81,6 +126,20 @@ mod tests {
         fs::create_dir_all(&nested).unwrap();
 
         assert_eq!(repo_root(&nested), Some(repo));
+    }
+
+    #[test]
+    fn returns_canonical_repo_paths_from_globs() {
+        let temp = tempdir().unwrap();
+        let repo = temp.path().join("repo");
+
+        fs::create_dir_all(repo.join(".jj")).unwrap();
+
+        let pattern = repo.display().to_string();
+        assert_eq!(
+            repos(&[pattern]).unwrap(),
+            BTreeSet::from([repo.canonicalize().unwrap()])
+        );
     }
 
     #[test]

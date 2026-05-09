@@ -29,7 +29,7 @@ The client should switch to the new session, and the session should carry the
 selected repo metadata.
 
     :t display-message -p '#{client_session}'
-    :t list-sessions -F '#{session_name}:#{@sesh.repo}'
+    :t list-sessions -F '#{session_name}:#{b:@sesh.repo}'
 
 ---
 vim: set ft=markdown:

@@ -2,8 +2,8 @@
 
 This scenario creates several repo-backed picker entries, with both live tmux
 sessions and discoverable repos that do not have live sessions. It verifies that
-the ephemeral new-session row is only selectable when the query is non-empty and
-not an exact live session name.
+the ephemeral new-session row is selectable when the query is non-empty, with
+names disambiguated from live sessions as needed.
 
     :bins jj cat
 
@@ -45,17 +45,14 @@ because `alp` is not an exact live session name.
     :k alp
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
-Completing the live session name replaces the new-session row with a spacer.
-Pressing `C-n` again should do nothing and leave the picker open.
+Completing the live session name causes the new-session row's name to become
+disambiguated.
 
     :k ha
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
 
-    :k C-n
-    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
-
-Completing the name of the non-live `beta` repo makes the new-session row
-selectable again, because there is no exact live session named `beta`.
+Completing the name of the non-live `beta` repo removes the disambiguation from
+the new-session row, because there is no live session named `beta`.
 
     :k C-u beta
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"

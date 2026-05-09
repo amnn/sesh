@@ -53,7 +53,7 @@ Move the cursor to the discovered `beta` repo row.
 ```terminal
 session:
   5/5 | [C-r] repo: ~/alpha
-▌  beta                                     ../beta                                      ┃
+▌  beta                                     ~/beta                                       ┃
 ──────────────────────────────────────────────────────────────────────────────────────────
 @  beta commit
 ◆
@@ -71,8 +71,8 @@ to `beta` while the selected row stays on `beta` after the picker refreshes.
 
 ```terminal
 session:
-  5/5 | [C-r] repo: ../beta
-▌  beta                                     ../beta                                      ┃
+  5/5 | [C-r] repo: ~/beta
+▌  beta                                     ~/beta                                       ┃
 ──────────────────────────────────────────────────────────────────────────────────────────
 @  beta commit
 ◆
@@ -91,8 +91,8 @@ filtered list.
 
 ```terminal
 session: a
-  3/5 | [C-r] repo: ../gamma
-▌  gamma                                    ../gamma                                     ┃
+  3/5 | [C-r] repo: ~/gamma
+▌  gamma                                    ~/gamma                                      ┃
 ──────────────────────────────────────────────────────────────────────────────────────────
 @  gamma commit
 ◆
@@ -110,7 +110,7 @@ Press `M-r` to clear the current repo without changing the selected row.
 ```terminal
 session: a
   3/5 | [C-r] repo: none
-▌  gamma                                    ../gamma                                     ┃
+▌  gamma                                    ~/gamma                                      ┃
 ──────────────────────────────────────────────────────────────────────────────────────────
 @  gamma commit
 ◆

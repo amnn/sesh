@@ -32,8 +32,8 @@ new-session row for `zeta`.
 
 ```terminal
 session: zeta
-  0/3 | [C-r] repo: beta
-▌  zeta                                     beta                                                                       ┃
+  0/3 | [C-r] repo: ~/beta
+▌  beta/zeta                                ~/beta                                                                     ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 
@@ -52,13 +52,13 @@ selected repo metadata.
     :t display-message -p '#{client_session}' (success)
 
 ```
-zeta
+beta/zeta
 ```
-    :t list-sessions -F '#{session_name}:#{@sesh.repo}' (success)
+    :t list-sessions -F '#{session_name}:#{b:@sesh.repo}' (success)
 
 ```
+beta/zeta:beta
 runner:
-zeta:beta
 ```
 
 ---

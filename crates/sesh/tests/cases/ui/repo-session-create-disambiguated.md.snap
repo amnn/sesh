@@ -34,7 +34,7 @@ session with the same name.
 ```terminal
 session: beta
   2/4 | [C-r] repo: none
-▌  beta~1                                   beta                                                                       ┃
+▌  beta~1                                   ~/beta                                                                     ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 @  beta commit
 ◆
@@ -58,7 +58,7 @@ session, and switch the client there.
 ```
 beta~1
 ```
-    :t list-sessions -F '#{session_name}:#{@sesh.repo}' (success)
+    :t list-sessions -F '#{session_name}:#{b:@sesh.repo}' (success)
 
 ```
 beta:
