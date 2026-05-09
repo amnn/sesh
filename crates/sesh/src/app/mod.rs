@@ -10,6 +10,7 @@ mod header;
 mod layout;
 mod list;
 mod loading;
+mod model;
 mod preview;
 mod prompt;
 mod scrollbar;
@@ -25,7 +26,6 @@ use crossterm::event::KeyCode;
 use crossterm::event::KeyEvent;
 use crossterm::event::KeyEventKind;
 use crossterm::event::KeyModifiers;
-use nucleo::Item;
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 
@@ -56,6 +56,7 @@ pub enum Action {
 /// Session picker state, caches, and UI behavior.
 pub struct App {
     load: loading::State,
+    model: model::Model,
     picker: Picker<Session>,
     preview: preview::State,
     repo: Option<PathBuf>,
@@ -63,20 +64,25 @@ pub struct App {
 }
 
 impl App {
-    /// Construct application state for the provided repo context.
-    pub fn new(sessions: Vec<Session>, repo: Option<PathBuf>) -> Self {
+    /// Create a new application.
+    ///
+    /// `globs` specify where to look for jj repositories, and `repo` is an optional path to a
+    /// "current" repository. It does not need to be one of the discovered repositories.
+    pub async fn new(globs: &[String], repo: Option<PathBuf>) -> anyhow::Result<Self> {
+        let model = model::Model::discover(globs).await?;
         let load = loading::State::new();
-        let picker = Picker::new(sessions.clone());
-        let preview = preview::State::new(sessions);
+        let picker = Picker::new(model.sessions().to_vec());
+        let preview = preview::State::new(model.sessions().to_vec());
         let sessions = sessions::State::new();
 
-        Self {
+        Ok(Self {
             load,
+            model,
             picker,
             preview,
             repo,
             sessions,
-        }
+        })
     }
 
     /// Run the interactive picker for discovered sessions.
@@ -120,9 +126,8 @@ impl App {
         f.render_widget(prompt::widget(query), l.prompt);
         f.render_stateful_widget(Loading::new(status.running), l.loading, &mut self.load);
 
-        let can_new = !name_collision(query, &items);
         let sessions = Sessions::new(
-            can_new.then(|| Session::new(query.to_owned(), self.repo.clone())),
+            self.model.new_session(query, self.repo.as_deref()),
             &items,
             snapshot.pattern().column_pattern(0),
         );
@@ -245,14 +250,4 @@ impl App {
             .selected()
             .and_then(|s| s.repo().map(|p| p.to_owned()));
     }
-}
-
-/// Whether `name` collides with the candidate sessions.
-///
-/// Names can collide if they are empty, or if they match the name of an existing tmux session.
-fn name_collision(name: &str, items: &[Item<'_, Session>]) -> bool {
-    name.is_empty()
-        || items
-            .iter()
-            .any(|i| i.data.is_tmux() && i.data.name() == name)
 }

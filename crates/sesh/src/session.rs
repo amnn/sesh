@@ -3,7 +3,6 @@
 
 //! Session model and picker rendering.
 
-use std::collections::BTreeSet;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -31,51 +30,14 @@ const SUFFIX_DELIM: &str = "~";
 /// A tmux session and optional repo metadata.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Session {
-    alerts: Vec<String>,
     name: String,
     repo: Option<PathBuf>,
     suffix: Option<String>,
+    alerts: Vec<String>,
     tmux: bool,
 }
 
 impl Session {
-    /// Find all sessions, between active tmux sessions and potential sessions from repos on disk.
-    pub async fn all(repos: &[String]) -> anyhow::Result<Vec<Self>> {
-        let mut sessions = vec![];
-        let mut seen_repos = BTreeSet::new();
-        let mut seen_names = BTreeSet::new();
-
-        // Add all the live sessions from tmux.
-        for (name, info) in tmux::sessions().await? {
-            seen_names.insert(name.clone());
-            seen_repos.extend(info.repo.clone());
-            sessions.push(Session::from_tmux(name, info.repo, info.alerts))
-        }
-
-        // Add an entry for every repo found, as long as it's not already associated with a
-        // live tmux session.
-        for repo in jj::repos(repos)? {
-            let inserted = seen_repos.insert(repo.clone());
-            if !inserted {
-                continue;
-            }
-
-            let mut session = Session::from_repo(repo)?;
-
-            // Make sure the name that will be used for a new session associated with this repo
-            // will be unambiguous by adding a suffix.
-            let mut i = 1;
-            while !seen_names.insert(session.name()) {
-                session.set_suffix(i.to_string());
-                i += 1;
-            }
-
-            sessions.push(session);
-        }
-
-        Ok(sessions)
-    }
-
     /// Construct a potential session from a repository path.
     ///
     /// The session's root name is derived from the repository's root directory name.
@@ -87,10 +49,10 @@ impl Session {
             .into_owned();
 
         Ok(Self {
-            alerts: vec![],
             name,
             repo: Some(path),
             suffix: None,
+            alerts: vec![],
             tmux: false,
         })
     }
@@ -111,10 +73,10 @@ impl Session {
             }
         } else {
             Self {
-                alerts,
                 name,
                 repo,
                 suffix: None,
+                alerts,
                 tmux: true,
             }
         }

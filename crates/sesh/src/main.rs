@@ -11,7 +11,6 @@ use clap::Parser;
 
 use sesh::Action;
 use sesh::App;
-use sesh::Session;
 use sesh::config::SeshConfig;
 use sesh::jj;
 use sesh::tmux;
@@ -43,8 +42,7 @@ async fn main() -> anyhow::Result<()> {
     let cwd = env::current_dir().context("failed to resolve current working directory")?;
     let current_repo = jj::repo_root(&cwd);
 
-    let sessions = Session::all(&args.repos).await?;
-    let app = App::new(sessions, current_repo);
+    let app = App::new(&args.repos, current_repo).await?;
 
     match app.run()? {
         Action::Cancel => Ok(()),
