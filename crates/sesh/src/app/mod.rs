@@ -69,7 +69,7 @@ impl App {
     /// `globs` specify where to look for jj repositories, and `repo` is an optional path to a
     /// "current" repository. It does not need to be one of the discovered repositories.
     pub async fn new(globs: &[String], repo: Option<PathBuf>) -> anyhow::Result<Self> {
-        let model = model::Model::discover(globs).await?;
+        let model = model::Model::discover(globs, repo.as_deref()).await?;
         let load = loading::State::new();
         let picker = Picker::new(model.sessions().to_vec());
         let preview = preview::State::new(model.sessions().to_vec());
@@ -245,9 +245,6 @@ impl App {
     /// If there is no selection, or the selected session has no associated repo, the current repo
     /// is cleared.
     fn set_current_repo(&mut self) {
-        self.repo = self
-            .sessions
-            .selected()
-            .and_then(|s| s.repo().map(|p| p.to_owned()));
+        self.repo = self.sessions.selected().and_then(Session::repo);
     }
 }

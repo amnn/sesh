@@ -13,6 +13,38 @@ use anyhow::ensure;
 use tokio::process::Command;
 use which::which;
 
+/// The conventional workspace name created by `jj git init`.
+pub const DEFAULT_WORKSPACE: &str = "default";
+
+/// Create a new workspace in `destination`, named `name`, with working copy based on `trunk()`.
+pub async fn add_workspace(repo: &Path, destination: &Path, name: &str) -> anyhow::Result<()> {
+    let output = Command::new("jj")
+        .args(["workspace", "add"])
+        .arg("-R")
+        .arg(repo)
+        .arg("--name")
+        .arg(name)
+        .arg("--revision")
+        .arg("trunk()")
+        .arg(destination)
+        .output()
+        .await
+        .with_context(|| {
+            format!(
+                "failed to run 'jj workspace add' for repo '{}'",
+                repo.display()
+            )
+        })?;
+
+    ensure!(
+        output.status.success(),
+        "error running 'jj workspace add': {}",
+        String::from_utf8_lossy(&output.stderr).trim()
+    );
+
+    Ok(())
+}
+
 /// Validate that `jj` is available on `$PATH`.
 pub fn ensure() -> anyhow::Result<()> {
     ensure!(which("jj").is_ok(), "'jj' not found in PATH");
@@ -67,7 +99,9 @@ pub fn repos(globs: &[String]) -> anyhow::Result<BTreeSet<PathBuf>> {
 }
 
 /// List all workspaces registered for the repository containing `repo`.
-pub async fn workspaces(repo: &Path) -> anyhow::Result<BTreeMap<String, Option<PathBuf>>> {
+///
+/// The default workspace name is normalized to `None`; named workspaces are `Some(name)`.
+pub async fn workspaces(repo: &Path) -> anyhow::Result<BTreeMap<Option<String>, Option<PathBuf>>> {
     let output = Command::new("jj")
         .args(["workspace", "list"])
         .arg("-R")
@@ -102,7 +136,8 @@ pub async fn workspaces(repo: &Path) -> anyhow::Result<BTreeMap<String, Option<P
             Some(PathBuf::from(root))
         };
 
-        workspaces.insert(name.to_owned(), root);
+        let normalized = (name != DEFAULT_WORKSPACE).then(|| name.to_owned());
+        workspaces.insert(normalized, root);
     }
 
     Ok(workspaces)
@@ -120,7 +155,7 @@ mod tests {
     fn finds_repo_root_from_nested_directory() {
         let temp = tempdir().unwrap();
         let repo = temp.path().join("repo");
-        let nested = repo.join("src/nested");
+        let nested = repo.join("src").join("nested");
 
         fs::create_dir_all(repo.join(".jj")).unwrap();
         fs::create_dir_all(&nested).unwrap();

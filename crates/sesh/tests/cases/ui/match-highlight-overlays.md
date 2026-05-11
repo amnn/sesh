@@ -1,7 +1,7 @@
 # Match highlight overlays
 
 Fuzzy match highlighting should overlay the styles already used by each part of
-a session row. This case matches characters in the dim session suffix, the dim
+a session row. This case matches characters in the live session name, the dim
 repo parent path, and the plain repo basename; the linked SVG snapshot preserves
 those combined styles.
 
@@ -21,8 +21,8 @@ those combined styles.
     :settle
 
 Hide the preview so the color snapshot focuses on the list row. The query
-`onecb` crosses the suffix (`one`), compact repo parent (`c`), and basename
-(`b`) spans.
+`onecb` crosses the live session name (`one`), compact repo parent (`c`), and
+basename (`b`) spans.
 
     :k C-p
     :settle

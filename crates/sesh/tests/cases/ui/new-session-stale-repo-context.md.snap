@@ -1,0 +1,74 @@
+---
+source: crates/sesh/tests/test.rs
+expression: output
+input_file: crates/sesh/tests/cases/ui/new-session-stale-repo-context.md
+---
+# New session stale repo context
+
+If the current repo context comes from stale tmux metadata and is not actually a
+jj repo, accepting a new session should use that path as the tmux working
+directory without attempting workspace creation or attaching repo metadata.
+
+    :bins jj tmux mkdir cat sh sed
+
+> [!NOTE]
+> 'jj', 'tmux', 'mkdir', 'cat', 'sh', and 'sed' are available.
+
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
+    :t rename-session -t 0 runner (success)
+    :$ mkdir plain (exit: 0)
+    :t new-session -d -s plain "cat" (success)
+    :t set-option -t plain @sesh.repo plain (success)
+    :t new-session -d -s ui "sesh" (success)
+    :t resize-window -t ui:0 -x 120 -y 10 (success)
+    :pane ui:0.0
+    :settle -d 2s (settled)
+
+Select the live session with stale repo metadata, set it as the current repo
+context, then accept a new-session row.
+
+    :k plain C-r C-u zeta
+    :snap
+
+```terminal
+session: zeta
+  0/3 | [C-r] repo: plain
+▌  zeta                                                                                                                ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+```
+
+    :k Enter
+    :settle -d 2s (settled)
+
+The new tmux session should start in `plain`, but it should not record stale
+repo metadata because no jj workspace was created.
+
+    :t display-message -p '#{client_session}' (success)
+
+```
+zeta
+```
+
+    :$ sh -c 'tmux display-message -p -t zeta:0 "#{pane_current_path}" | sed "s#$PWD/##g"' (exit: 0)
+
+```stdout
+plain
+```
+
+    :t list-sessions -F '#{session_name}:#{b:@sesh.repo}' (success)
+
+```
+plain:plain
+runner:
+zeta:
+```
+
+---
+vim: set ft=markdown:

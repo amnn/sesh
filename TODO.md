@@ -5,11 +5,11 @@
 - [ ] `C-x` should not close the entire app -- just trigger a reset of some
   kind.
 
-- [ ] Add workspace creation for new repo-backed work.
+- [x] Add workspace creation for new repo-backed work.
   - Name is derived from repo name + workspace name.
   - Create a workspace
 
-- [ ] Sanitize tmux session names (`:` and `.` are replaced with `_`).
+- [x] Sanitize tmux session names (`:` and `.` are replaced with `_`).
 
 - [x] Apply name deconflicting logic to new sessions, instead of not
   allowing them to be created at all.

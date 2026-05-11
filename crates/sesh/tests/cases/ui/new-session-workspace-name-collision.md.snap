@@ -1,31 +1,32 @@
 ---
 source: crates/sesh/tests/test.rs
 expression: output
-input_file: crates/sesh/tests/cases/ui/new-session-create-with-repo.md
+input_file: crates/sesh/tests/cases/ui/new-session-workspace-name-collision.md
 ---
-# New session create with repo
+# New session workspace name collision
 
-Selecting the ephemeral new-session row uses the current repo context when
-creating a new named session, so the new session starts in that repo and records
-`@sesh.repo` metadata.
+When a new repo-backed session would create a workspace whose name already
+exists, the workspace name is disambiguated before rendering and creation. The
+session name and workspace path are both derived from the disambiguated name.
 
-    :bins jj tmux
+    :bins jj tmux sh sed
 
 > [!NOTE]
-> 'jj', and 'tmux' are available.
+> 'jj', 'tmux', 'sh', and 'sed' are available.
 
     :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
 
     :t rename-session -t 0 runner (success)
     :$ jj git init beta (exit: 0)
+    :$ jj workspace add -R beta --name zeta beta.zeta (exit: 0)
     :$ jj describe -R beta -m "beta commit" (exit: 0)
     :t new-session -d -s ui "sesh -r beta" (success)
     :t resize-window -t ui:0 -x 120 -y 10 (success)
     :pane ui:0.0
     :settle -d 2s (settled)
 
-Select the discovered repo, set it as the current repo context, then accept the
-new-session row for `zeta`.
+Select the default repo, set it as the current repo context, then type the name
+of an existing sibling workspace.
 
     :k beta C-r C-u zeta
     :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
@@ -33,7 +34,7 @@ new-session row for `zeta`.
 ```terminal
 session: zeta
   0/3 | [C-r] repo: ~/beta
-▌  beta/zeta                                ~/beta.zeta                                                                ┃
+▌  beta/zeta~1                              ~/beta.zeta~1                                                              ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
 
@@ -46,20 +47,27 @@ session: zeta
     :k Enter
     :settle -d 2s (settled)
 
-The client should switch to the new session, and the session should carry the
-selected repo metadata.
+Accepting the row should create and switch to the disambiguated workspace.
 
     :t display-message -p '#{client_session}' (success)
 
 ```
-beta/zeta
+beta/zeta~1
 ```
 
     :t list-sessions -F '#{session_name}:#{b:@sesh.repo}' (success)
 
 ```
-beta/zeta:beta.zeta
+beta/zeta~1:beta.zeta~1
 runner:
+```
+
+    :$ sh -c 'jj workspace list -R beta --no-pager --color never --template "name ++ \"\\t\" ++ root ++ \"\\n\"" | sed "s#$PWD/##g"' (exit: 0)
+
+```stdout
+default	beta
+zeta	beta.zeta
+"zeta~1"	beta.zeta~1
 ```
 
 ---
