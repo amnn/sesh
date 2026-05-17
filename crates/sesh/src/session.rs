@@ -326,9 +326,9 @@ impl Item for Session {
         };
 
         if !alerts.is_empty() && highlighted {
-            row.with_sigil(Span::raw(SIGIL_TMUX).on_green())
+            row.with_sigil(Span::raw(SIGIL_TMUX).on_light_green())
         } else if !alerts.is_empty() {
-            row.with_sigil(Span::raw(SIGIL_TMUX).green())
+            row.with_sigil(Span::raw(SIGIL_TMUX).light_green())
         } else {
             row.with_sigil(Span::raw(SIGIL_TMUX).dim())
         }
