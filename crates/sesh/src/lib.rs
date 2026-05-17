@@ -15,5 +15,5 @@ mod session;
 mod terminal;
 mod ui;
 
-pub use crate::app::Action;
 pub use crate::app::App;
+pub use crate::app::Context;

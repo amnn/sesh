@@ -9,8 +9,8 @@ use std::path::PathBuf;
 use anyhow::Context as _;
 use clap::Parser;
 
-use sesh::Action;
 use sesh::App;
+use sesh::Context;
 use sesh::config::SeshConfig;
 use sesh::jj;
 use sesh::tmux;
@@ -40,13 +40,12 @@ async fn main() -> anyhow::Result<()> {
     tmux::ensure()?;
 
     let cwd = env::current_dir().context("failed to resolve current working directory")?;
-    let current_repo = jj::repo_root(&cwd);
+    let repo = jj::repo_root(&cwd);
 
-    let app = App::new(&args.repos, current_repo).await?;
+    let context = Context {
+        globs: &args.repos,
+        setup: &config.tmux.setup,
+    };
 
-    match app.run()? {
-        Action::Cancel => Ok(()),
-        Action::Close(session) => tmux::kill_session(&session.name()).await,
-        Action::Switch(session) => session.switch(&cwd, &config.tmux.setup).await,
-    }
+    App::new(repo).run(&cwd, context).await
 }

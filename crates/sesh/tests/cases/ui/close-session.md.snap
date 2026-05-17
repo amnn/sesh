@@ -5,33 +5,36 @@ input_file: crates/sesh/tests/cases/ui/close-session.md
 ---
 # Close session
 
-`C-x` closes the selected live tmux session. The shortcut is only offered for
-live tmux sessions, not repo-only entries.
+`C-x` closes the selected live tmux session, then refreshes the session list
+without closing the app or resetting the query.
 
     :bins jj tmux cat sleep
 
 > [!NOTE]
 > 'jj', 'tmux', 'cat', and 'sleep' are available.
 
-    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
-
     :t rename-session -t 0 runner (success)
-    :$ jj git init beta (exit: 0)
-    :$ jj describe -R beta -m "beta commit" (exit: 0)
     :t new-session -d -s alpha "cat" (success)
-    :t new-session -d -s ui "sesh -r beta; cat" (success)
-    :t resize-window -t ui:0 -x 120 -y 10 (success)
+    :t new-session -d -s alpine "cat" (success)
+    :t new-session -d -s ui "sesh; cat" (success)
+    :t resize-window -t ui:0 -x 120 -y 14 (success)
     :pane ui:0.0
+    :settle (settled)
 
-The initial selection is the live `alpha` session, so the header offers close.
+Filter to the matching sessions. The first match, `alpha`, is selected.
 
-    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+    :k alp
+    :snap
 
 ```terminal
-session:
-  4/4 | [C-r] repo: none | [C-x] close
+session: alp
+  2/4 | [C-r] repo: none | [C-x] close
+   alp                                                                                                                 ┃
 ▌⬤ alpha                                                                                                               ┃
+ ⬤ alpine                                                                                                              ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
 
 
 
@@ -40,34 +43,37 @@ session:
 
 ```
 
-Filtering to the repo-only `beta` row hides the close shortcut.
+Pressing `C-x` should kill `alpha`, keep `sesh` running, preserve the `alp`
+query, and show the refreshed list with only `alpine` remaining.
 
-    :k beta
-    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+    :k C-x
+    :settle (settled)
+    :snap
 
 ```terminal
-session: beta
-  1/4 | [C-r] repo: none
-▌  beta                                     ~/beta                                                                     ┃
+session: alp
+  1/3 | [C-r] repo: none | [C-x] close
+   alp                                                                                                                 ┃
+▌⬤ alpine                                                                                                              ┃
+                                                                                                                       ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-@  beta commit
-◆
+
+
+
+
 
 
 
 
 ```
 
-Pressing `C-x` on the live `alpha` session should kill `alpha` and exit without
-switching to it.
-
-    :k C-u C-x
-    :$ sleep 1 (exit: 0)
     :t has-session -t alpha (failure)
 
 ```
 can't find session: alpha
 ```
+
+    :t has-session -t alpine (success)
     :t has-session -t ui (success)
 
 ---

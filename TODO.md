@@ -2,7 +2,7 @@
 
 ## Session and Repo Lifecycle
 
-- [ ] `C-x` should not close the entire app -- just trigger a reset of some
+- [x] `C-x` should not close the entire app -- just trigger a reset of some
   kind.
 
 - [x] Add workspace creation for new repo-backed work.

@@ -17,6 +17,7 @@ mod scrollbar;
 mod sessions;
 
 use std::io;
+use std::path::Path;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -37,78 +38,107 @@ use crate::app::sessions::Sessions;
 use crate::picker::Picker;
 use crate::session::Session;
 use crate::terminal::AlternateScreenGuard;
+use crate::tmux;
 
 /// Timeout for waiting for a key event.
 const POLL_TIMEOUT: Duration = Duration::from_millis(16);
 
+/// Session picker state, caches, and UI behavior.
+pub struct App {
+    repo: Option<PathBuf>,
+    load: loading::State,
+    model: model::Model,
+    picker: Picker<Session>,
+    preview: preview::State,
+    sessions: sessions::State,
+}
+
+/// Runtime inputs used by the picker but not owned by its UI state.
+pub struct Context<'a> {
+    /// Repository globs to discover alongside existing tmux sessions.
+    pub globs: &'a [String],
+
+    /// Shell setup to run when creating a tmux session.
+    pub setup: &'a str,
+}
+
 /// Completed action chosen from the picker.
-pub enum Action {
+enum Action {
     /// Do nothing and exit the picker.
     Cancel,
 
-    /// Kill the selected live tmux session.
+    /// Close the selected tmux session and refresh discovered sessions.
     Close(Session),
 
     /// Switch to the selected session, creating it first if needed.
     Switch(Session),
 }
 
-/// Session picker state, caches, and UI behavior.
-pub struct App {
-    load: loading::State,
-    model: model::Model,
-    picker: Picker<Session>,
-    preview: preview::State,
-    repo: Option<PathBuf>,
-    sessions: sessions::State,
-}
-
 impl App {
     /// Create a new application.
     ///
-    /// `globs` specify where to look for jj repositories, and `repo` is an optional path to a
-    /// "current" repository. It does not need to be one of the discovered repositories.
-    pub async fn new(globs: &[String], repo: Option<PathBuf>) -> anyhow::Result<Self> {
-        let model = model::Model::discover(globs, repo.as_deref()).await?;
-        let load = loading::State::new();
-        let picker = Picker::new(model.sessions().to_vec());
-        let preview = preview::State::new(model.sessions().to_vec());
-        let sessions = sessions::State::new();
-
-        Ok(Self {
-            load,
-            model,
-            picker,
-            preview,
+    /// `repo` is the initial base repository.
+    pub fn new(repo: Option<PathBuf>) -> Self {
+        Self {
             repo,
-            sessions,
-        })
+            load: loading::State::new(),
+            model: model::Model::default(),
+            picker: Picker::new(),
+            preview: preview::State::new(),
+            sessions: sessions::State::new(),
+        }
     }
 
     /// Run the interactive picker for discovered sessions.
-    pub fn run(mut self) -> anyhow::Result<Action> {
-        let _guard = AlternateScreenGuard::new()?;
+    pub async fn run(mut self, cwd: &Path, ctx: Context<'_>) -> anyhow::Result<()> {
+        let guard = AlternateScreenGuard::new()?;
         let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
 
         loop {
-            terminal.draw(|frame| self.draw(frame))?;
+            self.discover(ctx.globs).await?;
 
-            if !event::poll(POLL_TIMEOUT)? {
-                continue;
-            }
+            loop {
+                terminal.draw(|frame| self.draw(frame))?;
 
-            let Event::Key(key) = event::read()? else {
-                continue;
-            };
+                if !event::poll(POLL_TIMEOUT)? {
+                    continue;
+                }
 
-            if key.kind != KeyEventKind::Press {
-                continue;
-            }
+                let Event::Key(key) = event::read()? else {
+                    continue;
+                };
 
-            if let Some(action) = self.handle_key(key) {
-                return Ok(action);
+                if key.kind != KeyEventKind::Press {
+                    continue;
+                }
+
+                match self.handle_key(key) {
+                    None => continue,
+                    Some(Action::Cancel) => return Ok(()),
+
+                    Some(Action::Close(session)) => {
+                        tmux::kill_session(&session.name()).await?;
+                        self.picker.reset();
+                        break;
+                    }
+
+                    Some(Action::Switch(session)) => {
+                        drop(guard);
+                        session.switch(cwd, ctx.setup).await?;
+                        return Ok(());
+                    }
+                }
             }
         }
+    }
+
+    /// Discover sessions and inject them into the picker.
+    async fn discover(&mut self, globs: &[String]) -> anyhow::Result<()> {
+        self.model = model::Model::discover(globs, self.repo.as_deref()).await?;
+        let sessions = self.model.sessions().to_vec();
+        self.preview.feed(&sessions);
+        self.picker.inject(sessions);
+        Ok(())
     }
 
     /// Draw the UI into the provided frame based on the current application state.

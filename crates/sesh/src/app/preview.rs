@@ -23,7 +23,7 @@ pub(super) struct Preview<'s> {
 
 /// Mutable preview pane state shared across renders.
 pub(super) struct State {
-    cache: PreviewCache<Session>,
+    cache: PreviewCache,
     scroll: ScrollbarState,
     visible: bool,
 }
@@ -68,12 +68,17 @@ impl<'s> Preview<'s> {
 }
 
 impl State {
-    pub(super) fn new(items: Vec<Session>) -> Self {
+    pub(super) fn new() -> Self {
         Self {
-            cache: PreviewCache::new(items),
+            cache: PreviewCache::new(),
             scroll: ScrollbarState::default(),
             visible: true,
         }
+    }
+
+    /// Start generating previews for sessions that are not already cached.
+    pub(super) fn feed<'a>(&mut self, sessions: impl IntoIterator<Item = &'a Session>) {
+        self.cache.feed(sessions);
     }
 
     /// Move the scroll position to the start of the content.

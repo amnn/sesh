@@ -35,19 +35,10 @@ pub(crate) struct Picker<I: Send + Sync + 'static> {
 }
 
 impl<I: Item + Send + Sync + 'static> Picker<I> {
-    /// Construct a fuzzy matcher for the provided sessions.
-    pub(crate) fn new(items: Vec<I>) -> Self {
-        let matcher = Nucleo::new(Config::DEFAULT, Arc::new(|| {}), None, 1);
-        let injector = matcher.injector();
-
-        for item in items {
-            injector.push(item, |item, columns| {
-                columns[0] = Utf32String::from(item.text())
-            });
-        }
-
+    /// Construct an empty fuzzy matcher.
+    pub(crate) fn new() -> Self {
         Self {
-            matcher,
+            matcher: Nucleo::new(Config::DEFAULT, Arc::new(|| {}), None, 1),
             query: String::new(),
         }
     }
@@ -62,6 +53,16 @@ impl<I: Item + Send + Sync + 'static> Picker<I> {
             Normalization::Smart,
             false,
         );
+    }
+
+    /// Inject replacement items into the matcher.
+    pub(crate) fn inject(&mut self, items: Vec<I>) {
+        let injector = self.matcher.injector();
+        for item in items {
+            injector.push(item, |item, columns| {
+                columns[0] = Utf32String::from(item.text())
+            });
+        }
     }
 
     /// Remove the trailing character from the active query string.
@@ -92,5 +93,10 @@ impl<I: Item + Send + Sync + 'static> Picker<I> {
     pub(crate) fn refresh(&mut self) -> (Status, &Snapshot<I>, &str) {
         let status = self.matcher.tick(TICK_TIMEOUT_MS);
         (status, self.matcher.snapshot(), &self.query)
+    }
+
+    /// Reset matcher contents while preserving the active query string.
+    pub(crate) fn reset(&mut self) {
+        self.matcher.restart(true);
     }
 }

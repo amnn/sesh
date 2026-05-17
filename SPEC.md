@@ -53,7 +53,7 @@ The fuzzy finder includes a header with the following information:
   - `C-r` to change repo (next to the current repo).
   - `C-b` to change base revision (next to the current base).
   - `C-n` to create a new session from the current query.
-  - `C-x` to clean a session.
+  - `C-x` to close a session and refresh the session list.
 
 ### Candidate Sessions
 The fuzzy finder constructs a list of candidate sessions from the following
@@ -99,12 +99,12 @@ Then the pop-over switches to the session and closes itself.
 - `C-n` will create a new session from the current query. This will first
   check that a session with this name doesn't already exist, and if so,
   follows the "picking a session" flow above.
-- `C-x` will close a given (existing) session. This involves closing the
-  session in tmux.
+- `C-x` will close the selected existing tmux session, then refresh discovered
+  sessions while preserving the current query.
 - `C-d` will delete an existing session and/or workspace. If there is a
   session for this selection, it is closed in tmux. If the selection is tied
   to a real repository/workspace candidate, the workspace is forgotten in `jj`
-  and deleted from disk; otherwise it behaves like `C-x`.
+  and deleted from disk; otherwise only the tmux session is closed.
 
 ## Tech recommendations
 This tool will be built using Rust, taking advantage of `skim` for fuzzy
