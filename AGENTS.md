@@ -48,6 +48,10 @@ operation is performed.
 When moving behavior onto domain types, keep configuration arguments narrow:
 pass only the values the method needs rather than the full `SeshConfig`.
 
+For read-only `jj` commands on startup or hot paths, pass
+`--ignore-working-copy` unless fresh working-copy state is required; otherwise
+large repositories can spend visible time snapshotting before `sesh` renders.
+
 ## Truth Seeking
 
 Default to verified claims over plausible guesses.

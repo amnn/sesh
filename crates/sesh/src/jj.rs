@@ -106,6 +106,7 @@ pub async fn workspaces(repo: &Path) -> anyhow::Result<BTreeMap<Option<String>, 
         .args(["workspace", "list"])
         .arg("-R")
         .arg(repo)
+        .arg("--ignore-working-copy")
         .arg("--no-pager")
         .args(["--color", "never"])
         .args(["--template", "name ++ '\t' ++ root ++ '\n'"])
