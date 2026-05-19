@@ -30,6 +30,7 @@ pub(super) struct Sessions<'s> {
 /// Persistent selection and scroll state for the session list.
 #[derive(Default)]
 pub(super) struct State {
+    deleting: bool,
     list: ListState,
     selected: Option<Session>,
 }
@@ -91,7 +92,7 @@ impl<'s> Sessions<'s> {
 
         let selected = state.list.selected();
         if let Some(session) = &self.new {
-            rows.push(session.render(selected == Some(0), &[]))
+            rows.push(session.render(selected == Some(0), false, &[]))
         } else {
             rows.push(Row::empty())
         }
@@ -105,7 +106,9 @@ impl<'s> Sessions<'s> {
             indices.sort_unstable();
             indices.dedup();
 
-            let row = item.data.render(selected == Some(i), &indices);
+            let highlighted = selected == Some(i);
+            let row = item.data.render(highlighted, state.deleting, &indices);
+
             let margin = indices.last().copied().map(|off| right_margin(text, off));
             rows.push(row.with_right_margin(margin));
         }
@@ -127,9 +130,24 @@ impl State {
         Self::default()
     }
 
+    /// Cancel any pending deletion.
+    pub(super) fn reset_delete(&mut self) {
+        self.deleting = false;
+    }
+
     /// Whether the currently selected session can be closed.
     pub(super) fn can_close(&self) -> bool {
-        self.selected.as_ref().is_some_and(Session::is_tmux)
+        self.selected.as_ref().is_some_and(Session::can_close)
+    }
+
+    /// Whether the currently selected session can be deleted.
+    pub(super) fn can_delete(&self) -> bool {
+        self.selected.as_ref().is_some_and(Session::can_delete)
+    }
+
+    /// Whether the selected session is marked for deletion.
+    pub(super) fn is_deleting(&self) -> bool {
+        self.deleting
     }
 
     /// The session to preview. This is similar to [`State::selected`], but if the currently
@@ -168,6 +186,11 @@ impl State {
     /// A reference to the currently selected session, if there is one.
     pub(super) fn selected(&self) -> Option<&Session> {
         self.selected.as_ref()
+    }
+
+    /// Mark the selected session for deletion.
+    pub(super) fn start_delete(&mut self) {
+        self.deleting = true;
     }
 
     /// Take the selected session.

@@ -1,5 +1,11 @@
 # TODO
 
+## Refactors
+
+- [ ] Audit `:snap` replacements -- we may not need most of them.
+
+- [ ] Audit usage of `Span::styled` -- prefer `Span::raw` with `Stylize` builders calls.
+
 ## Session and Repo Lifecycle
 
 - [x] `C-x` should not close the entire app -- just trigger a reset of some
@@ -17,7 +23,7 @@
 - [ ] New session preview should show a preview of `jj` log at the base repo,
   if applicable (if a repo is set).
 
-- [ ] Add `C-d` to delete the selected session/workspace.
+- [x] Add `C-d` to delete the selected session/workspace.
   - Destroy the underlying workspace too, if applicable.
   - Confirm destructive behavior, if possible.
 

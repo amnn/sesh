@@ -1,7 +1,8 @@
 # Close session
 
-`C-x` closes the selected live tmux session, then refreshes the session list
-without closing the app or resetting the query.
+`C-x` closes the selected live tmux session without deleting any attached
+workspace, then refreshes the session list without closing the app or resetting
+the query.
 
     :bins jj tmux cat sleep
 

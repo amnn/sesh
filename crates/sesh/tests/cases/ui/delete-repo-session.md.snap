@@ -1,0 +1,106 @@
+---
+source: crates/sesh/tests/test.rs
+expression: output
+input_file: crates/sesh/tests/cases/ui/delete-repo-session.md
+---
+# Delete repo session
+
+`C-d` should be available for a repo-backed named workspace entry even when
+there is no live tmux session to close. Confirming should forget the workspace
+and delete the workspace checkout.
+
+    :bins jj tmux cat sh test
+
+> [!NOTE]
+> 'jj', 'tmux', 'cat', 'sh', and 'test' are available.
+
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
+    :t rename-session -t 0 runner (success)
+    :$ jj git init beta (exit: 0)
+    :$ jj describe -R beta -m "beta commit" (exit: 0)
+    :$ jj workspace add -R beta --name feature beta.feature (exit: 0)
+    :$ jj describe -R beta.feature -m "feature commit" (exit: 0)
+    :t new-session -d -s ui "sesh -r 'beta*'; cat" (success)
+    :t resize-window -t ui:0 -x 120 -y 12 (success)
+    :pane ui:0.0
+    :settle -d 2s (settled)
+
+Filter to the repo-only named workspace entry. The header should offer deletion
+even though the selected row has no live tmux sigil.
+
+    :k feature C-n
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
+```terminal
+session: feature
+  1/4 | [C-r] repo: none | [C-d] delete
+   feature                                                                                                             ┃
+▌  beta/feature                             ~/beta.feature                                                             ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+@  feature commit
+│ ○  beta commit
+├─╯
+◆
+
+
+
+```
+
+Pressing `C-d` should mark the repo entry for deletion.
+
+    :k C-d
+    :settle (settled)
+    :snap --color "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
+```terminal
+session: feature
+  1/4 | [C-r] repo: none | [C-y] confirm
+   feature                                                                                                             ┃
+▌× beta/feature                             ~/beta.feature                                                             ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+@  feature commit
+│ ○  beta commit
+├─╯
+◆
+
+
+
+```
+
+![light](delete-repo-session.md.snap.2.light.svg)
+![dark](delete-repo-session.md.snap.2.dark.svg)
+
+Confirming should leave the picker alive, forget the workspace, and remove the
+workspace checkout.
+
+    :k C-y
+    :settle -d 2s (settled)
+    :snap
+
+```terminal
+session: feature
+  0/3 | [C-r] repo: none
+▌  feature                                                                                                             ┃
+                                                                                                                       ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+
+```
+
+    :$ sh -c 'test ! -e beta.feature' (exit: 0)
+    :$ jj workspace list -R beta --ignore-working-copy --no-pager --color never --template 'name ++ "\n"' (exit: 0)
+
+```stdout
+default
+```
+
+    :t has-session -t ui (success)
+
+---
+vim: set ft=markdown:

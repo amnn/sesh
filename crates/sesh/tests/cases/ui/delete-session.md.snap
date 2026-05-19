@@ -1,0 +1,71 @@
+---
+source: crates/sesh/tests/test.rs
+expression: output
+input_file: crates/sesh/tests/cases/ui/delete-session.md
+---
+# Delete session
+
+Plain live tmux sessions are closeable, but not deletable: there is no
+associated checkout for `C-d` to remove.
+
+    :bins jj tmux cat
+
+> [!NOTE]
+> 'jj', 'tmux', and 'cat' are available.
+
+    :t rename-session -t 0 runner (success)
+    :t new-session -d -s alpha "cat" (success)
+    :t new-session -d -s alpine "cat" (success)
+    :t new-session -d -s ui "sesh; cat" (success)
+    :t resize-window -t ui:0 -x 120 -y 10 (success)
+    :pane ui:0.0
+    :settle (settled)
+
+Filter to the matching sessions. The first match, `alpha`, is selected. The
+header should offer `C-x` close, but not `C-d` delete.
+
+    :k alp
+    :snap
+
+```terminal
+session: alp
+  2/4 | [C-r] repo: none | [C-x] close
+▌⬤ alpha                                                                                                               ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+```
+
+Pressing `C-d` should do nothing for a plain live tmux session.
+
+    :k C-d
+    :settle (settled)
+    :snap --color
+
+```terminal
+session: alp
+  2/4 | [C-r] repo: none | [C-x] close
+▌⬤ alpha                                                                                                               ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+```
+
+![light](delete-session.md.snap.2.light.svg)
+![dark](delete-session.md.snap.2.dark.svg)
+
+The session should still exist, and the picker should still be running.
+
+    :t has-session -t alpha (success)
+    :t has-session -t ui (success)
+
+---
+vim: set ft=markdown:

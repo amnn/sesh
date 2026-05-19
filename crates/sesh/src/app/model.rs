@@ -64,13 +64,10 @@ impl Model {
         let mut model = Self::default();
         let mut tmux_repos = BTreeSet::new();
 
-        // Add all the live sessions from tmux.
-        for (name, info) in tmux::sessions().await? {
+        let tmux_sessions = tmux::sessions().await?;
+        for (name, info) in &tmux_sessions {
             model.seen_tmux_names.insert(name.clone());
             tmux_repos.extend(info.repo.clone());
-
-            let session = LiveKind::new(name, info.repo, info.alerts);
-            model.sessions.push(session.into());
         }
 
         let globbed = jj::repos(globs)?;
@@ -84,6 +81,18 @@ impl Model {
         // construct workspace-aware session names.
         model.workspaces = workspaces(repos).await;
 
+        // Add all the live sessions from tmux.
+        for (name, info) in tmux_sessions {
+            let can_delete = info
+                .repo
+                .as_ref()
+                .and_then(|repo| model.workspace_name(repo))
+                .is_some();
+
+            let session = LiveKind::new(name, info.repo, info.alerts, can_delete);
+            model.sessions.push(session.into());
+        }
+
         // Add an entry for every repo found, as long as it's not already associated with a
         // live tmux session.
         for repo in globbed {
@@ -96,9 +105,10 @@ impl Model {
                     workspace.name.as_deref(),
                     workspace.default.clone().unwrap_or_else(|| repo.to_owned()),
                     repo.to_owned(),
+                    workspace.name.is_some(),
                 )
             } else {
-                RepoKind::new(None, repo.to_owned(), repo.to_owned())
+                RepoKind::new(None, repo.to_owned(), repo.to_owned(), false)
             };
 
             session.disambiguate(&model.seen_tmux_names);
@@ -158,6 +168,14 @@ impl Model {
     /// Return the discovered sessions.
     pub(super) fn sessions(&self) -> &[Session] {
         &self.sessions
+    }
+
+    /// Return the exact jj workspace name for `repo`, if it is a named workspace.
+    pub(super) fn workspace_name(&self, repo: &Path) -> Option<&str> {
+        self.workspaces
+            .get(repo)
+            .and_then(|w| w.as_ref())
+            .and_then(|w| w.name.as_deref())
     }
 }
 

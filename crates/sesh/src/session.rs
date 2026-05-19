@@ -9,6 +9,7 @@ use std::path::PathBuf;
 
 use anyhow::Context as _;
 use async_trait::async_trait;
+use ratatui::style::Style;
 use ratatui::style::Stylize as _;
 use ratatui::text::Line;
 use ratatui::text::Span;
@@ -27,6 +28,7 @@ const DELIM_SUFFIX: &str = "~";
 const DELIM_WORKSPACE: &str = "/";
 
 const NAME_WIDTH: usize = 40;
+const SIGIL_DELETE: &str = "×";
 const SIGIL_TMUX: &str = "⬤";
 
 /// A tmux session or potential session.
@@ -48,6 +50,7 @@ pub(crate) struct LiveKind {
     name: String,
     repo: Option<PathBuf>,
     alerts: Vec<String>,
+    can_delete: bool,
 }
 
 /// A new session, optionally backed by a jj workspace to create from a repository base.
@@ -65,6 +68,7 @@ pub(crate) struct RepoKind {
     default: PathBuf,
     path: PathBuf,
     suffix: Option<String>,
+    can_delete: bool,
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -75,9 +79,26 @@ enum Kind {
 }
 
 impl Session {
-    /// Return whether this entry represents a currently live tmux session.
-    pub fn is_tmux(&self) -> bool {
+    /// Return whether this entry represents a currently live tmux session that can be closed.
+    pub fn can_close(&self) -> bool {
         matches!(&self.0, Kind::Live(_))
+    }
+
+    /// Return whether this entry can be deleted.
+    pub fn can_delete(&self) -> bool {
+        match &self.0 {
+            Kind::Live(kind) => kind.can_delete,
+            Kind::New(_) => false,
+            Kind::Repo(kind) => kind.can_delete,
+        }
+    }
+
+    /// Close this session without deleting any attached workspace.
+    pub async fn close(&self) -> anyhow::Result<()> {
+        match &self.0 {
+            Kind::Live(kind) => kind.close().await,
+            Kind::New(_) | Kind::Repo(_) => Ok(()),
+        }
     }
 
     /// Return the session name.
@@ -132,10 +153,26 @@ impl LiveKind {
     /// Construct a potential session from information extracted from `tmux`.
     ///
     /// `name` is a tmux session name, `repo` is an optional path to a jj repository attached as a
-    /// user-option on the tmux session, and `alerts` is a list of windows in the session that have
-    /// an active bell alert.
-    pub(crate) fn new(name: String, repo: Option<PathBuf>, alerts: Vec<String>) -> Self {
-        Self { name, repo, alerts }
+    /// user-option on the tmux session, `alerts` is a list of windows in the session that have an
+    /// active bell alert, and `can_delete` indicates whether deletion can remove a named jj
+    /// workspace.
+    pub(crate) fn new(
+        name: String,
+        repo: Option<PathBuf>,
+        alerts: Vec<String>,
+        can_delete: bool,
+    ) -> Self {
+        Self {
+            name,
+            repo,
+            alerts,
+            can_delete,
+        }
+    }
+
+    /// Close the live tmux session without deleting any attached workspace.
+    async fn close(&self) -> anyhow::Result<()> {
+        tmux::kill_session(&self.name).await
     }
 
     fn name(&self) -> String {
@@ -246,12 +283,18 @@ impl NewKind {
 
 impl RepoKind {
     /// Construct a potential session from an existing repository or workspace checkout.
-    pub(crate) fn new(workspace: Option<&str>, default: PathBuf, path: PathBuf) -> Self {
+    pub(crate) fn new(
+        workspace: Option<&str>,
+        default: PathBuf,
+        path: PathBuf,
+        can_delete: bool,
+    ) -> Self {
         Self {
             workspace: workspace.map(sanitize),
             default,
             path,
             suffix: None,
+            can_delete,
         }
     }
 
@@ -309,10 +352,10 @@ impl From<RepoKind> for Session {
 impl Item for Session {
     type Widget = Row;
 
-    fn render(&self, highlighted: bool, matches: &[u32]) -> Self::Widget {
+    fn render(&self, highlighted: bool, deleting: bool, matches: &[u32]) -> Self::Widget {
         let mut hl = Highlight::new(matches.to_vec());
         let mut line = Line::default();
-        push_session_name_spans(&mut line, self, &mut hl);
+        push_session_name_spans(&mut line, self, &mut hl, deleting, highlighted);
 
         if let Some(repo) = self.repo() {
             let padding = NAME_WIDTH.saturating_sub(self.name().width()) + 1;
@@ -321,6 +364,11 @@ impl Item for Session {
         };
 
         let row = Row::new(line);
+
+        if highlighted && deleting {
+            return row.with_sigil(Span::raw(SIGIL_DELETE).on_light_red());
+        }
+
         let Kind::Live(LiveKind { alerts, .. }) = &self.0 else {
             return row;
         };
@@ -388,16 +436,27 @@ fn push_session_name_spans<'a>(
     spans: &mut impl Extend<Span<'a>>,
     session: &Session,
     hl: &mut Highlight,
+    deleting: bool,
+    highlighted: bool,
 ) {
     let name = session.name();
+
+    let name_style = if deleting && highlighted {
+        Style::new().on_light_red().bold()
+    } else {
+        Style::new()
+    };
+
+    let suffix_style = name_style.dim();
+
     let Some((prefix, suffix)) = name.rsplit_once(DELIM_SUFFIX) else {
-        spans.extend(hl.highlight(Span::raw(name)));
+        spans.extend(hl.highlight(Span::styled(name, name_style)));
         return;
     };
 
-    spans.extend(hl.highlight(Span::raw(prefix.to_owned())));
-    spans.extend(hl.highlight(Span::raw(DELIM_SUFFIX).dim()));
-    spans.extend(hl.highlight(Span::raw(suffix.to_owned()).dim()));
+    spans.extend(hl.highlight(Span::styled(prefix.to_owned(), name_style)));
+    spans.extend(hl.highlight(Span::styled(DELIM_SUFFIX, suffix_style)));
+    spans.extend(hl.highlight(Span::styled(suffix.to_owned(), suffix_style)));
 }
 
 /// Derive a workspace-aware tmux session name.

@@ -17,10 +17,12 @@ mod scrollbar;
 mod sessions;
 
 use std::io;
+use std::io::ErrorKind;
 use std::path::Path;
 use std::path::PathBuf;
 use std::time::Duration;
 
+use anyhow::anyhow;
 use crossterm::event;
 use crossterm::event::Event;
 use crossterm::event::KeyCode;
@@ -35,10 +37,10 @@ use crate::app::header::Header;
 use crate::app::loading::Loading;
 use crate::app::preview::Preview;
 use crate::app::sessions::Sessions;
+use crate::jj;
 use crate::picker::Picker;
 use crate::session::Session;
 use crate::terminal::AlternateScreenGuard;
-use crate::tmux;
 
 /// Timeout for waiting for a key event.
 const POLL_TIMEOUT: Duration = Duration::from_millis(16);
@@ -67,8 +69,11 @@ enum Action {
     /// Do nothing and exit the picker.
     Cancel,
 
-    /// Close the selected tmux session and refresh discovered sessions.
+    /// Close the selected tmux session without deleting any attached workspace.
     Close(Session),
+
+    /// Delete the selected session's attached workspace checkout, closing tmux if live.
+    Delete(Session),
 
     /// Switch to the selected session, creating it first if needed.
     Switch(Session),
@@ -117,7 +122,15 @@ impl App {
                     Some(Action::Cancel) => return Ok(()),
 
                     Some(Action::Close(session)) => {
-                        tmux::kill_session(&session.name()).await?;
+                        session.close().await?;
+                        self.picker.reset();
+                        break;
+                    }
+
+                    Some(Action::Delete(session)) => {
+                        self.delete(&session).await?;
+                        session.close().await?;
+                        self.sessions.reset_delete();
                         self.picker.reset();
                         break;
                     }
@@ -128,6 +141,26 @@ impl App {
                         return Ok(());
                     }
                 }
+            }
+        }
+    }
+
+    /// Delete the repository or workspace checkout attached to `session`, if any.
+    async fn delete(&self, session: &Session) -> anyhow::Result<()> {
+        let Some(repo) = session.repo() else {
+            return Ok(());
+        };
+
+        if let Some(name) = self.model.workspace_name(&repo) {
+            jj::forget_workspace(&repo, name).await?;
+        }
+
+        match tokio::fs::remove_dir_all(&repo).await {
+            Ok(()) => Ok(()),
+            Err(err) if err.kind() == ErrorKind::NotFound => Ok(()),
+            Err(err) => {
+                let msg = format!("failed to remove repository '{}'", repo.display());
+                Err(anyhow!(err).context(msg))
             }
         }
     }
@@ -168,6 +201,8 @@ impl App {
 
         let header = Header::new(
             self.sessions.can_close(),
+            self.sessions.can_delete(),
+            self.sessions.is_deleting(),
             items.len(),
             self.repo.as_deref(),
             snapshot.item_count() as usize,
@@ -201,6 +236,21 @@ impl App {
         const CTRL: KM = KM::CONTROL;
         const SHIFT: KM = KM::SHIFT;
 
+        if self.sessions.is_deleting() {
+            self.sessions.reset_delete();
+
+            match key.code {
+                KC::Char('y') if key.modifiers.contains(CTRL) => {
+                    return self.sessions.take_selected().map(Action::Delete);
+                }
+
+                KC::Esc => return None,
+                KC::Char('c') if key.modifiers.contains(CTRL) => return None,
+
+                _ => {}
+            }
+        }
+
         match key.code {
             // Accept the selected row.
             KC::Enter => return self.sessions.take_selected().map(Action::Switch),
@@ -212,6 +262,10 @@ impl App {
             // Session actions
             KC::Char('x') if key.modifiers.contains(CTRL) && self.sessions.can_close() => {
                 return self.sessions.take_selected().map(Action::Close);
+            }
+
+            KC::Char('d') if key.modifiers.contains(CTRL) && self.sessions.can_delete() => {
+                self.sessions.start_delete();
             }
 
             // Scroll preview

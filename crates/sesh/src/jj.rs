@@ -51,6 +51,33 @@ pub fn ensure() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Forget the workspace named `name` in the repository containing `repo`.
+pub async fn forget_workspace(repo: &Path, name: &str) -> anyhow::Result<()> {
+    let output = Command::new("jj")
+        .args(["workspace", "forget"])
+        .arg("-R")
+        .arg(repo)
+        .arg("--ignore-working-copy")
+        .arg("--")
+        .arg(name)
+        .output()
+        .await
+        .with_context(|| {
+            format!(
+                "failed to run 'jj workspace forget' for repo '{}'",
+                repo.display()
+            )
+        })?;
+
+    ensure!(
+        output.status.success(),
+        "error running 'jj workspace forget': {}",
+        String::from_utf8_lossy(&output.stderr).trim()
+    );
+
+    Ok(())
+}
+
 /// Fetch `jj log` output from the repository at `repo`.
 pub async fn log(repo: &Path) -> anyhow::Result<String> {
     let output = Command::new("jj")
@@ -162,6 +189,43 @@ mod tests {
         fs::create_dir_all(&nested).unwrap();
 
         assert_eq!(repo_root(&nested), Some(repo));
+    }
+
+    #[tokio::test]
+    async fn forgets_named_workspace() {
+        let temp = tempdir().unwrap();
+        let default = temp.path().join("repo");
+        let workspace = temp.path().join("repo.feature");
+
+        let output = Command::new("jj")
+            .args(["git", "init"])
+            .arg(&default)
+            .output()
+            .await
+            .unwrap();
+        assert!(output.status.success());
+
+        let output = Command::new("jj")
+            .args(["workspace", "add"])
+            .arg("-R")
+            .arg(&default)
+            .arg("--name")
+            .arg("feature")
+            .arg(&workspace)
+            .output()
+            .await
+            .unwrap();
+        assert!(output.status.success());
+
+        forget_workspace(&workspace, "feature").await.unwrap();
+
+        assert!(workspace.exists());
+        assert!(
+            !workspaces(&default)
+                .await
+                .unwrap()
+                .contains_key(&Some("feature".to_owned()))
+        );
     }
 
     #[test]

@@ -7,7 +7,7 @@ use std::path::Path;
 
 use ratatui::Frame;
 use ratatui::layout::Rect;
-use ratatui::style::Style;
+use ratatui::style::Stylize as _;
 use ratatui::text::Line;
 use ratatui::text::Span;
 
@@ -17,15 +17,26 @@ use crate::ui::push_shortcut_span;
 
 pub(super) struct Header<'r> {
     can_close: bool,
+    can_delete: bool,
+    confirm_delete: bool,
     found: usize,
     repo: Option<&'r Path>,
     total: usize,
 }
 
 impl<'r> Header<'r> {
-    pub(super) fn new(can_close: bool, found: usize, repo: Option<&'r Path>, total: usize) -> Self {
+    pub(super) fn new(
+        can_close: bool,
+        can_delete: bool,
+        confirm_delete: bool,
+        found: usize,
+        repo: Option<&'r Path>,
+        total: usize,
+    ) -> Self {
         Self {
             can_close,
+            can_delete,
+            confirm_delete,
             found,
             repo,
             total,
@@ -40,21 +51,33 @@ impl<'r> Header<'r> {
         };
 
         let mut line = Line::default();
-        let dim = Style::new().dim();
 
         line += Span::raw(format!(" {:>width$}", self.found));
-        line += Span::styled(format!("/{} | ", self.total), dim);
+        line += Span::raw(format!("/{} | ", self.total)).dim();
         push_shortcut_span(&mut line, "C-r");
         line += Span::raw(" repo: ");
 
         if let Some(repo) = self.repo {
             push_repo_path_spans(&mut line, repo, &mut Highlight::none());
         } else {
-            line += Span::styled("none", dim);
+            line += Span::raw("none").dim();
+        }
+
+        let mut prefix = " | ";
+        if self.confirm_delete {
+            line += Span::raw(prefix).dim();
+            push_shortcut_span(&mut line, "C-y");
+            line += Span::raw(" confirm").light_red().bold();
+            prefix = ", ";
+        } else if self.can_delete {
+            line += Span::raw(prefix).dim();
+            push_shortcut_span(&mut line, "C-d");
+            line += Span::raw(" delete");
+            prefix = ", ";
         }
 
         if self.can_close {
-            line += Span::styled(" | ", dim);
+            line += Span::raw(prefix).dim();
             push_shortcut_span(&mut line, "C-x");
             line += Span::raw(" close");
         }

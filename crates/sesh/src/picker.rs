@@ -22,7 +22,7 @@ pub(crate) trait Item {
     type Widget: Widget;
 
     /// Render this item for the picker list.
-    fn render(&self, highlighted: bool, matches: &[u32]) -> Self::Widget;
+    fn render(&self, highlighted: bool, deleting: bool, matches: &[u32]) -> Self::Widget;
 
     /// Return the text shown for this item in the picker list.
     fn text(&self) -> String;

@@ -1,0 +1,77 @@
+---
+source: crates/sesh/tests/test.rs
+expression: output
+input_file: crates/sesh/tests/cases/ui/delete-default-workspace.md
+---
+# Delete default workspace
+
+Default jj workspace checkouts are not deletable from `sesh`; only named
+workspaces can be deleted.
+
+    :bins jj tmux cat test
+
+> [!NOTE]
+> 'jj', 'tmux', 'cat', and 'test' are available.
+
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
+    :t rename-session -t 0 runner (success)
+    :$ jj git init beta (exit: 0)
+    :$ jj describe -R beta -m "beta commit" (exit: 0)
+    :t new-session -d -s ui "sesh -r beta; cat" (success)
+    :t resize-window -t ui:0 -x 120 -y 12 (success)
+    :pane ui:0.0
+    :settle -d 2s (settled)
+
+Filter to the default workspace repo-only entry. The header should not offer
+`C-d` delete.
+
+    :k beta C-n
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
+```terminal
+session: beta
+  1/3 | [C-r] repo: none
+   beta                                                                                                                ┃
+▌  beta                                     ~/beta                                                                     ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+@  beta commit
+◆
+
+
+
+
+
+```
+
+Pressing `C-d` should do nothing.
+
+    :k C-d
+    :settle (settled)
+    :snap --color "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
+```terminal
+session: beta
+  1/3 | [C-r] repo: none
+   beta                                                                                                                ┃
+▌  beta                                     ~/beta                                                                     ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+@  beta commit
+◆
+
+
+
+
+
+```
+
+![light](delete-default-workspace.md.snap.2.light.svg)
+![dark](delete-default-workspace.md.snap.2.dark.svg)
+
+The default checkout and picker session should both remain.
+
+    :$ test -e beta (exit: 0)
+    :t has-session -t ui (success)
+
+---
+vim: set ft=markdown:

@@ -31,8 +31,9 @@ pub fn ensure() -> anyhow::Result<()> {
 
 /// Kill an existing tmux session.
 pub async fn kill_session(session: &str) -> anyhow::Result<()> {
+    let target = format!("={session}");
     let output = Command::new("tmux")
-        .args(["kill-session", "-t", session])
+        .args(["kill-session", "-t", &target])
         .output()
         .await
         .context("failed to kill tmux session")?;
