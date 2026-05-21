@@ -4,7 +4,7 @@
 
 - [ ] Audit `:snap` replacements -- we may not need most of them.
 
-- [ ] Audit usage of `Span::styled` -- prefer `Span::raw` with `Stylize` builders calls.
+- [x] Audit usage of `Span::styled` -- prefer `Span::raw` with `Stylize` builders calls.
 
 ## Session and Repo Lifecycle
 

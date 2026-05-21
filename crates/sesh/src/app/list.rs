@@ -5,8 +5,8 @@
 
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
-use ratatui::style::Color;
 use ratatui::style::Style;
+use ratatui::style::Stylize as _;
 use ratatui::text::Span;
 use ratatui::widgets::ListState;
 use ratatui::widgets::StatefulWidget;
@@ -80,7 +80,7 @@ where
             let [margin, rest] = rect.layout(&layout);
 
             let symbol = if selected {
-                Span::styled(SELECTED, Style::new().bg(Color::Red))
+                Span::raw(SELECTED).on_red()
             } else {
                 Span::raw(" ".repeat(SELECTED.width()))
             };

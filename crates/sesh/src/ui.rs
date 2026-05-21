@@ -8,8 +8,8 @@ use std::path::MAIN_SEPARATOR;
 use std::path::Path;
 use std::vec;
 
-use ratatui::style::Color;
 use ratatui::style::Style;
+use ratatui::style::Stylize as _;
 use ratatui::text::Span;
 
 use crate::path::TruncatedExt as _;
@@ -101,7 +101,7 @@ pub(crate) fn push_repo_path_spans<'a>(
     }
 
     let dim = Style::new().dim();
-    let parent = hl.highlight(Span::styled(parent, dim));
+    let parent = hl.highlight(Span::raw(parent).dim());
 
     let mut cs = parent
         .iter()
@@ -138,13 +138,10 @@ pub(crate) fn push_repo_path_spans<'a>(
 
 /// Append a consistently styled shortcut token for header help text.
 pub(crate) fn push_shortcut_span<'a>(spans: &mut impl Extend<Span<'a>>, code: &str) {
-    let dim = Style::new().dim();
-    let key = Style::new().fg(Color::Yellow);
-
     spans.extend([
-        Span::styled("[", dim),
-        Span::styled(code.to_owned(), key),
-        Span::styled("]", dim),
+        Span::raw("[").dim(),
+        Span::raw(code.to_owned()).yellow(),
+        Span::raw("]").dim(),
     ])
 }
 
