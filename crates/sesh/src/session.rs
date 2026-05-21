@@ -134,6 +134,15 @@ impl Session {
         }
     }
 
+    /// Return the repository whose log should be shown in the preview pane.
+    fn preview_repo(&self) -> Option<PathBuf> {
+        match &self.0 {
+            Kind::Live(kind) => kind.repo(),
+            Kind::New(kind) => kind.preview_repo(),
+            Kind::Repo(kind) => kind.repo(),
+        }
+    }
+
     /// Return the tmux target for switching to this session.
     fn switch_target(&self) -> String {
         let session = self.name();
@@ -255,6 +264,14 @@ impl NewKind {
         };
 
         workspace_session_name(base, Some(&self.name), self.suffix.as_deref())
+    }
+
+    /// The repository whose log should be shown before this session's workspace exists.
+    fn preview_repo(&self) -> Option<PathBuf> {
+        match &self.base {
+            Base::Repo(default) => Some(default.clone()),
+            Base::Cwd(_) => None,
+        }
     }
 
     /// The repository associated with this session. Disambiguation ensures this path does not
@@ -397,9 +414,15 @@ impl Item for Session {
 
 #[async_trait]
 impl Preview for Session {
+    type Key = Option<PathBuf>;
+
+    fn key(&self) -> Self::Key {
+        self.preview_repo()
+    }
+
     /// Render a `jj log` preview for this session's attached repository.
     async fn preview(&self) -> anyhow::Result<String> {
-        let Some(repo) = self.repo() else {
+        let Some(repo) = self.preview_repo() else {
             return Ok(String::new());
         };
 
@@ -509,6 +532,16 @@ mod tests {
 
         assert_eq!(session.name(), "repo/feature");
         assert_eq!(session.repo(), Some(temp.path().join("repo.feature")));
+    }
+
+    #[test]
+    fn new_workspace_sessions_share_preview_cache_with_base_repo() {
+        let temp = tempdir().unwrap();
+        let default = temp.path().join("repo");
+        let new = Session::from(NewKind::new("feature", Base::Repo(default.clone())));
+        let repo = Session::from(RepoKind::new(None, default.clone(), default.clone(), false));
+
+        assert_eq!(new.key(), repo.key());
     }
 
     #[test]

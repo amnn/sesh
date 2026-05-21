@@ -199,6 +199,12 @@ impl App {
         // and session are up-to-date and valid.
         sessions.draw(f, l.sessions, l.scroll, &mut self.sessions);
 
+        // (2.a) Ensure the currently selected session is fed into the preview cache. Most sessions
+        // have already been fed to preview during discovery and this will do nothing, but if the
+        // selected row corresponds to the new session, then its repo may not have been fed to
+        // preview yet.
+        self.preview.feed(self.sessions.selected());
+
         let header = Header::new(
             self.sessions.can_close(),
             self.sessions.can_delete(),

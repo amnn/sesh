@@ -130,11 +130,6 @@ impl State {
         Self::default()
     }
 
-    /// Cancel any pending deletion.
-    pub(super) fn reset_delete(&mut self) {
-        self.deleting = false;
-    }
-
     /// Whether the currently selected session can be closed.
     pub(super) fn can_close(&self) -> bool {
         self.selected.as_ref().is_some_and(Session::can_close)
@@ -150,14 +145,14 @@ impl State {
         self.deleting
     }
 
-    /// The session to preview. This is similar to [`State::selected`], but if the currently
-    /// selected session is the new one, then that also returns `None`, as there will not be a
-    /// prepared preview for this session.
+    /// The session to preview, if one is currently selected.
     pub(super) fn preview(&self) -> Option<&Session> {
-        match self.list.selected() {
-            None | Some(0) => None,
-            Some(_) => self.selected.as_ref(),
-        }
+        self.selected.as_ref()
+    }
+
+    /// Cancel any pending deletion.
+    pub(super) fn reset_delete(&mut self) {
+        self.deleting = false;
     }
 
     /// Move selection to the beginning of the list.

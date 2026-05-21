@@ -4,12 +4,12 @@
 //! Background preview generation and caching.
 
 use std::collections::HashMap;
+use std::hash::Hash;
 use std::sync::Arc;
 
 use ansi_to_tui::IntoText as _;
 use async_trait::async_trait;
 use dashmap::DashMap;
-use nucleo::Utf32String;
 use ratatui::text::Text;
 use tokio_util::task::AbortOnDropHandle;
 
@@ -18,17 +18,26 @@ use crate::picker::Item;
 /// Item extension for rendering asynchronously cached previews.
 #[async_trait]
 pub(crate) trait Preview: Item {
+    /// Cache key used to share rendered previews between items.
+    type Key: Clone + Eq + Hash + Send + Sync + 'static;
+
+    /// Return the cache key used to share rendered previews between items.
+    fn key(&self) -> Self::Key;
+
     /// Render a preview for this item.
     async fn preview(&self) -> anyhow::Result<String>;
 }
 
 /// Shared preview cache populated by a background worker.
-pub(crate) struct PreviewCache {
-    entries: Arc<DashMap<Utf32String, Arc<anyhow::Result<Text<'static>>>>>,
-    workers: HashMap<Utf32String, AbortOnDropHandle<()>>,
+pub(crate) struct PreviewCache<K> {
+    entries: Arc<DashMap<K, Arc<anyhow::Result<Text<'static>>>>>,
+    workers: HashMap<K, AbortOnDropHandle<()>>,
 }
 
-impl PreviewCache {
+impl<K> PreviewCache<K>
+where
+    K: Clone + Eq + Hash + Send + Sync + 'static,
+{
     /// Create an empty preview cache.
     pub(crate) fn new() -> Self {
         Self {
@@ -37,15 +46,15 @@ impl PreviewCache {
         }
     }
 
-    /// Start populating previews for sessions that are not already cached or pending.
+    /// Start populating previews for items that are not already cached or pending.
     pub(crate) fn feed<'a, I>(&mut self, items: impl IntoIterator<Item = &'a I>)
     where
-        I: Preview + Clone + Send + Sync + 'static,
+        I: Preview<Key = K> + Clone + Send + Sync + 'static,
     {
         self.workers.retain(|_, worker| !worker.is_finished());
 
         for item in items {
-            let key = Utf32String::from(item.text());
+            let key = item.key();
             if self.entries.contains_key(&key) || self.workers.contains_key(&key) {
                 continue;
             }
@@ -67,7 +76,7 @@ impl PreviewCache {
     }
 
     /// Return the cached preview for `key`, if it has finished rendering.
-    pub(crate) fn get(&self, key: &Utf32String) -> Option<Arc<anyhow::Result<Text<'static>>>> {
+    pub(crate) fn get(&self, key: &K) -> Option<Arc<anyhow::Result<Text<'static>>>> {
         self.entries.get(key).as_deref().cloned()
     }
 }

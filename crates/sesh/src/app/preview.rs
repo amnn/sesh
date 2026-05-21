@@ -3,7 +3,8 @@
 
 //! Rendering and state for the session preview pane.
 
-use nucleo::Utf32String;
+use std::path::PathBuf;
+
 use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::text::Text;
@@ -12,8 +13,8 @@ use ratatui::widgets::ScrollDirection;
 use ratatui::widgets::ScrollbarState;
 
 use crate::app::scrollbar;
+use crate::cache::Preview as _;
 use crate::cache::PreviewCache;
-use crate::picker::Item as _;
 use crate::session::Session;
 
 /// View over the currently selected session's cached preview content.
@@ -23,16 +24,18 @@ pub(super) struct Preview<'s> {
 
 /// Mutable preview pane state shared across renders.
 pub(super) struct State {
-    cache: PreviewCache,
+    cache: PreviewCache<Option<PathBuf>>,
     scroll: ScrollbarState,
     visible: bool,
 }
 
 impl<'s> Preview<'s> {
+    /// Create a preview view over the currently selected session.
     pub(super) fn new(selected: Option<&'s Session>) -> Self {
         Self { selected }
     }
 
+    /// Render the preview text and its scrollbar into `area`.
     pub(super) fn draw(&self, f: &mut Frame<'_>, area: Rect, state: &mut State) {
         let text = self.text(state);
 
@@ -50,13 +53,13 @@ impl<'s> Preview<'s> {
         f.render_stateful_widget(scrollbar::widget(), area, &mut state.scroll);
     }
 
+    /// Resolve the selected session's cached preview text.
     fn text(&self, state: &State) -> Text<'static> {
         let Some(session) = self.selected else {
             return Text::raw("");
         };
 
-        let key = Utf32String::from(session.text());
-        let Some(preview) = state.cache.get(&key) else {
+        let Some(preview) = state.cache.get(&session.key()) else {
             return Text::raw("Loading...");
         };
 
@@ -68,6 +71,7 @@ impl<'s> Preview<'s> {
 }
 
 impl State {
+    /// Create preview pane state with an empty cache.
     pub(super) fn new() -> Self {
         Self {
             cache: PreviewCache::new(),

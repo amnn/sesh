@@ -20,7 +20,7 @@
 - [x] Apply name deconflicting logic to new sessions, instead of not
   allowing them to be created at all.
 
-- [ ] New session preview should show a preview of `jj` log at the base repo,
+- [x] New session preview should show a preview of `jj` log at the base repo,
   if applicable (if a repo is set).
 
 - [x] Add `C-d` to delete the selected session/workspace.
