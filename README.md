@@ -46,6 +46,98 @@ Reload tmux after editing your config:
 tmux source-file ~/.tmux.conf
 ```
 
+## Troubleshooting
+
+### `sesh` does not detect the repository from the current directory
+
+`sesh` detects the default repository context from the directory it starts in.
+If the picker header does not show the expected `repo: ...` value, check the
+path tmux uses when launching `sesh`:
+
+```tmux
+bind s display-popup -E -w 80% -h 80% -T sesh -d "#{pane_current_path}" "sesh"
+```
+
+The `-d "#{pane_current_path}"` option should be present so tmux starts `sesh`
+from the pane that was active when you opened the picker.
+
+To confirm the directory is inside a jj workspace, run the same jj check from
+that pane:
+
+```sh
+cd /path/to/repo/or/subdirectory
+jj workspace root
+```
+
+If `jj workspace root` fails, switch to a directory inside the jj checkout or
+fix the tmux binding so `sesh` starts from the active pane's path.
+
+### `sesh` does not detect the repository for an existing session
+
+Live tmux sessions only have repository metadata when they were opened by
+`sesh`, or when you set the `@sesh.repo` user option yourself. Plain tmux
+sessions still appear in the picker, but `sesh` cannot associate them with a jj
+repository.
+
+Check the session's repo metadata with:
+
+```sh
+tmux show-options -t SESSION -qv @sesh.repo
+```
+
+The command should print the repository path for repo-backed sessions. Empty
+output means `sesh` will treat the tmux session as a plain live session.
+
+To fix this, create or open the session through `sesh`. If you know the correct
+repository path and want to attach it manually, set the user option yourself:
+
+```sh
+tmux set-option -t SESSION @sesh.repo /path/to/repo
+```
+
+### `sesh` does not associate a workspace with its default checkout
+
+If `sesh` can find a jj checkout but new workspace names or paths are based on
+the current workspace instead of the default checkout, the jj workspace path
+index may be stale or missing. Check whether jj can report workspace paths:
+
+```sh
+cd /path/to/repo/or/subdirectory
+jj workspace root
+jj workspace list --template 'name ++ "\t" ++ root ++ "\n"'
+```
+
+If `jj workspace root` points at the right checkout but `jj workspace list`
+prints `<Error: ... workspace_store/index ...>` or
+`<Error: Workspace has no recorded path: ...>`, the repository was likely
+created before jj recorded workspace paths. `sesh` can still find the `.jj`
+directory, but it cannot tell which checkout is the default workspace.
+
+The repository includes [`scripts/fix-jj-workspace-index.py`](scripts/fix-jj-workspace-index.py) to
+recreate the missing workspace path index. It has been tested with `jj
+0.40.0`.
+
+> [!WARNING]
+> This script writes jj repository metadata. Use it at your own risk, inspect
+> the script first, and only run it when you are comfortable repairing the
+> `.jj/repo/workspace_store/index` file directly. The script backs up the
+> existing index file next to the original before replacing it.
+
+Run it from the default workspace root with one `name=/path/to/checkout`
+argument for each workspace. Include the default workspace too:
+
+```sh
+cd /path/to/default/repo
+/path/to/sesh/scripts/fix-jj-workspace-index.py \
+  default=/path/to/default/repo \
+  feature=/path/to/feature/repo
+jj workspace list --template 'name ++ "\t" ++ root ++ "\n"'
+```
+
+The final command should print each workspace with its checkout path instead of
+an error. After that, jj will maintain the index when you add or forget
+workspaces.
+
 ## Configuration
 
 `sesh` reads configuration from `$XDG_CONFIG_HOME/sesh/sesh.toml`, or
