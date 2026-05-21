@@ -3,16 +3,77 @@ source: crates/sesh/tests/test.rs
 expression: output
 input_file: crates/sesh/tests/cases/help.md
 ---
+# Help output
+
+The brief help output should document CLI options only.
+
+    :$ sesh -h (exit: 0)
+
+```stdout
+Usage: sesh [OPTIONS]
+
+Options:
+  -h                   Print brief help
+      --help           Print complete help
+      --config <PATH>  Path to a custom config file
+  -r, --repo <GLOB>    Additional repository globs to surface alongside existing tmux sessions
+  -V, --version        Print version
+```
+
+The complete help output should include detailed key binding and configuration sections.
+
     :$ sesh --help (exit: 0)
 
 ```stdout
 Usage: sesh [OPTIONS]
 
 Options:
-  -?, --help           
-      --config <PATH>  Path to a custom config file
-  -r, --repo <GLOB>    Additional repository globs to surface alongside existing tmux sessions
-  -V, --version        Print version
+  -h
+          Print brief help
+
+      --help
+          Print complete help
+
+      --config <PATH>
+          Path to a custom config file. When omitted, sesh reads $XDG_CONFIG_HOME/sesh/sesh.toml, or
+          ~/.config/sesh/sesh.toml when $XDG_CONFIG_HOME is unset.
+
+  -r, --repo <GLOB>
+          Additional repository globs to surface alongside existing tmux sessions. Pass once per
+          glob; each matching jj repo can be used as context for new repo-backed workspaces.
+
+  -V, --version
+          Print version
+
+Key bindings:
+  C-d             Delete the repository and close the session.
+  C-p             Toggle the preview pane.
+  C-r, M-r        Set or reset the current repo.
+  C-u             Clear the filter.
+  C-x             Close a live session.
+  C-y             Confirm a pending deletion.
+  up, down        Move selection by one row.
+  M-up, M-down    Move selection to the first or last row.
+  S-up, S-down    Scroll the preview pane up or down.
+  enter           Switch to the session, creating it if necessary.
+  esc, C-g, C-c   Close the UI.
+
+Configuration:
+  The config file is TOML. It is optional; when no file is present, sesh uses
+  the built-in defaults.
+
+  tmux.setup      Shell script to run after sesh creates a detached tmux
+                    session. The script runs in the new session's tmux context
+                    and working directory, so commands can use default tmux
+                    targets and relative paths.
+
+Example:
+  [tmux]
+  setup = '''
+  tmux rename-window shell
+  tmux new-window -n editor 'nvim .'
+  '''
+
 ```
 
 ---

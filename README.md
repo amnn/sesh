@@ -46,6 +46,46 @@ Reload tmux after editing your config:
 tmux source-file ~/.tmux.conf
 ```
 
+## Key bindings
+
+`sesh -h` prints brief CLI help. `sesh --help` prints complete help, including
+all picker key bindings:
+
+| Key | Action |
+| --- | --- |
+| `C-d` | Delete the repository and close the session. |
+| `C-p` | Toggle the preview pane. |
+| `C-r`, `M-r` | Set or reset the current repo. |
+| `C-u` | Clear the filter. |
+| `C-x` | Close a live session. |
+| `C-y` | Confirm a pending deletion. |
+| `up`, `down` | Move selection by one row. |
+| `M-up`, `M-down` | Move selection to the first or last row. |
+| `S-up`, `S-down` | Scroll the preview pane up or down. |
+| `enter` | Switch to the session, creating it if necessary. |
+| `esc`, `C-g`, `C-c` | Close the UI. |
+
+## Configuration
+
+`sesh` reads configuration from `$XDG_CONFIG_HOME/sesh/sesh.toml`, or
+`~/.config/sesh/sesh.toml` when `$XDG_CONFIG_HOME` is unset. You can also pass
+an explicit config file with `--config PATH`.
+
+The config file is optional. The default configuration does not run any extra
+setup after creating a tmux session.
+
+Use `[tmux].setup` to run a shell script after `sesh` creates a detached tmux
+session. The script runs in the new session's tmux context and working
+directory, so commands can use default tmux targets and relative paths:
+
+```toml
+[tmux]
+setup = '''
+tmux rename-window shell
+tmux new-window -n editor 'nvim .'
+'''
+```
+
 ## Troubleshooting
 
 ### `sesh` does not detect the repository from the current directory
@@ -137,24 +177,3 @@ jj workspace list --template 'name ++ "\t" ++ root ++ "\n"'
 The final command should print each workspace with its checkout path instead of
 an error. After that, jj will maintain the index when you add or forget
 workspaces.
-
-## Configuration
-
-`sesh` reads configuration from `$XDG_CONFIG_HOME/sesh/sesh.toml`, or
-`~/.config/sesh/sesh.toml` when `$XDG_CONFIG_HOME` is unset. You can also pass
-an explicit config file with `--config PATH`.
-
-The config file is optional. The default configuration does not run any extra
-setup after creating a tmux session.
-
-Use `[tmux].setup` to run a shell script after `sesh` creates a detached tmux
-session. The script runs in the new session's tmux context and working
-directory, so commands can use default tmux targets and relative paths:
-
-```toml
-[tmux]
-setup = '''
-tmux rename-window shell
-tmux new-window -n editor 'nvim .'
-'''
-```

@@ -240,6 +240,7 @@ dependencies = [
  "anstyle",
  "clap_lex",
  "strsim",
+ "terminal_size",
 ]
 
 [[package]]
@@ -1669,6 +1670,7 @@ name = "sesh"
 version = "0.1.0"
 dependencies = [
  "ansi-to-tui",
+ "anstyle",
  "anyhow",
  "async-trait",
  "clap",
@@ -1685,6 +1687,7 @@ dependencies = [
  "sesh-integration-tests",
  "telemetry-subscribers",
  "tempfile",
+ "textwrap",
  "tokio",
  "tokio-util",
  "toml",
@@ -1897,6 +1900,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "terminal_size"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "230a1b821ccbd75b185820a1f1ff7b14d21da1e442e22c0863ea5f08771a8874"
+dependencies = [
+ "rustix",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "terminfo"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1966,6 +1979,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c13547615a44dc9c452a8a534638acdf07120d4b6847c8178705da06306a3057"
 dependencies = [
  "smawk",
+ "terminal_size",
  "unicode-linebreak",
  "unicode-width",
 ]

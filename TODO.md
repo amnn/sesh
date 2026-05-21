@@ -45,7 +45,7 @@
 
 ## Configuration
 
-- [ ] Add dedicated `help` output sections for key bindings and configuration.
+- [x] Add dedicated `help` output sections for key bindings and configuration.
   - Include `M-r` to clear/reset the repo.
 
 - [ ] Configure previews
