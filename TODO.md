@@ -31,6 +31,9 @@
   - Label this as `base:` in the header and user-facing text.
   - Define base resolution rules for mixed repo types.
 
+- [ ] `S-Enter` to create a session without switching to it (and without
+  closing the picker).
+
 ## GitHub
 
 - [ ] List relevant PRs for repo in session list (a relevant PR is one that is
