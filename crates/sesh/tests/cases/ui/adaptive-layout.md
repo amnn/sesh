@@ -20,13 +20,13 @@ This snapshot shows the narrow stacked layout, including the horizontal
 separator between the session list and preview.
 
     :k alpha
-    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+    :snap
 
 After widening the terminal, the picker should redraw with the session list and
 preview side by side.
 
     :t resize-window -t ui:0 -x 180 -y 10
-    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+    :snap
 
 ---
 vim: set ft=markdown:

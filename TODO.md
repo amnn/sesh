@@ -2,7 +2,7 @@
 
 ## Refactors
 
-- [ ] Audit `:snap` replacements -- we may not need most of them.
+- [x] Audit `:snap` replacements -- we may not need most of them.
 
 - [x] Audit usage of `Span::styled` -- prefer `Span::raw` with `Stylize` builders calls.
 

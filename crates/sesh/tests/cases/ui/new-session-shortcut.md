@@ -34,28 +34,28 @@ repo-only entries discovered through the CLI globs.
 Initially the query is empty, so the top row is an unselectable spacer.
 Pressing `C-n` should do nothing and leave the picker open in the same state.
 
-    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+    :snap
 
     :k C-n
-    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+    :snap
 
 Typing a prefix of the live `alpha` session makes the new-session row selectable,
 because `alp` is not an exact live session name.
 
     :k alp
-    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+    :snap
 
 Completing the live session name causes the new-session row's name to become
 disambiguated.
 
     :k ha
-    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+    :snap
 
 Completing the name of the non-live `beta` repo removes the disambiguation from
 the new-session row, because there is no live session named `beta`.
 
     :k C-u beta
-    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{6,8})\b/h"
+    :snap
 
 ---
 vim: set ft=markdown:

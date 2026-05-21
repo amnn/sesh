@@ -22,7 +22,7 @@ Type a new workspace name. The current repo has no recorded workspace root, so
 its own path is used as the base.
 
     :k omega
-    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+    :snap
 
     :k Enter
     :settle -d 2s

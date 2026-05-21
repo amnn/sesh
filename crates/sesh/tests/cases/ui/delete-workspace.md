@@ -29,14 +29,14 @@ Launch a fresh picker and select the workspace-backed session.
     :settle -d 2s
 
     :k feature
-    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+    :snap
 
 Requesting deletion should mark the selected session and show the confirm
 shortcut.
 
     :k C-d
     :settle
-    :snap --color "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+    :snap --color
 
 Confirming should remove the tmux session, remove the workspace from jj's
 workspace list, and delete the workspace directory.

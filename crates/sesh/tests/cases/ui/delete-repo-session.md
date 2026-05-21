@@ -22,13 +22,13 @@ Filter to the repo-only named workspace entry. The header should offer deletion
 even though the selected row has no live tmux sigil.
 
     :k feature C-n
-    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+    :snap
 
 Pressing `C-d` should mark the repo entry for deletion.
 
     :k C-d
     :settle
-    :snap --color "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+    :snap --color
 
 Confirming should leave the picker alive, forget the workspace, and remove the
 workspace checkout.

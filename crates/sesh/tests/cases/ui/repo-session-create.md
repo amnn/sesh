@@ -23,7 +23,7 @@ Launch the picker in a live tmux client and make the repo discoverable.
 Type a query that selects `beta`, wait for the picker to redraw, and accept it.
 
     :k beta
-    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+    :snap
 
     :k enter
     :settle -d 2s

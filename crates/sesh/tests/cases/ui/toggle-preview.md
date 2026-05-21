@@ -15,17 +15,17 @@ This scenario verifies that `C-p` toggles the preview pane.
 
 The preview should be visible initially.
 
-    :snap --color "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+    :snap --color
 
 Pressing `C-p` should hide the preview and allow the list to use the full width.
 
     :k C-p
-    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+    :snap
 
 Pressing `C-p` again should restore the preview.
 
     :k C-p
-    :snap --color "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+    :snap --color
 
 ---
 vim: set ft=markdown:

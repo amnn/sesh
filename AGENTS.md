@@ -23,6 +23,10 @@ remove any leftover `.snap.new` artifacts before finishing.
 Use `:snap --color` only when terminal colour is part of the behavior under
 test; plain `:snap` intentionally skips SVG artifacts.
 
+Do not add `:snap` replacement filters speculatively; use them only when the
+captured output is unstable without them or when a test explicitly covers
+replacement behavior.
+
 When reviewing SVG snapshot diffs, inspect the actual SVG text/span changes and
 compare old versus new before describing behavior. Distinguish visual movement
 from changes in span ownership or styling of the same visible cells.
