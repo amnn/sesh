@@ -54,6 +54,7 @@ all picker key bindings:
 | Key | Action |
 | --- | --- |
 | `C-d` | Delete the repository and close the session. |
+| `C-n` | Create the session if necessary without switching to it. |
 | `C-p` | Toggle the preview pane. |
 | `C-r`, `M-r` | Set or reset the current repo. |
 | `C-u` | Clear the filter. |

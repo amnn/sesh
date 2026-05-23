@@ -75,6 +75,9 @@ enum Action {
     /// Delete the selected session's attached workspace checkout, closing tmux if live.
     Delete(Session),
 
+    /// Create the selected session without switching to it.
+    Create(Session),
+
     /// Switch to the selected session, creating it first if needed.
     Switch(Session),
 }
@@ -131,6 +134,14 @@ impl App {
                         self.delete(&session).await?;
                         session.close().await?;
                         self.sessions.reset_delete();
+                        self.picker.reset();
+                        break;
+                    }
+
+                    Some(Action::Create(session)) => {
+                        session.create(cwd, ctx.setup).await?;
+                        self.sessions.select_first();
+                        self.picker.clear();
                         self.picker.reset();
                         break;
                     }
@@ -260,6 +271,11 @@ impl App {
         match key.code {
             // Accept the selected row.
             KC::Enter => return self.sessions.take_selected().map(Action::Switch),
+
+            // Create the selected row without switching.
+            KC::Char('n') if key.modifiers.contains(CTRL) => {
+                return self.sessions.take_selected().map(Action::Create);
+            }
 
             // Cancel
             KC::Esc => return Some(Action::Cancel),

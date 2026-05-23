@@ -101,6 +101,11 @@ impl Session {
         }
     }
 
+    /// Create this session if needed without switching the current tmux client.
+    pub async fn create(&self, cwd: &Path, setup: &str) -> anyhow::Result<()> {
+        self.ensure_tmux(cwd, setup).await
+    }
+
     /// Return the session name.
     pub fn name(&self) -> String {
         match &self.0 {
@@ -121,7 +126,7 @@ impl Session {
 
     /// Switch the current tmux client to this session, creating the session first if needed.
     pub async fn switch(&self, cwd: &Path, setup: &str) -> anyhow::Result<()> {
-        self.ensure_tmux(cwd, setup).await?;
+        self.create(cwd, setup).await?;
         tmux::switch_client(&self.switch_target()).await
     }
 

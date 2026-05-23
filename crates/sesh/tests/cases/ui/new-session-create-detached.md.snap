@@ -1,0 +1,80 @@
+---
+source: crates/sesh/tests/test.rs
+expression: output
+input_file: crates/sesh/tests/cases/ui/new-session-create-detached.md
+---
+# New session create detached
+
+Ctrl+n on the ephemeral new-session row creates the session without switching
+the current tmux client or closing the picker.
+
+    :bins jj tmux
+
+> [!NOTE]
+> 'jj', and 'tmux' are available.
+
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
+    :t rename-session -t 0 runner (success)
+    :t new-session -d -s ui "sesh" (success)
+    :t resize-window -t ui:0 -x 120 -y 10 (success)
+    :pane ui:0.0
+    :settle -d 2s (settled)
+
+Type a unique session name and create it without switching.
+
+    :k zeta
+    :snap
+
+```terminal
+session: zeta
+  0/2 | [C-r] repo: none
+▌  zeta                                                                                                                ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+```
+
+    :k C-n
+    :settle -d 2s (settled)
+
+The picker should remain open with the query cleared, and the control-mode
+client should still be attached to the picker session.
+
+    :snap
+
+```terminal
+session:
+  3/3 | [C-r] repo: none | [C-x] close
+▌⬤ runner                                                                                                              ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+```
+
+    :t display-message -p '#{client_session}' (success)
+
+```
+ui
+```
+
+The new session should exist without repo metadata.
+
+    :t list-sessions -F '#{session_name}:#{@sesh.repo}' (success)
+
+```
+runner:
+ui:
+zeta:
+```
+
+---
+vim: set ft=markdown:

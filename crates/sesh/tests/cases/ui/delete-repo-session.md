@@ -21,7 +21,7 @@ and delete the workspace checkout.
 Filter to the repo-only named workspace entry. The header should offer deletion
 even though the selected row has no live tmux sigil.
 
-    :k feature C-n
+    :k feature
     :snap
 
 Pressing `C-d` should mark the repo entry for deletion.

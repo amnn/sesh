@@ -18,7 +18,7 @@ workspaces can be deleted.
 Filter to the default workspace repo-only entry. The header should not offer
 `C-d` delete.
 
-    :k beta C-n
+    :k beta
     :snap
 
 Pressing `C-d` should do nothing.
