@@ -10,8 +10,11 @@ use std::path::PathBuf;
 
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt as _;
+use nucleo::Snapshot;
+use nucleo::Status;
 
 use crate::jj;
+use crate::picker::Picker;
 use crate::session::Base;
 use crate::session::LiveKind;
 use crate::session::NewKind;
@@ -24,8 +27,10 @@ use crate::tmux;
 /// This owns the discovered session rows, the collision sets used while deriving candidate rows,
 /// and the mapping from repository paths to workspace metadata needed by workspace-aware session
 /// construction.
-#[derive(Default)]
 pub struct Model {
+    /// Fuzzy finder state for discovered sessions.
+    picker: Picker<Session>,
+
     /// The sessions to fuzzy find over.
     sessions: Vec<Session>,
 
@@ -55,18 +60,62 @@ struct Workspace {
 }
 
 impl Model {
-    /// Discover live tmux sessions and repository-backed candidate sessions.
+    /// Construct a model with discovered sessions and a seeded fuzzy query.
     ///
     /// `globs` is a list of glob patterns to search for repositories in. `current` is an
     /// optional current repository path. The model will discover workspace information for all the
-    /// repositories found between the two.
-    pub async fn discover(globs: &[String], current: Option<&Path>) -> anyhow::Result<Self> {
-        let mut model = Self::default();
+    /// repositories found between the two. `query` seeds the model's fuzzy picker.
+    pub async fn new(
+        globs: &[String],
+        current: Option<&Path>,
+        query: String,
+    ) -> anyhow::Result<Self> {
+        let mut model = Self {
+            picker: Picker::new(query),
+            sessions: Vec::new(),
+            seen_tmux_names: BTreeSet::new(),
+            seen_workspaces: BTreeMap::new(),
+            workspaces: BTreeMap::new(),
+        };
+
+        model.discover(globs, current).await?;
+        Ok(model)
+    }
+
+    /// Return all matched sessions after the matcher has finished processing pending updates.
+    pub fn matches(&mut self) -> Vec<Session> {
+        loop {
+            let (status, snapshot, _) = self.picker.refresh();
+            if !status.running {
+                return snapshot
+                    .matched_items(..)
+                    .map(|item| item.data.clone())
+                    .collect();
+            }
+        }
+    }
+
+    /// Clear the active query string.
+    pub(crate) fn clear_query(&mut self) {
+        self.picker.clear();
+    }
+
+    /// Discover sessions while preserving the current fuzzy query.
+    pub(crate) async fn discover(
+        &mut self,
+        globs: &[String],
+        current: Option<&Path>,
+    ) -> anyhow::Result<()> {
+        self.sessions.clear();
+        self.seen_tmux_names.clear();
+        self.seen_workspaces.clear();
+        self.workspaces.clear();
+
         let mut tmux_repos = BTreeSet::new();
 
         let tmux_sessions = tmux::sessions().await?;
         for (name, info) in &tmux_sessions {
-            model.seen_tmux_names.insert(name.clone());
+            self.seen_tmux_names.insert(name.clone());
             tmux_repos.extend(info.repo.clone());
         }
 
@@ -79,18 +128,18 @@ impl Model {
 
         // Discover workspace names and locations for the repositories found -- this is used to
         // construct workspace-aware session names.
-        model.workspaces = workspaces(repos).await;
+        self.workspaces = workspaces(repos).await;
 
         // Add all the live sessions from tmux.
         for (name, info) in tmux_sessions {
             let can_delete = info
                 .repo
                 .as_ref()
-                .and_then(|repo| model.workspace_name(repo))
+                .and_then(|repo| self.workspace_name(repo))
                 .is_some();
 
             let session = LiveKind::new(name, info.repo, info.alerts, can_delete);
-            model.sessions.push(session.into());
+            self.sessions.push(session.into());
         }
 
         // Add an entry for every repo found, as long as it's not already associated with a
@@ -100,7 +149,7 @@ impl Model {
                 continue;
             }
 
-            let mut session = if let Some(Some(workspace)) = model.workspaces.get(&repo) {
+            let mut session = if let Some(Some(workspace)) = self.workspaces.get(&repo) {
                 RepoKind::new(
                     workspace.name.as_deref(),
                     workspace.default.clone().unwrap_or_else(|| repo.to_owned()),
@@ -111,13 +160,13 @@ impl Model {
                 RepoKind::new(None, repo.to_owned(), repo.to_owned(), false)
             };
 
-            session.disambiguate(&model.seen_tmux_names);
-            model.sessions.push(session.into());
+            session.disambiguate(&self.seen_tmux_names);
+            self.sessions.push(session.into());
         }
 
         // Attach information about workspaces seen, to help disambiguate future new workspaces
         // created by the tool.
-        for (root, workspace) in &model.workspaces {
+        for (root, workspace) in &self.workspaces {
             let Some(workspace) = workspace else {
                 continue;
             };
@@ -125,18 +174,21 @@ impl Model {
             let root = workspace.default.as_ref().unwrap_or(root);
             let name = workspace.name.as_deref().unwrap_or(jj::DEFAULT_WORKSPACE);
 
-            model
-                .seen_workspaces
+            self.seen_workspaces
                 .entry(root.to_owned())
                 .or_default()
                 .insert(name.to_owned());
         }
 
-        Ok(model)
+        self.picker.reset();
+        self.picker.inject(self.sessions.clone());
+
+        Ok(())
     }
 
     /// Construct the dynamic "new session" candidate for the current query and repo context.
-    pub(super) fn new_session(&self, query: &str, repo: Option<&Path>) -> Option<Session> {
+    pub(crate) fn new_session(&self, repo: Option<&Path>) -> Option<Session> {
+        let query = self.picker.query();
         if query.is_empty() {
             return None;
         }
@@ -165,13 +217,28 @@ impl Model {
         Some(session.into())
     }
 
+    /// Remove the trailing character from the active query string.
+    pub(crate) fn pop_query(&mut self) {
+        self.picker.pop();
+    }
+
+    /// Append one character to the active query string.
+    pub(crate) fn push_query(&mut self, ch: char) {
+        self.picker.push(ch);
+    }
+
+    /// Refresh fuzzy matches and return the currently visible rows.
+    pub(crate) fn refresh(&mut self) -> (Status, &Snapshot<Session>, &str) {
+        self.picker.refresh()
+    }
+
     /// Return the discovered sessions.
-    pub(super) fn sessions(&self) -> &[Session] {
+    pub(crate) fn sessions(&self) -> &[Session] {
         &self.sessions
     }
 
     /// Return the exact jj workspace name for `repo`, if it is a named workspace.
-    pub(super) fn workspace_name(&self, repo: &Path) -> Option<&str> {
+    pub(crate) fn workspace_name(&self, repo: &Path) -> Option<&str> {
         self.workspaces
             .get(repo)
             .and_then(|w| w.as_ref())

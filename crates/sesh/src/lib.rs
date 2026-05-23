@@ -9,6 +9,7 @@ pub mod tmux;
 
 mod app;
 mod cache;
+mod model;
 mod path;
 mod picker;
 mod session;
@@ -17,3 +18,5 @@ mod ui;
 
 pub use crate::app::App;
 pub use crate::app::Context;
+pub use crate::model::Model;
+pub use crate::session::Session;

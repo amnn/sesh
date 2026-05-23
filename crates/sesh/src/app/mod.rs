@@ -10,7 +10,6 @@ mod header;
 mod layout;
 mod list;
 mod loading;
-mod model;
 mod preview;
 mod prompt;
 mod scrollbar;
@@ -22,7 +21,7 @@ use std::path::Path;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use anyhow::anyhow;
+use anyhow::Context as _;
 use crossterm::event;
 use crossterm::event::Event;
 use crossterm::event::KeyCode;
@@ -38,7 +37,7 @@ use crate::app::loading::Loading;
 use crate::app::preview::Preview;
 use crate::app::sessions::Sessions;
 use crate::jj;
-use crate::picker::Picker;
+use crate::model::Model;
 use crate::session::Session;
 use crate::terminal::AlternateScreenGuard;
 
@@ -49,13 +48,12 @@ const POLL_TIMEOUT: Duration = Duration::from_millis(16);
 pub struct App {
     repo: Option<PathBuf>,
     load: loading::State,
-    model: model::Model,
-    picker: Picker<Session>,
+    model: Model,
     preview: preview::State,
     sessions: sessions::State,
 }
 
-/// Runtime inputs used by the picker but not owned by its UI state.
+/// Runtime inputs used by the interactive picker but not owned by its UI state.
 pub struct Context<'a> {
     /// Repository globs to discover alongside existing tmux sessions.
     pub globs: &'a [String],
@@ -85,14 +83,17 @@ enum Action {
 impl App {
     /// Create a new application.
     ///
-    /// `repo` is the initial base repository.
-    pub fn new(repo: Option<PathBuf>) -> Self {
+    /// `repo` is the initial base repository. `model` contains the underlying data to drive the
+    /// interface.
+    pub fn new(repo: Option<PathBuf>, model: Model) -> Self {
+        let mut preview = preview::State::new();
+        preview.feed(model.sessions());
+
         Self {
             repo,
             load: loading::State::new(),
-            model: model::Model::default(),
-            picker: Picker::new(),
-            preview: preview::State::new(),
+            model,
+            preview,
             sessions: sessions::State::new(),
         }
     }
@@ -103,8 +104,6 @@ impl App {
         let mut terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
 
         loop {
-            self.discover(ctx.globs).await?;
-
             loop {
                 terminal.draw(|frame| self.draw(frame))?;
 
@@ -126,7 +125,6 @@ impl App {
 
                     Some(Action::Close(session)) => {
                         session.close().await?;
-                        self.picker.reset();
                         break;
                     }
 
@@ -134,15 +132,13 @@ impl App {
                         self.delete(&session).await?;
                         session.close().await?;
                         self.sessions.reset_delete();
-                        self.picker.reset();
                         break;
                     }
 
                     Some(Action::Create(session)) => {
                         session.create(cwd, ctx.setup).await?;
                         self.sessions.select_first();
-                        self.picker.clear();
-                        self.picker.reset();
+                        self.model.clear_query();
                         break;
                     }
 
@@ -153,6 +149,8 @@ impl App {
                     }
                 }
             }
+
+            self.discover(ctx.globs).await?;
         }
     }
 
@@ -169,19 +167,15 @@ impl App {
         match tokio::fs::remove_dir_all(&repo).await {
             Ok(()) => Ok(()),
             Err(err) if err.kind() == ErrorKind::NotFound => Ok(()),
-            Err(err) => {
-                let msg = format!("failed to remove repository '{}'", repo.display());
-                Err(anyhow!(err).context(msg))
-            }
+            Err(err) => Err(err)
+                .with_context(|| format!("failed to remove repository '{}'", repo.display())),
         }
     }
 
     /// Discover sessions and inject them into the picker.
     async fn discover(&mut self, globs: &[String]) -> anyhow::Result<()> {
-        self.model = model::Model::discover(globs, self.repo.as_deref()).await?;
-        let sessions = self.model.sessions().to_vec();
-        self.preview.feed(&sessions);
-        self.picker.inject(sessions);
+        self.model.discover(globs, self.repo.as_deref()).await?;
+        self.preview.feed(self.model.sessions());
         Ok(())
     }
 
@@ -192,19 +186,17 @@ impl App {
     fn draw(&mut self, f: &mut ratatui::Frame<'_>) {
         let l = layout::Layout::new(f.area(), self.preview.visible());
 
+        let new_session = self.model.new_session(self.repo.as_deref());
+
         // Poll the picker for its latest state, and build the data model.
-        let (status, snapshot, query) = self.picker.refresh();
+        let (status, snapshot, query) = self.model.refresh();
         let items: Vec<_> = snapshot.matched_items(..).collect();
 
         // (1) Render picker state
         f.render_widget(prompt::widget(query), l.prompt);
         f.render_stateful_widget(Loading::new(status.running), l.loading, &mut self.load);
 
-        let sessions = Sessions::new(
-            self.model.new_session(query, self.repo.as_deref()),
-            &items,
-            snapshot.pattern().column_pattern(0),
-        );
+        let sessions = Sessions::new(new_session, &items, snapshot.pattern().column_pattern(0));
 
         // (2) Render session list. This also updates `self.sessions`, so that the selected index
         // and session are up-to-date and valid.
@@ -330,10 +322,10 @@ impl App {
             }
 
             // Edit query
-            KC::Backspace => self.picker.pop(),
-            KC::Char('u') if key.modifiers.contains(CTRL) => self.picker.clear(),
-            KC::Char(c) if key.modifiers.is_empty() => self.picker.push(c),
-            KC::Char(c) if key.modifiers.contains(SHIFT) => self.picker.push(c),
+            KC::Backspace => self.model.pop_query(),
+            KC::Char('u') if key.modifiers.contains(CTRL) => self.model.clear_query(),
+            KC::Char(c) if key.modifiers.is_empty() => self.model.push_query(c),
+            KC::Char(c) if key.modifiers.contains(SHIFT) => self.model.push_query(c),
 
             _ => {}
         };

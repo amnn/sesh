@@ -38,7 +38,9 @@ reached a stable state.
 When a UI test needs to assert behavior after `sesh` exits without
 switching the client, keep the launched tmux pane alive (for example
 `"sesh ...; cat"`) so later markdown directives can still query the tmux
-server.
+server. Include any helper command used inside tmux panes (such as `cat` or
+`sleep`) in the case's `:bins`; panes run with the sandboxed PATH, so missing
+helpers can exit immediately and make sessions disappear.
 
 ## Architecture
 

@@ -1,0 +1,44 @@
+---
+source: crates/sesh/tests/test.rs
+expression: output
+input_file: crates/sesh/tests/cases/ui/initial-query.md
+---
+# Initial query
+
+The `--query` flag should seed the interactive filter before the picker draws.
+
+    :bins jj cat tmux
+
+> [!NOTE]
+> 'jj', 'cat', and 'tmux' are available.
+
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
+    :t rename-session -t 0 runner (success)
+    :t new-session -d -s beta "printf 'beta target'; cat" (success)
+    :t new-session -d -s gamma "printf 'gamma target'; cat" (success)
+    :t new-session -d -s ui "sesh --query gam" (success)
+    :t resize-window -t ui:0 -x 80 -y 10 (success)
+    :pane ui:0.0
+    :settle -d 2s (settled)
+
+The prompt should contain the seeded query, and the list should be filtered to
+matching sessions.
+
+    :snap
+
+```terminal
+session: gam
+  1/4 | [C-r] repo: none | [C-x] close
+▌⬤ gamma                                                                       ┃
+────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+```
+
+---
+vim: set ft=markdown:

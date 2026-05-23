@@ -35,24 +35,18 @@ pub(crate) struct Picker<I: Send + Sync + 'static> {
 }
 
 impl<I: Item + Send + Sync + 'static> Picker<I> {
-    /// Construct an empty fuzzy matcher.
-    pub(crate) fn new() -> Self {
-        Self {
-            matcher: Nucleo::new(Config::DEFAULT, Arc::new(|| {}), None, 1),
-            query: String::new(),
-        }
+    /// Construct an empty fuzzy matcher seeded with `query`.
+    pub(crate) fn new(query: String) -> Self {
+        let matcher = Nucleo::new(Config::DEFAULT, Arc::new(|| {}), None, 1);
+        let mut picker = Self { matcher, query };
+        picker.reparse(false);
+        picker
     }
 
     /// Clear the active query string.
     pub(crate) fn clear(&mut self) {
         self.query.clear();
-        self.matcher.pattern.reparse(
-            0,
-            &self.query,
-            CaseMatching::Smart,
-            Normalization::Smart,
-            false,
-        );
+        self.reparse(false);
     }
 
     /// Inject replacement items into the matcher.
@@ -68,25 +62,18 @@ impl<I: Item + Send + Sync + 'static> Picker<I> {
     /// Remove the trailing character from the active query string.
     pub(crate) fn pop(&mut self) {
         self.query.pop();
-        self.matcher.pattern.reparse(
-            0,
-            &self.query,
-            CaseMatching::Smart,
-            Normalization::Smart,
-            false,
-        );
+        self.reparse(false);
     }
 
     /// Append one character to the active query string.
     pub(crate) fn push(&mut self, ch: char) {
         self.query.push(ch);
-        self.matcher.pattern.reparse(
-            0,
-            &self.query,
-            CaseMatching::Smart,
-            Normalization::Smart,
-            true,
-        );
+        self.reparse(true);
+    }
+
+    /// Return the active query string.
+    pub(crate) fn query(&self) -> &str {
+        &self.query
     }
 
     /// Refresh fuzzy matches and return the currently visible rows.
@@ -98,5 +85,16 @@ impl<I: Item + Send + Sync + 'static> Picker<I> {
     /// Reset matcher contents while preserving the active query string.
     pub(crate) fn reset(&mut self) {
         self.matcher.restart(true);
+    }
+
+    /// Reparse the active query and tell nucleo whether the change appended text.
+    fn reparse(&mut self, append: bool) {
+        self.matcher.pattern.reparse(
+            0,
+            &self.query,
+            CaseMatching::Smart,
+            Normalization::Smart,
+            append,
+        );
     }
 }
