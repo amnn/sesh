@@ -58,6 +58,10 @@ impl<'r> Header<'r> {
 
         if let Some(repo) = self.repo {
             push_repo_path_spans(&mut line, repo.source(), &mut Highlight::none());
+            line += Span::raw(", ").dim();
+            push_shortcut_span(&mut line, "C-b");
+            line += Span::raw(" base: ");
+            line += Span::raw(repo.revision().to_owned()).dim();
         } else {
             line += Span::raw("none").dim();
         }

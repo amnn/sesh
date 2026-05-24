@@ -33,7 +33,7 @@ of an existing sibling workspace.
 
 ```terminal
 session: zeta
-  0/3 | [C-r] repo: ~/beta
+  0/3 | [C-r] repo: ~/beta, [C-b] base: trunk()
 ▌  beta/zeta~1                              ~/beta.zeta~1                                                              ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 @  beta commit

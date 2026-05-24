@@ -34,7 +34,7 @@ from `cwd`.
 
 ```terminal
 session:
-  5/5 | [C-r] repo: ~/alpha | [C-x] close
+  5/5 | [C-r] repo: ~/alpha, [C-b] base: trunk() | [C-x] close
 ▌⬤ runner                                                                                ┃
 ──────────────────────────────────────────────────────────────────────────────────────────
 
@@ -52,7 +52,7 @@ Move the cursor to the discovered `beta` repo row.
 
 ```terminal
 session:
-  5/5 | [C-r] repo: ~/alpha
+  5/5 | [C-r] repo: ~/alpha, [C-b] base: trunk()
 ▌  beta                                     ~/beta                                       ┃
 ──────────────────────────────────────────────────────────────────────────────────────────
 @  beta commit
@@ -71,7 +71,7 @@ to `beta` while the selected row stays on `beta` after the picker refreshes.
 
 ```terminal
 session:
-  5/5 | [C-r] repo: ~/beta
+  5/5 | [C-r] repo: ~/beta, [C-b] base: trunk()
 ▌  beta                                     ~/beta                                       ┃
 ──────────────────────────────────────────────────────────────────────────────────────────
 @  beta commit
@@ -91,7 +91,7 @@ filtered list.
 
 ```terminal
 session: a
-  3/5 | [C-r] repo: ~/gamma
+  3/5 | [C-r] repo: ~/gamma, [C-b] base: trunk()
 ▌  gamma                                    ~/gamma                                      ┃
 ──────────────────────────────────────────────────────────────────────────────────────────
 @  gamma commit
