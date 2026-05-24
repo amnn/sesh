@@ -13,11 +13,19 @@ use anyhow::ensure;
 use tokio::process::Command;
 use which::which;
 
+/// The default revision used as the parent for newly-created workspaces.
+pub const DEFAULT_BASE_REVSET: &str = "trunk()";
+
 /// The conventional workspace name created by `jj git init`.
 pub const DEFAULT_WORKSPACE: &str = "default";
 
-/// Create a new workspace in `destination`, named `name`, with working copy based on `trunk()`.
-pub async fn add_workspace(repo: &Path, destination: &Path, name: &str) -> anyhow::Result<()> {
+/// Create a new workspace in `destination`, named `name`, with working copy based on `revision`.
+pub async fn add_workspace(
+    repo: &Path,
+    destination: &Path,
+    name: &str,
+    revision: &str,
+) -> anyhow::Result<()> {
     let output = Command::new("jj")
         .args(["workspace", "add"])
         .arg("-R")
@@ -25,7 +33,7 @@ pub async fn add_workspace(repo: &Path, destination: &Path, name: &str) -> anyho
         .arg("--name")
         .arg(name)
         .arg("--revision")
-        .arg("trunk()")
+        .arg(revision)
         .arg(destination)
         .output()
         .await
@@ -178,6 +186,49 @@ mod tests {
     use tempfile::tempdir;
 
     use super::*;
+
+    #[tokio::test]
+    async fn creates_workspace_from_explicit_revision() {
+        let temp = tempdir().unwrap();
+        let default = temp.path().join("repo");
+        let workspace = temp.path().join("repo.feature");
+
+        let output = Command::new("jj")
+            .args(["git", "init"])
+            .arg(&default)
+            .output()
+            .await
+            .unwrap();
+        assert!(output.status.success());
+
+        let output = Command::new("jj")
+            .arg("describe")
+            .arg("-R")
+            .arg(&default)
+            .args(["-m", "base"])
+            .output()
+            .await
+            .unwrap();
+        assert!(output.status.success());
+
+        add_workspace(&default, &workspace, "feature", "@")
+            .await
+            .unwrap();
+
+        let output = Command::new("jj")
+            .arg("log")
+            .arg("-R")
+            .arg(&workspace)
+            .arg("--ignore-working-copy")
+            .args(["--no-graph", "--color", "never"])
+            .args(["-r", "@-"])
+            .args(["--template", "description"])
+            .output()
+            .await
+            .unwrap();
+        assert!(output.status.success());
+        assert_eq!(String::from_utf8_lossy(&output.stdout).trim(), "base");
+    }
 
     #[test]
     fn finds_repo_root_from_nested_directory() {

@@ -197,18 +197,19 @@ impl Model {
             None => Base::Cwd(None),
             Some(repo) => match self.workspaces.get(repo) {
                 None => Base::Cwd(Some(repo.to_owned())),
-                Some(workspace) => Base::Repo(
-                    workspace
+                Some(workspace) => Base::Repo {
+                    default: workspace
                         .as_ref()
                         .and_then(|w| w.default.clone())
                         .unwrap_or_else(|| repo.to_owned()),
-                ),
+                    revision: jj::DEFAULT_BASE_REVSET.to_owned(),
+                },
             },
         };
 
         let empty = BTreeSet::new();
         let siblings = match &base {
-            Base::Repo(default) => self.seen_workspaces.get(default).unwrap_or(&empty),
+            Base::Repo { default, .. } => self.seen_workspaces.get(default).unwrap_or(&empty),
             Base::Cwd(_) => &empty,
         };
 
