@@ -14,6 +14,12 @@ If the caller explicitly asks for a whole-codebase pass, review all Rust source
 files in the workspace (for example, `crates/**/*.rs`) otherwise, review only
 the files that were touched by the current change.
 
+Never modify code that was not already modified for the change at hand unless
+the caller explicitly requests that broader work. Do not reorder functions,
+rename things, add documentation, or make any other cleanup in untouched code.
+If you notice an opportunity in code that was not already touched, mention it in
+the report as an out-of-scope opportunity, but do not make the change.
+
 Default behavior is FIX-FIRST:
 
 - Apply safe, minimal, in-place edits directly.

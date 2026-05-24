@@ -38,6 +38,7 @@ use crate::app::preview::Preview;
 use crate::app::sessions::Sessions;
 use crate::jj;
 use crate::model::Model;
+use crate::session::Repo;
 use crate::session::Session;
 use crate::terminal::AlternateScreenGuard;
 
@@ -46,7 +47,7 @@ const POLL_TIMEOUT: Duration = Duration::from_millis(16);
 
 /// Session picker state, caches, and UI behavior.
 pub struct App {
-    repo: Option<PathBuf>,
+    repo: Option<Repo>,
     load: loading::State,
     model: Model,
     preview: preview::State,
@@ -90,7 +91,7 @@ impl App {
         preview.feed(model.sessions());
 
         Self {
-            repo,
+            repo: repo.map(Repo::new),
             load: loading::State::new(),
             model,
             preview,
@@ -174,7 +175,8 @@ impl App {
 
     /// Discover sessions and inject them into the picker.
     async fn discover(&mut self, globs: &[String]) -> anyhow::Result<()> {
-        self.model.discover(globs, self.repo.as_deref()).await?;
+        let repo = self.repo.as_ref().map(|r| r.source());
+        self.model.discover(globs, repo).await?;
         self.preview.feed(self.model.sessions());
         Ok(())
     }
@@ -186,7 +188,7 @@ impl App {
     fn draw(&mut self, f: &mut ratatui::Frame<'_>) {
         let l = layout::Layout::new(f.area(), self.preview.visible());
 
-        let new_session = self.model.new_session(self.repo.as_deref());
+        let new_session = self.model.new_session(self.repo.as_ref());
 
         // Poll the picker for its latest state, and build the data model.
         let (status, snapshot, query) = self.model.refresh();
@@ -213,7 +215,7 @@ impl App {
             self.sessions.can_delete(),
             self.sessions.is_deleting(),
             items.len(),
-            self.repo.as_deref(),
+            self.repo.as_ref(),
             snapshot.item_count() as usize,
         );
 
@@ -343,6 +345,10 @@ impl App {
     /// If there is no selection, or the selected session has no associated repo, the current repo
     /// is cleared.
     fn set_current_repo(&mut self) {
-        self.repo = self.sessions.selected().and_then(Session::repo);
+        self.repo = self
+            .sessions
+            .selected()
+            .and_then(Session::repo)
+            .map(Repo::new);
     }
 }

@@ -18,6 +18,7 @@ use crate::picker::Picker;
 use crate::session::Base;
 use crate::session::LiveKind;
 use crate::session::NewKind;
+use crate::session::Repo;
 use crate::session::RepoKind;
 use crate::session::Session;
 use crate::tmux;
@@ -187,7 +188,7 @@ impl Model {
     }
 
     /// Construct the dynamic "new session" candidate for the current query and repo context.
-    pub(crate) fn new_session(&self, repo: Option<&Path>) -> Option<Session> {
+    pub(crate) fn new_session(&self, repo: Option<&Repo>) -> Option<Session> {
         let query = self.picker.query();
         if query.is_empty() {
             return None;
@@ -195,21 +196,22 @@ impl Model {
 
         let base = match repo {
             None => Base::Cwd(None),
-            Some(repo) => match self.workspaces.get(repo) {
-                None => Base::Cwd(Some(repo.to_owned())),
-                Some(workspace) => Base::Repo {
-                    default: workspace
-                        .as_ref()
-                        .and_then(|w| w.default.clone())
-                        .unwrap_or_else(|| repo.to_owned()),
-                    revision: jj::DEFAULT_BASE_REVSET.to_owned(),
-                },
+            Some(repo) => match self.workspaces.get(repo.source()) {
+                None => Base::Cwd(Some(repo.source().to_owned())),
+                Some(workspace) => Base::Repo(
+                    repo.with_default(
+                        workspace
+                            .as_ref()
+                            .and_then(|w| w.default.clone())
+                            .unwrap_or_else(|| repo.source().to_owned()),
+                    ),
+                ),
             },
         };
 
         let empty = BTreeSet::new();
         let siblings = match &base {
-            Base::Repo { default, .. } => self.seen_workspaces.get(default).unwrap_or(&empty),
+            Base::Repo(base) => self.seen_workspaces.get(base.default()).unwrap_or(&empty),
             Base::Cwd(_) => &empty,
         };
 

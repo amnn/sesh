@@ -30,6 +30,7 @@ const DELIM_WORKSPACE: &str = "/";
 const NAME_WIDTH: usize = 40;
 const SIGIL_DELETE: &str = "×";
 const SIGIL_TMUX: &str = "⬤";
+const TMUX_REPO_OPTION: &str = "@sesh.repo";
 
 /// A tmux session or potential session.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
@@ -38,8 +39,8 @@ pub struct Session(Kind);
 /// The base used when creating a new session.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub(crate) enum Base {
-    /// Create a jj workspace from this repository path and revision.
-    Repo { default: PathBuf, revision: String },
+    /// Create a jj workspace from this repository information.
+    Repo(Repo),
     /// Create a tmux session at this working directory, or the process cwd if absent.
     Cwd(Option<PathBuf>),
 }
@@ -61,7 +62,22 @@ pub(crate) struct NewKind {
     suffix: Option<String>,
 }
 
-/// A repository or workspace checkout that already exists.
+/// Repository information used while constructing workspace-backed sessions.
+///
+/// `source` is the selected checkout whose workspace metadata is inspected. `default` is the
+/// resolved default checkout used for workspace naming and placement. `revision` is the jj revset
+/// used as the new workspace base.
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+pub(crate) struct Repo {
+    /// Selected repository or workspace checkout used to look up workspace metadata.
+    source: PathBuf,
+    /// Default checkout used to derive sibling workspace names and paths.
+    default: PathBuf,
+    /// jj revset used as the base revision for new workspaces.
+    revision: String,
+}
+
+/// Session for a repository or workspace checkout that already exists.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub(crate) struct RepoKind {
     workspace: Option<String>,
@@ -71,6 +87,7 @@ pub(crate) struct RepoKind {
     can_delete: bool,
 }
 
+/// Backing kind for a picker session.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 enum Kind {
     Live(LiveKind),
@@ -233,7 +250,7 @@ impl NewKind {
         let target = self.name();
         let repo = self.repo();
         let cwd = match &self.base {
-            Base::Repo { .. } => repo.clone().context("missing repo")?,
+            Base::Repo(_) => repo.clone().context("missing repo")?,
             Base::Cwd(Some(cwd)) => cwd.clone(),
             Base::Cwd(None) => cwd.to_owned(),
         };
@@ -242,7 +259,7 @@ impl NewKind {
         tmux::new_session(&target, &cwd).await?;
 
         if let Some(repo) = self.repo() {
-            tmux::set_option(&target, "@sesh.repo", &repo).await?;
+            tmux::set_option(&target, TMUX_REPO_OPTION, &repo).await?;
         }
 
         tmux::run_shell(&format!("{target}:0"), &cwd, setup).await
@@ -264,7 +281,7 @@ impl NewKind {
     /// The tmux session name for the new session.
     fn name(&self) -> String {
         let base = match &self.base {
-            Base::Repo { default, .. } => Some(default.as_path()),
+            Base::Repo(base) => Some(base.default()),
             Base::Cwd(_) => None,
         };
 
@@ -274,7 +291,7 @@ impl NewKind {
     /// The repository whose log should be shown before this session's workspace exists.
     fn preview_repo(&self) -> Option<PathBuf> {
         match &self.base {
-            Base::Repo { default, .. } => Some(default.clone()),
+            Base::Repo(base) => Some(base.default().to_owned()),
             Base::Cwd(_) => None,
         }
     }
@@ -289,7 +306,7 @@ impl NewKind {
     /// This session's workspace name. Disambiguation ensures this name does not collide with an
     /// existing workspace name.
     fn workspace(&self) -> Option<(&Path, String, &str)> {
-        let Base::Repo { default, revision } = &self.base else {
+        let Base::Repo(base) = &self.base else {
             return None;
         };
 
@@ -299,7 +316,42 @@ impl NewKind {
             workspace.push_str(suffix);
         }
 
-        Some((default, workspace, revision))
+        Some((base.default(), workspace, base.revision()))
+    }
+}
+
+impl Repo {
+    /// Package repository information with the default base revision.
+    pub(crate) fn new(source: PathBuf) -> Self {
+        Self {
+            source: source.clone(),
+            default: source,
+            revision: jj::DEFAULT_BASE_REVSET.to_owned(),
+        }
+    }
+
+    /// Return the default workspace checkout that names new workspaces.
+    pub(crate) fn default(&self) -> &Path {
+        &self.default
+    }
+
+    /// Return the selected base revision expression.
+    pub(crate) fn revision(&self) -> &str {
+        &self.revision
+    }
+
+    /// Return the repository or workspace path this information applies to.
+    pub(crate) fn source(&self) -> &Path {
+        &self.source
+    }
+
+    /// Return a copy of this repo with the default workspace checkout overridden.
+    pub(crate) fn with_default(&self, default: PathBuf) -> Self {
+        Self {
+            source: self.source.clone(),
+            default,
+            revision: self.revision.clone(),
+        }
     }
 }
 
@@ -334,7 +386,7 @@ impl RepoKind {
     async fn ensure_tmux(&self, setup: &str) -> anyhow::Result<()> {
         let target = self.name();
         tmux::new_session(&target, &self.path).await?;
-        tmux::set_option(&target, "@sesh.repo", &self.path).await?;
+        tmux::set_option(&target, TMUX_REPO_OPTION, &self.path).await?;
         tmux::run_shell(&format!("{target}:0"), &self.path, setup).await
     }
 
@@ -533,13 +585,7 @@ mod tests {
     fn new_workspace_sessions_derive_names_and_paths() {
         let temp = tempdir().unwrap();
         let default = temp.path().join("repo");
-        let session = NewKind::new(
-            "feature",
-            Base::Repo {
-                default,
-                revision: jj::DEFAULT_BASE_REVSET.to_owned(),
-            },
-        );
+        let session = NewKind::new("feature", Base::Repo(Repo::new(default)));
 
         assert_eq!(session.name(), "repo/feature");
         assert_eq!(session.repo(), Some(temp.path().join("repo.feature")));
@@ -551,10 +597,7 @@ mod tests {
         let default = temp.path().join("repo");
         let new = Session::from(NewKind::new(
             "feature",
-            Base::Repo {
-                default: default.clone(),
-                revision: jj::DEFAULT_BASE_REVSET.to_owned(),
-            },
+            Base::Repo(Repo::new(default.clone())),
         ));
         let repo = Session::from(RepoKind::new(None, default.clone(), default.clone(), false));
 
@@ -565,10 +608,7 @@ mod tests {
     fn workspace_session_names_are_sanitized() {
         let session = NewKind::new(
             "feature: one.two/path\\name\n",
-            Base::Repo {
-                default: PathBuf::from("repo.default"),
-                revision: jj::DEFAULT_BASE_REVSET.to_owned(),
-            },
+            Base::Repo(Repo::new(PathBuf::from("repo.default"))),
         );
 
         assert_eq!(session.name(), "repo-default/feature-one-two-path-name");

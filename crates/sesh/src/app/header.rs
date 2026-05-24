@@ -3,14 +3,13 @@
 
 //! Rendering for the header bar.
 
-use std::path::Path;
-
 use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::style::Stylize as _;
 use ratatui::text::Line;
 use ratatui::text::Span;
 
+use crate::session::Repo;
 use crate::ui::Highlight;
 use crate::ui::push_repo_path_spans;
 use crate::ui::push_shortcut_span;
@@ -20,7 +19,7 @@ pub(super) struct Header<'r> {
     can_delete: bool,
     confirm_delete: bool,
     found: usize,
-    repo: Option<&'r Path>,
+    repo: Option<&'r Repo>,
     total: usize,
 }
 
@@ -30,7 +29,7 @@ impl<'r> Header<'r> {
         can_delete: bool,
         confirm_delete: bool,
         found: usize,
-        repo: Option<&'r Path>,
+        repo: Option<&'r Repo>,
         total: usize,
     ) -> Self {
         Self {
@@ -58,7 +57,7 @@ impl<'r> Header<'r> {
         line += Span::raw(" repo: ");
 
         if let Some(repo) = self.repo {
-            push_repo_path_spans(&mut line, repo, &mut Highlight::none());
+            push_repo_path_spans(&mut line, repo.source(), &mut Highlight::none());
         } else {
             line += Span::raw("none").dim();
         }
