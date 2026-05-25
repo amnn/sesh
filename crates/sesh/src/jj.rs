@@ -135,6 +135,35 @@ pub fn repos(globs: &[String]) -> anyhow::Result<BTreeSet<PathBuf>> {
     Ok(repos)
 }
 
+/// Fetch `jj show` output for `rev` in the repository at `repo` using `template`.
+pub async fn show(repo: &Path, rev: &str, template: &str) -> anyhow::Result<String> {
+    let output = Command::new("jj")
+        .arg("show")
+        .arg("-R")
+        .arg(repo)
+        .args(["-r", rev])
+        .arg("--ignore-working-copy")
+        .arg("--no-pager")
+        .args(["--color", "never"])
+        .args(["--template", template])
+        .output()
+        .await
+        .with_context(|| {
+            format!(
+                "failed to run 'jj show' for revision '{rev}' in repo '{}'",
+                repo.display()
+            )
+        })?;
+
+    ensure!(
+        output.status.success(),
+        "error running 'jj show': {}",
+        String::from_utf8_lossy(&output.stderr).trim()
+    );
+
+    Ok(String::from_utf8_lossy(&output.stdout).into_owned())
+}
+
 /// List all workspaces registered for the repository containing `repo`.
 ///
 /// The default workspace name is normalized to `None`; named workspaces are `Some(name)`.
@@ -302,5 +331,32 @@ mod tests {
         fs::create_dir_all(&path).unwrap();
 
         assert_eq!(repo_root(&path), None);
+    }
+
+    #[tokio::test]
+    async fn shows_revision_with_template() {
+        let temp = tempdir().unwrap();
+        let repo = temp.path().join("repo");
+
+        let output = Command::new("jj")
+            .args(["git", "init"])
+            .arg(&repo)
+            .output()
+            .await
+            .unwrap();
+        assert!(output.status.success());
+
+        let template = concat!(
+            "change_id ++ \"\\t\" ++ self.contained_in(\"trunk()\") ++ \"\\t\" ++ ",
+            "local_bookmarks ++ \"\\t\" ++ remote_bookmarks ++ \"\\n\"",
+        );
+        let output = show(&repo, "root()", template).await.unwrap();
+        let fields: Vec<_> = output.trim_end_matches('\n').split('\t').collect();
+
+        assert_eq!(fields.len(), 4);
+        assert!(fields[0].chars().all(|c| c == 'z'), "rev: {:?}", fields[0]);
+        assert!(matches!(fields[1], "true" | "false"));
+        assert_eq!(fields[2], "");
+        assert_eq!(fields[3], "");
     }
 }
