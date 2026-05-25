@@ -10,6 +10,7 @@ mod header;
 mod layout;
 mod list;
 mod loading;
+mod onto;
 mod preview;
 mod prompt;
 mod scrollbar;
@@ -47,6 +48,7 @@ const POLL_TIMEOUT: Duration = Duration::from_millis(16);
 
 /// Session picker state, caches, and UI behavior.
 pub struct App {
+    onto: Option<onto::State>,
     repo: Option<Repo>,
     load: loading::State,
     model: Model,
@@ -91,6 +93,7 @@ impl App {
         preview.feed(model.sessions());
 
         Self {
+            onto: None,
             repo: repo.map(Repo::new),
             load: loading::State::new(),
             model,
@@ -194,8 +197,14 @@ impl App {
         let (status, snapshot, query) = self.model.refresh();
         let items: Vec<_> = snapshot.matched_items(..).collect();
 
+        let (label, query) = if let Some(onto) = &self.onto {
+            ("onto", onto.query())
+        } else {
+            ("session", query)
+        };
+
         // (1) Render picker state
-        f.render_widget(prompt::widget(query), l.prompt);
+        f.render_widget(prompt::widget(label, query), l.prompt);
         f.render_stateful_widget(Loading::new(status.running), l.loading, &mut self.load);
 
         let sessions = Sessions::new(new_session, &items, snapshot.pattern().column_pattern(0));
@@ -262,6 +271,15 @@ impl App {
             }
         }
 
+        if let Some(onto) = &mut self.onto {
+            match onto.handle_key(key) {
+                Some(onto::Action::Cancel) => self.onto = None,
+                None => {}
+            }
+
+            return None;
+        }
+
         match key.code {
             // Accept the selected row.
             KC::Enter => return self.sessions.take_selected().map(Action::Switch),
@@ -273,7 +291,7 @@ impl App {
 
             // Cancel
             KC::Esc => return Some(Action::Cancel),
-            KC::Char('g' | 'c') if key.modifiers.contains(CTRL) => return Some(Action::Cancel),
+            KC::Char('c' | 'g') if key.modifiers.contains(CTRL) => return Some(Action::Cancel),
 
             // Session actions
             KC::Char('x') if key.modifiers.contains(CTRL) && self.sessions.can_close() => {
@@ -315,6 +333,10 @@ impl App {
             }
 
             // App state
+            KC::Char('o') if key.modifiers.contains(CTRL) && self.repo.is_some() => {
+                self.onto = Some(onto::State::default());
+            }
+
             KC::Char('r') if key.modifiers.contains(ALT) => self.reset_current_repo(),
             KC::Char('r') if key.modifiers.contains(CTRL) => self.set_current_repo(),
 

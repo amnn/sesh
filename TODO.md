@@ -2,9 +2,9 @@
 
 ## Session and Repo Lifecycle
 
-- [ ] Add `C-b` to pick the base commit used for new workspaces.
-  - Label this as `base:` in the header and user-facing text.
-  - Define base resolution rules for mixed repo types.
+- [ ] Add `C-o` to pick the `onto` revision used for new workspaces.
+  - Label this as `onto:` in the header and user-facing text.
+  - Define revision resolution rules for mixed repo types.
 
 - [x] `C-n` to create a session without switching to it (and without closing
   the picker).

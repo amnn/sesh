@@ -6,7 +6,7 @@ supports opening new sessions:
 
 - based on a jj repository
   - ...and existing workspace
-  - ...and base revision (to create a new workspace)
+  - ...and an `onto` revision (to create a new workspace)
   - ...on its own.
 - based on a custom name (and no repository), to create a simple tmux session.
 
@@ -32,9 +32,9 @@ The session switcher maintains the following state:
   - The currently selected repository (if any). Defaults to the closest
     containing jj repo root to the current working directory of the active tmux
     pane.
-- The currently selected base revision, if there is a selected repository.
-  Defaults to `trunk()`, and resets if the selected repository changes. The
-  base picker lists bookmarks (including `origin/*`) and a `trunk()` entry.
+  - The currently selected `onto` revision, if there is a selected repository.
+    Defaults to `trunk()`, and resets if the selected repository changes. The
+    revision picker lists bookmarks (including `origin/*`) and a `trunk()` entry.
 - On each open session, tmux metadata is added to indicate whether the session
   corresponds to a repository/workspace, or is plain.
   - This is used by the session switcher to advertise metadata about
@@ -49,10 +49,10 @@ selected session.
 The fuzzy finder includes a header with the following information:
 
 - Currently selected repo (if any).
-- Currently selected base (if there is a repo).
+- Currently selected `onto` revision (if there is a repo).
 - Hints for keybindings:
   - `C-r` to change repo (next to the current repo).
-  - `C-b` to change base revision (next to the current base).
+  - `C-o` to change the `onto` revision (next to the current revision).
   - `C-n` to create a new session from the current query.
   - `C-x` to close a session and refresh the session list.
 
@@ -93,7 +93,7 @@ Then the pop-over switches to the session and closes itself.
 - `C-r` opens a sub-fuzzy-finder to select a different repository,
   populated by enumerating valid `jj` repositories found by evaluating
   `repo.globs` and command-line repo globs.
-- `C-b` opens a sub-fuzzy-finder to select a different base revision. This
+- `C-o` opens a sub-fuzzy-finder to select a different `onto` revision. This
   will only be enabled if a repository is selected. The fuzzy finder is
   populated with bookmarks (including `*@origin`), with `trunk()` included as
   a pseudo-entry at the top.

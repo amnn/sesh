@@ -32,7 +32,7 @@ whose derived destination already exists.
 
 ```terminal
 session: zeta
-  0/3 | [C-r] repo: ~/beta, [C-b] base: trunk()
+  0/3 | [C-r] repo: ~/beta, [C-o] onto: trunk()
 ▌  beta/zeta~1                              ~/beta.zeta~1                                                              ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 @  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh

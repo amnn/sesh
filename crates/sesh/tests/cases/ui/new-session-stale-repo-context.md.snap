@@ -33,7 +33,7 @@ context, then accept a new-session row.
 
 ```terminal
 session: zeta
-  0/3 | [C-r] repo: plain, [C-b] base: trunk()
+  0/3 | [C-r] repo: plain, [C-o] onto: trunk()
 ▌  zeta                                                                                                                ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 

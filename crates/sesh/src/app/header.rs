@@ -14,6 +14,7 @@ use crate::ui::Highlight;
 use crate::ui::push_repo_path_spans;
 use crate::ui::push_shortcut_span;
 
+/// Header bar component showing counts, repo context, and available actions.
 pub(super) struct Header<'r> {
     can_close: bool,
     can_delete: bool,
@@ -24,6 +25,7 @@ pub(super) struct Header<'r> {
 }
 
 impl<'r> Header<'r> {
+    /// Create a header from the current picker state.
     pub(super) fn new(
         can_close: bool,
         can_delete: bool,
@@ -42,6 +44,7 @@ impl<'r> Header<'r> {
         }
     }
 
+    /// Render the header bar into `area`.
     pub(super) fn draw(&self, f: &mut Frame<'_>, area: Rect) {
         let width = if self.total == 0 {
             1
@@ -59,8 +62,8 @@ impl<'r> Header<'r> {
         if let Some(repo) = self.repo {
             push_repo_path_spans(&mut line, repo.source(), &mut Highlight::none());
             line += Span::raw(", ").dim();
-            push_shortcut_span(&mut line, "C-b");
-            line += Span::raw(" base: ");
+            push_shortcut_span(&mut line, "C-o");
+            line += Span::raw(" onto: ");
             line += Span::raw(repo.revision().to_owned()).dim();
         } else {
             line += Span::raw("none").dim();
