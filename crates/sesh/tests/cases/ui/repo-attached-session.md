@@ -52,20 +52,20 @@ repo discovery enabled for `alpha`, `beta`, and `mono*`.
 This snapshot shows the initial mixed picker state before any query is typed,
 including the attached `alpha-live` session and the glob-discovered repos.
 
-    :snap
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 This snapshot shows the picker after typing `beta`, so the selection should
 move away from the initial attached-session result and onto the discovered
 `beta` repo.
 
     :k beta
-    :snap
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 This snapshot shows the picker after clearing the query with `C-u` and typing
 `mono`, so the selection should switch to the discovered `mono` entries.
 
     :k C-u mono
-    :snap --color
+    :snap --color "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 ---
 vim: set ft=markdown:

@@ -92,8 +92,10 @@ pub async fn log(repo: &Path) -> anyhow::Result<String> {
         .arg("log")
         .arg("-R")
         .arg(repo)
-        .arg("--color")
-        .arg("always")
+        .arg("--ignore-working-copy")
+        .arg("--no-pager")
+        .args(["--color", "always"])
+        .args(["--template", "builtin_log_compact"])
         .output()
         .await
         .with_context(|| format!("failed to run 'jj log' for repo '{}'", repo.display()))?;

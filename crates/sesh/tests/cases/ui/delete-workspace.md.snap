@@ -37,7 +37,7 @@ Launch a fresh picker and select the workspace-backed session.
     :settle -d 2s (settled)
 
     :k feature
-    :snap
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 ```terminal
 session: feature
@@ -45,11 +45,11 @@ session: feature
    alpha/feature~1                          ~/alpha.feature~1                                                          ┃
 ▌⬤ alpha/feature                            ~/alpha.feature                                                            ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-@
-│ ○  alpha commit
-├─╯
-◆
-
+@  wwwwwwww (no email set) ttttttttttttttttttt feature@ hhhhhhhh
+│  (empty) (no description set)
+│ ○  wwwwwwww (no email set) ttttttttttttttttttt default@ hhhhhhhh
+├─╯  (empty) alpha commit
+◆  wwwwwwww root() hhhhhhhh
 
 
 ```
@@ -59,7 +59,7 @@ shortcut.
 
     :k C-d
     :settle (settled)
-    :snap --color
+    :snap --color "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 ```terminal
 session: feature
@@ -67,11 +67,11 @@ session: feature
    alpha/feature~1                          ~/alpha.feature~1                                                          ┃
 ▌× alpha/feature                            ~/alpha.feature                                                            ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-@
-│ ○  alpha commit
-├─╯
-◆
-
+@  wwwwwwww (no email set) ttttttttttttttttttt feature@ hhhhhhhh
+│  (empty) (no description set)
+│ ○  wwwwwwww (no email set) ttttttttttttttttttt default@ hhhhhhhh
+├─╯  (empty) alpha commit
+◆  wwwwwwww root() hhhhhhhh
 
 
 ```

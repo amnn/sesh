@@ -30,6 +30,12 @@ Do not add `:snap` replacement filters speculatively; use them only when the
 captured output is unstable without them or when a test explicitly covers
 replacement behavior.
 
+When UI snapshots include `jj log --template builtin_log_compact` output, keep
+volatile IDs and timestamps behind explicit `:snap` filters. For colour
+snapshots, also keep `crates/sesh/tests/fixtures/jjconfig.toml` styling the
+`change_id`/`commit_id` prefix and rest labels identically so jj's variable
+unique-prefix boundary does not leak into SVG diffs.
+
 When reviewing SVG snapshot diffs, inspect the actual SVG text/span changes and
 compare old versus new before describing behavior. Distinguish visual movement
 from changes in span ownership or styling of the same visible cells.

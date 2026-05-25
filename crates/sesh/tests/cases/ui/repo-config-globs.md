@@ -31,12 +31,12 @@ selected from the same picker.
 The config-supplied glob discovers `config-repo`.
 
     :k config
-    :snap
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 The CLI-supplied glob discovers `cli-repo` in the same run.
 
     :k C-u cli
-    :snap
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 ---
 vim: set ft=markdown:

@@ -30,18 +30,18 @@ Type a new workspace name. The current repo has no recorded workspace root, so
 its own path is used as the base.
 
     :k omega
-    :snap
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 ```terminal
 session: omega
   0/2 | [C-r] repo: ~/beta.zeta, [C-b] base: trunk()
 ▌  beta-zeta/omega                          ~/beta.zeta.omega                                                          ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-@
-│ ○
-├─╯
-◆
-
+@  wwwwwwww (no email set) ttttttttttttttttttt zeta@ hhhhhhhh
+│  (empty) (no description set)
+│ ○  wwwwwwww (no email set) ttttttttttttttttttt default@ hhhhhhhh
+├─╯  (empty) (no description set)
+◆  wwwwwwww root() hhhhhhhh
 
 ```
 

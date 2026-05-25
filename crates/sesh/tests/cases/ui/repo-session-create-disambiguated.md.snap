@@ -29,16 +29,16 @@ session with the same name.
     :pane ui:0.0
     :settle -d 2s (settled)
     :k beta down
-    :snap --color
+    :snap --color "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 ```terminal
 session: beta
   2/4 | [C-r] repo: none
 ▌  beta~1                                   ~/beta                                                                     ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-@  beta commit
-◆
-
+@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+│  (empty) beta commit
+◆  wwwwwwww root() hhhhhhhh
 
 
 

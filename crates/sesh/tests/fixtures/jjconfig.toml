@@ -1,2 +1,5 @@
-[templates]
-log = "description"
+[colors]
+"change_id prefix" = { fg = "bright black", bold = false }
+"change_id rest" = { fg = "bright black", bold = false }
+"commit_id prefix" = { fg = "bright black", bold = false }
+"commit_id rest" = { fg = "bright black", bold = false }

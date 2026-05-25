@@ -48,11 +48,11 @@ session: omega
   0/2 | [C-r] repo: ~/beta.zeta, [C-b] base: trunk()
 ▌  beta/omega                               ~/beta.omega                                                               ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-@
-│ ○
-├─╯
-◆
-
+@  wwwwwwww (no email set) ttttttttttttttttttt default@ hhhhhhhh
+│  (empty) (no description set)
+│ ○  wwwwwwww (no email set) ttttttttttttttttttt zeta@ hhhhhhhh
+├─╯  (empty) (no description set)
+◆  wwwwwwww root() hhhhhhhh
 
 ```
 

@@ -1,18 +1,14 @@
 # Preview scroll threshold
 
-This scenario verifies the preview scrollbar threshold. In this fixture, `jj`
-still renders the graph markers, so the viewport-fitting case uses 11 content
-lines plus the trailing root marker line:
+This scenario verifies the preview scrollbar threshold with the fixed
+`builtin_log_compact` preview template:
 
 - when the preview height exactly matches the viewport, no scrollbar is shown,
-- when the preview is one line longer, a scrollbar appears,
+- when the preview is taller than the viewport, a scrollbar appears,
 - and once it appears, the preview can scroll.
 
-The test configures `jj log` to show only commit descriptions so the preview is
-easy to read in snapshots.
-
-The helper script below writes numbered multiline descriptions into each repo so
-the test data is generated consistently.
+The helper script below writes numbered commits into each repo so the test data
+is generated consistently.
 
     :bins jj cat python3
 
@@ -30,8 +26,10 @@ def main() -> None:
 
     repo, prefix, count_text = argv[1:]
     count = int(count_text)
-    message = "\n".join(f"{prefix} {i:02d}" for i in range(1, count + 1))
-    run(["jj", "describe", "-R", repo, "-m", message], check=True)
+    for i in range(1, count + 1):
+        run(["jj", "describe", "-R", repo, "-m", f"{prefix} {i:02d}"], check=True)
+        if i != count:
+            run(["jj", "new", "-R", repo], check=True)
 
 
 if __name__ == "__main__":
@@ -40,11 +38,9 @@ if __name__ == "__main__":
 
     :t rename-session -t 0 runner
     :$ jj git init exact
-    :$ jj config set --repo -R exact templates.log 'description'
-    :$ python3 scripts/mklog.py exact exact 6
+    :$ python3 scripts/mklog.py exact exact 3
     :$ jj git init overflow
-    :$ jj config set --repo -R overflow templates.log 'description'
-    :$ python3 scripts/mklog.py overflow overflow 7
+    :$ python3 scripts/mklog.py overflow overflow 4
     :t new-session -d -s plain "cat"
     :t new-session -d -s ui "sesh -r exact -r overflow"
     :t resize-window -t ui:0 -x 120 -y 12
@@ -55,19 +51,19 @@ scrollbar should be visible.
 
     :settle
     :k exact down
-    :snap
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
-This snapshot shows a preview that is one line taller than the viewport, so the
-preview scrollbar should now be visible.
+This snapshot shows a preview that is taller than the viewport, so the preview
+scrollbar should now be visible.
 
     :k C-u overflow down
-    :snap
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 This snapshot shows that once the scrollbar appears, `S-down` scrolls the
 preview content by one line.
 
     :k S-down
-    :snap
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 ---
 vim: set ft=markdown:

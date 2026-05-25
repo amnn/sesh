@@ -28,16 +28,16 @@ Select the default repo, set it as the current repo context, then type the name
 whose derived destination already exists.
 
     :k beta C-r C-u zeta
-    :snap
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 ```terminal
 session: zeta
   0/3 | [C-r] repo: ~/beta, [C-b] base: trunk()
 ▌  beta/zeta~1                              ~/beta.zeta~1                                                              ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
-@  beta commit
-◆
-
+@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh
+│  (empty) beta commit
+◆  wwwwwwww root() hhhhhhhh
 
 
 

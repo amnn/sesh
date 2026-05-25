@@ -22,30 +22,30 @@ an unfiltered repo row and on a row selected from a multi-match query.
 This snapshot shows the initial picker state with the current repo inferred
 from `cwd`.
 
-    :snap
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 Move the cursor to the discovered `beta` repo row.
 
     :k down down down
-    :snap
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 Press `C-r` to set repo context from the selected row. The header should update
 to `beta` while the selected row stays on `beta` after the picker refreshes.
 
     :k C-r
-    :snap
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 This snapshot applies the query `a`, which still matches multiple repo rows,
 moves to `gamma`, and then uses `C-r` to update the current repo from the
 filtered list.
 
     :k C-u a down down C-r
-    :snap
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 Press `M-r` to clear the current repo without changing the selected row.
 
     :k M-r
-    :snap
+    :snap "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 ---
 vim: set ft=markdown:
