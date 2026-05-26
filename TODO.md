@@ -9,6 +9,31 @@
 - [x] `C-n` to create a session without switching to it (and without closing
   the picker).
 
+- [ ] Find a way to keep the session picker working even if the workspace is
+  stale.
+
+## UI
+
+- [ ] Flag and unflag session.
+  - Add a mechanism for setting a flag on a session.
+  - This causes its pip to remain lit up even if it does not have an alert (but
+    with a different colour).
+  - Flags must be manually cleared by the user.
+  - `C-f` is the setting to toggle flags. It should show up in the header with
+    a `flag` or `unflag` label.
+
+- [ ] Clearer alert indicator -- the green colour is not bright enough to
+  distinguish from the grey.
+
+- [ ] Spinner for deletion -- that operation can take some time, so it would be
+  good to have a visual indicator that something is happening.
+
+## README
+
+- [ ] README: Screenshot/animation
+- [ ] README: Feature list
+- [ ] README: Contribution
+
 ## GitHub
 
 - [ ] List relevant PRs for repo in session list (a relevant PR is one that is
