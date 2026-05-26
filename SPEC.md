@@ -12,9 +12,10 @@ supports opening new sessions:
 
 ## Configuration
 The switcher is configured via a configuration file at
-`~/.config/sesh/config.toml`, containing the following properties:
+`~/.config/sesh/sesh.toml`, containing the following properties:
 
-- `repo.globs`: A list of glob patterns to locate jj repositories.
+- `repo.globs`: A list of glob patterns to locate jj repositories. These stack
+  with repository globs supplied on the command line.
 - `workspace.template`: A template for naming new workspaces. This can be
   a relative path that ends in a directory name that contains the `{repo}`
   and `{name}` placeholders. `{repo}` is the repo basename, and `{name}`
@@ -60,8 +61,8 @@ The fuzzy finder constructs a list of candidate sessions from the following
 sources, in the following order:
 
 - Existing tmux sessions.
-- Repositories and workspaces found under `repository.globs`, in
-  alphabetical order.
+- Repositories and workspaces found under `repo.globs` and command-line repo
+  globs, in alphabetical order.
 
 When reconciling existing sessions with candidate sessions, a name is generated
 for each candidate session. If it matches the name of an existing session, the
@@ -91,7 +92,7 @@ Then the pop-over switches to the session and closes itself.
 ### Actions
 - `C-r` opens a sub-fuzzy-finder to select a different repository,
   populated by enumerating valid `jj` repositories found by evaluating
-  `repo.globs`.
+  `repo.globs` and command-line repo globs.
 - `C-b` opens a sub-fuzzy-finder to select a different base revision. This
   will only be enabled if a repository is selected. The fuzzy finder is
   populated with bookmarks (including `*@origin`), with `trunk()` included as

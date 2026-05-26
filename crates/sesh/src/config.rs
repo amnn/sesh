@@ -16,10 +16,21 @@ use serde::Serialize;
 /// The relative config file path below the `sesh` config root.
 pub const PATH: &str = "sesh.toml";
 
+/// Configuration for discovering repositories.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default)]
+pub struct RepoConfig {
+    /// Glob patterns to search for jj repositories.
+    pub globs: Vec<String>,
+}
+
 /// Top-level `sesh` config file schema.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default)]
 pub struct SeshConfig {
+    /// Configuration for discovering repositories.
+    pub repo: RepoConfig,
+
     /// Configuration for creating and initializing tmux sessions.
     pub tmux: TmuxConfig,
 }
@@ -46,6 +57,7 @@ impl SeshConfig {
     }
 }
 
+/// Read config contents from an explicit path or the default config path.
 fn read_to_string(path: Option<&Path>) -> anyhow::Result<Option<String>> {
     if let Some(path) = path {
         let contents = fs::read_to_string(path)

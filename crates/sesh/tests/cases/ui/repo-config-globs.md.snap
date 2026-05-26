@@ -1,0 +1,76 @@
+---
+source: crates/sesh/tests/test.rs
+expression: output
+input_file: crates/sesh/tests/cases/ui/repo-config-globs.md
+---
+# Repository config globs
+
+Repository globs from config should stack with globs supplied on the command
+line, so both sources can surface repo-backed picker entries.
+
+    :bins jj
+
+> [!NOTE]
+> 'jj' is available.
+
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
+    :t rename-session -t 0 runner (success)
+    :$ jj git init config-repo (exit: 0)
+    :$ jj describe -R config-repo -m "config glob commit" (exit: 0)
+    :$ jj git init cli-repo (exit: 0)
+    :$ jj describe -R cli-repo -m "cli glob commit" (exit: 0)
+
+    :w .config/sesh/sesh.toml (written)
+
+```toml
+[repo]
+globs = ["config-repo"]
+```
+
+Launch `sesh` with an additional CLI glob, then verify each repository can be
+selected from the same picker.
+
+    :t new-session -d -s ui "sesh -r cli-repo" (success)
+    :t resize-window -t ui:0 -x 120 -y 10 (success)
+    :pane ui:0.0
+    :settle (settled)
+
+The config-supplied glob discovers `config-repo`.
+
+    :k config
+    :snap
+
+```terminal
+session: config
+  1/4 | [C-r] repo: none
+▌  config-repo                              ~/config-repo                                                              ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+@  config glob commit
+◆
+
+
+
+
+```
+
+The CLI-supplied glob discovers `cli-repo` in the same run.
+
+    :k C-u cli
+    :snap
+
+```terminal
+session: cli
+  1/4 | [C-r] repo: none
+▌  cli-repo                                 ~/cli-repo                                                                 ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+@  cli glob commit
+◆
+
+
+
+
+```
+
+---
+vim: set ft=markdown:

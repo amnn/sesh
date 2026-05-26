@@ -66,12 +66,13 @@ struct Args {
         value_name = "GLOB",
         action = ArgAction::Append,
         long_help = "Additional repository globs to surface alongside existing tmux sessions. \
-                     Pass once per glob; each matching jj repo can be used as context for new \
-                     repo-backed workspaces."
+                     Pass once per glob; these stack with repo.globs from config, and each \
+                     matching jj repo can be used as context for new repo-backed workspaces."
     )]
     repos: Vec<String>,
 }
 
+/// Parse CLI arguments, load config, and run the picker.
 #[tokio::main]
 async fn main() -> anyhow::Result<ExitCode> {
     let args = Args::parse();
@@ -87,7 +88,8 @@ async fn main() -> anyhow::Result<ExitCode> {
     }
 
     let config = SeshConfig::load(args.config.as_deref())?;
-    let globs = args.repos.clone();
+    let mut globs = config.repo.globs.clone();
+    globs.extend(args.repos);
 
     jj::ensure()?;
     tmux::ensure()?;

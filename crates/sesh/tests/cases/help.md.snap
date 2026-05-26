@@ -56,30 +56,34 @@ Options:
 
   -r, --repo <GLOB>
           Additional repository globs to surface alongside existing tmux sessions. Pass once per
-          glob; each matching jj repo can be used as context for new repo-backed workspaces.
+          glob; these stack with repo.globs from config, and each matching jj repo can be used as
+          context for new repo-backed workspaces.
 
   -V, --version
           Print version
 
 Key bindings:
-  C-d             Delete the repository and close the session.
-  C-n             Create the session without switching to it.
-  C-p             Toggle the preview pane.
-  C-r, M-r        Set or reset the current repo.
-  C-u             Clear the filter.
-  C-x             Close a live session.
-  C-y             Confirm a pending deletion.
-  up, down        Move selection by one row.
-  M-up, M-down    Move selection to the first or last row.
-  S-up, S-down    Scroll the preview pane up or down.
-  enter           Switch to the session, creating it if necessary.
-  esc, C-g, C-c   Close the UI.
+  C-d               Delete the repository and close the session.
+  C-n               Create the session without switching to it.
+  C-p               Toggle the preview pane.
+  C-r, M-r          Set or reset the current repo.
+  C-u               Clear the filter.
+  C-x               Close a live session.
+  C-y               Confirm a pending deletion.
+  up, down          Move selection by one row.
+  M-up, M-down      Move selection to the first or last row.
+  S-up, S-down      Scroll the preview pane up or down.
+  enter             Switch to the session, creating it if necessary.
+  esc, C-g, C-c     Close the UI.
 
 Configuration:
   The config file is TOML. It is optional; when no file is present, sesh uses
   the built-in defaults.
 
-  tmux.setup      Shell script to run after sesh creates a detached tmux
+  repo.globs        Glob patterns for jj repositories to surface alongside
+                    existing tmux sessions. These stack with any --repo command-
+                    line globs.
+  tmux.setup        Shell script to run after sesh creates a detached tmux
                     session. The script runs in the new session's tmux context
                     and working directory, so commands can use default tmux
                     targets and relative paths.
@@ -87,6 +91,12 @@ Configuration:
 Example:
   Below is an example configuration that makes use of every available
   configuration field.
+
+  [repo]
+  globs = [
+    "/Users/alice/Code/*",
+    "/Users/alice/.config/nvim"
+  ]
 
   [tmux]
   setup = '''

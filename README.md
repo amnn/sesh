@@ -32,8 +32,20 @@ The `-d "#{pane_current_path}"` option runs `sesh` from the pane that was active
 when you pressed `C-b s`, so the picker can pre-populate its current repository
 context from that pane's working directory.
 
-If you want to surface additional repositories, pass one or more repository
-globs to `sesh`:
+If you want to surface additional repositories, add repository globs to your
+config:
+
+```toml
+[repo]
+globs = [
+  "/Users/alice/Code/*",
+  "/Users/alice/.bootstrap",
+  "/Users/alice/.config/nvim"
+]
+```
+
+You can also pass one or more repository globs to `sesh`. Command-line globs
+stack with `repo.globs` from config:
 
 ```tmux
 bind s display-popup -E -w 80% -h 80% -T sesh -d "#{pane_current_path}" \
@@ -84,14 +96,23 @@ all picker key bindings:
 `~/.config/sesh/sesh.toml` when `$XDG_CONFIG_HOME` is unset. You can also pass
 an explicit config file with `--config PATH`.
 
-The config file is optional. The default configuration does not run any extra
-setup after creating a tmux session.
+The config file is optional. The default configuration has no repository globs
+and does not run any extra setup after creating a tmux session.
+
+Use `[repo].globs` to surface jj repositories alongside existing tmux sessions.
+These stack with any `--repo`/`-r` globs supplied on the command line.
 
 Use `[tmux].setup` to run a shell script after `sesh` creates a detached tmux
 session. The script runs in the new session's tmux context and working
 directory, so commands can use default tmux targets and relative paths:
 
 ```toml
+[repo]
+globs = [
+  "/Users/alice/Code/*",
+  "/Users/alice/.config/nvim"
+]
+
 [tmux]
 setup = '''
 tmux rename-window shell

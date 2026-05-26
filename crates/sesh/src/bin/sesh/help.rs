@@ -66,7 +66,7 @@ impl<W: Write> Writer<W> {
     /// occupying a fixed width, and the description follows, wrapped and indented after the key.
     fn def(&mut self, key: &str, desc: &str) -> io::Result<()> {
         let mut nest = self.nest();
-        nest.literal(|w| write!(w, "  {key:<KEY_WIDTH$}"))?;
+        nest.literal(|w| write!(w, "  {key:<KEY_WIDTH$}  "))?;
 
         let initial_indent = nest.as_str()?;
         let indent = " ".repeat(KEY_WIDTH + 4);
@@ -177,6 +177,13 @@ fn write_config_help<W: Write>(w: &mut Writer<W>) -> io::Result<()> {
 
     writeln!(w)?;
     writeln!(w)?;
+
+    w.def(
+        "repo.globs",
+        "Glob patterns for jj repositories to surface alongside existing tmux sessions. These \
+         stack with any --repo command-line globs.",
+    )?;
+
     w.def(
         "tmux.setup",
         "Shell script to run after sesh creates a detached tmux session. The script runs in the \
@@ -194,6 +201,12 @@ fn write_config_help<W: Write>(w: &mut Writer<W>) -> io::Result<()> {
     writeln!(w)?;
     writeln!(w)?;
     w.code(|out| {
+        writeln!(out, "  [repo]")?;
+        writeln!(out, "  globs = [")?;
+        writeln!(out, "    \"/Users/alice/Code/*\",")?;
+        writeln!(out, "    \"/Users/alice/.config/nvim\"")?;
+        writeln!(out, "  ]")?;
+        writeln!(out)?;
         writeln!(out, "  [tmux]")?;
         writeln!(out, "  setup = '''")?;
         writeln!(out, "  tmux rename-window shell")?;
