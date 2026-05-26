@@ -14,6 +14,9 @@ When validating multiple Rust tests, avoid parallel `cargo test` invocations:
 they contend on Cargo's package and build locks. Prefer a single `cargo
 nextest run` command that covers the desired cases.
 
+For Python maintenance scripts in `scripts/`, run `python3 -m py_compile` and a
+small end-to-end fixture when the script mutates jj or Git metadata.
+
 ## Snapshots
 
 For markdown-driven snapshot changes, refresh the checked-in `.snap` files with

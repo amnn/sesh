@@ -169,6 +169,72 @@ repository path and want to attach it manually, set the user option yourself:
 tmux set-option -t SESSION @sesh.repo /path/to/repo
 ```
 
+### Git tools do not detect a secondary jj workspace
+
+Released versions of jj can create additional workspaces for a colocated Git
+repository, but those workspaces do not automatically become Git worktrees. Git
+commands and tools that require repository discovery may fail with `fatal: not a
+git repository`, or may behave unsafely if the workspace has only a direct
+`.git` pointer to the default workspace's `.git` directory.
+
+Check the current workspace with:
+
+```sh
+cd /path/to/jj/workspace
+/path/to/sesh/scripts/jj-workspace-colocate.py doctor
+```
+
+You can also inspect the Git metadata directly:
+
+```sh
+git rev-parse --show-toplevel
+git rev-parse --path-format=absolute --git-dir
+git rev-parse --path-format=absolute --git-common-dir
+jj log --ignore-working-copy -r @- --no-graph -T 'commit_id ++ "\n"'
+```
+
+A healthy secondary workspace should have `--show-toplevel` equal to the jj
+workspace root, `--git-dir` different from `--git-common-dir` (meaning Git is
+using a linked worktree with its own HEAD and index), and `git rev-parse HEAD`
+matching jj `@-` printed by the `jj log` command above.
+
+The repository includes
+[`scripts/jj-workspace-colocate.py`](scripts/jj-workspace-colocate.py) to
+attach linked Git worktree metadata to an existing jj workspace and to keep that
+metadata aligned later.
+
+> [!WARNING]
+> This is a workaround for jj releases that do not yet support colocated
+> secondary workspaces. It writes Git worktree metadata under the default
+> workspace's `.git/worktrees/` directory and writes `.jj/.gitignore` in the
+> workspace. Inspect the script first and use it only when you are comfortable
+> repairing Git worktree metadata directly.
+
+To create missing Git worktree metadata or refresh existing metadata, run:
+
+```sh
+cd /path/to/jj/workspace
+/path/to/sesh/scripts/jj-workspace-colocate.py sync
+```
+
+If you previously used the unsafe one-line hack where `.git` points directly at
+the default workspace's `.git` directory, replace that file with a real Git
+worktree pointer:
+
+```sh
+cd /path/to/jj/workspace
+/path/to/sesh/scripts/jj-workspace-colocate.py sync --replace-existing
+```
+
+`sync` creates linked Git worktree metadata when it is missing. It also sets
+Git's HEAD and index to jj `@-`, so workspace file changes appear to Git as
+ordinary worktree modifications. If you later run jj commands that change `@-`,
+such as `jj new`, `jj edit`, or a rebase from another workspace, run `sync`
+again.
+
+`sync` uses `git reset --mixed`, so it will unstage any changes that Git tools
+staged. It does not update the working tree files.
+
 ### `sesh` does not associate a workspace with its default checkout
 
 If `sesh` can find a jj checkout but new workspace names or paths are based on
