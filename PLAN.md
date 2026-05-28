@@ -1,41 +1,65 @@
-# Plan: Pick workspace base from the existing preview log
+# Plan: Pick workspace base from the current repo log
 
-## ADR: Use the existing preview log as the onto picker surface
+## ADR: Use a preview-shaped onto picker backed by the current repo log
 
 ### Status
 
-Proposed.
+Accepted; implementation in progress.
 
 ### Context
 
 `sesh` already shows a cached `jj log` preview for the selected session or
 repository. The TODO item is to add `C-o` so users can choose the `onto`
-revision used when creating new workspaces. Earlier ideas considered opening a
-separate revision picker list, but the desired UX is to keep the session list
-visible and turn the preview pane itself into the selection surface.
+revision used when creating new workspaces.
 
-The preview should continue to look like normal `jj log`, while base-selection
-mode adds:
+The desired UX is still to keep the session list visible and use the existing
+preview-shaped layout area as the selection surface. However, the onto picker is
+not the session preview. Its source must be the current repo context
+(`App::repo`), even when the selected session row points at a different repo.
+For example, if the current repo is `alpha` and the selected row is `beta`,
+`C-o` should show `alpha`'s log.
+
+The onto picker should continue to look like normal `jj log`, while
+base-selection mode adds:
 
 - an `onto:` prompt in the existing top prompt location,
 - fuzzy match highlighting over log rows without hiding non-matching rows,
 - a selected log row highlighted with inverted colours,
 - `enter` to choose the selected commit as the base revision.
 
-We must keep the existing session preview cache alive while entering/leaving
-onto mode. Do not throw away cached session previews when switching modes.
+The session preview cache should remain session-preview-specific. Do not punch
+holes through the preview/caching interface or add extra preview-cache feed
+calls just to make onto mode work.
 
 ### Decision
 
-Use the existing cached preview output for display. Force that preview output to
-use jj's built-in compact log template so it is predictable even when user or
-test configuration overrides `templates.log`:
+Use a dedicated `crates/sesh/src/app/onto_picker.rs` module for the picker that
+occupies the preview-shaped pane. `crates/sesh/src/app/onto.rs::State` owns the
+onto picker state and starts its own worker when entering onto mode:
+
+```rust
+onto::State::new(repo.source())
+```
+
+The worker loads the current repo's `jj log`, converts ANSI output into
+`ratatui::text::Text`, and stores the data needed by the picker in onto-owned
+state. The picker models the log as selectable commit blocks, keeps all log
+rows visible in their original order, applies fuzzy-match highlighting across
+matching blocks, and renders the selected block with a full-row highlight.
+
+`App` remains a coordinator: it creates `onto::State` from the current repo,
+renders normal session previews through `preview::Preview`, and delegates onto
+mode rendering, query editing, navigation, and base acceptance to `onto`.
+
+The log command still uses jj's built-in compact log template so parsing and
+snapshots stay predictable even when user or test configuration overrides
+`templates.log`:
 
 ```sh
 jj log --template builtin_log_compact --color always
 ```
 
-When accepting a selected preview row, resolve that row to a semantic revision
+When accepting a selected log row, resolve that row to a semantic revision
 identifier with `jj show`, not with a companion metadata `jj log`:
 
 ```sh
@@ -62,22 +86,32 @@ when the selected commit is the configured trunk revision.
 
 ### Consequences
 
-- The UI reuses exactly the same log content users already see in the preview.
+- Onto mode renders the current repo context, not the selected session's repo.
+- The session preview module/cache remains focused on session previews.
+- Entering onto mode may run a separate `jj log` even if the same repo was
+  already previewed, but it avoids cache coupling and loads exactly the repo the
+  picker should use.
 - There is no row-order alignment problem between graphical and non-graph log
   commands because metadata is fetched only for the selected row.
 - Base selection needs a best-effort parser for commit header rows in
   `builtin_log_compact` output.
 - Rows without a parseable commit/change id remain visible but are not
   acceptable as a base.
-- A single `jj show` is run only when accepting a row. Optionally cache those
-  results by `(repo, selected-change-id)`.
+- A single `jj show` is run only when accepting a row.
 
 ### Alternatives considered
 
 #### Separate full-screen onto picker
 
 Rejected. It hides the session list and duplicates list/picker UI that the
-preview already provides.
+preview-shaped pane already provides.
+
+#### Reuse the session preview cache for onto mode
+
+Rejected. The selected session preview can point at a different repo from the
+current repo context. Reusing the session preview cache also forces `App` to
+feed cache entries opportunistically for onto mode, which couples two separate
+surfaces.
 
 #### Companion metadata `jj log --no-graph`
 
@@ -109,23 +143,24 @@ session: feature
   3/7 | [C-r] repo: ~/sesh, [C-o] onto: trunk()
 ▌  sesh/feature ...
 ────────────────────────────────────────
-@  ... existing jj log preview ...
+@  ... selected session jj log preview ...
 ```
 
 ### Base selection mode
 
-Pressing `C-o` when a repo context exists switches the active prompt and preview
-behavior, but leaves the session list and its selection visible:
+Pressing `C-o` when a repo context exists switches the active prompt and uses
+the preview-shaped pane as the onto picker, but leaves the session list and its
+selection visible:
 
 ```text
 onto: parser
   3/7 | [C-r] repo: ~/sesh, [C-o] onto: trunk()
 ▌  sesh/feature ...
 ────────────────────────────────────────
-@  ... existing jj log preview with fuzzy highlights ...
+@  ... current repo jj log with fuzzy highlights ...
 ```
 
-There is no second prompt inside the preview. The top prompt label changes from
+There is no second prompt inside the pane. The top prompt label changes from
 `session:` to `onto:` and edits the revision query. The session query is
 preserved and restored when leaving onto mode.
 
@@ -138,22 +173,23 @@ preserved and restored when leaving onto mode.
 - `enter`: accept the selected commit block if it has a parsed change id.
 - `esc`, `C-g`, `C-c`: cancel onto mode and return to normal session mode.
 - `C-o`: optional toggle/cancel back to normal session mode.
-- `C-p`: continue to toggle preview visibility.
-- `S-up` / `S-down`: scroll preview, if preserving current preview scroll
+- `C-p`: disabled -- can't disable preview when that is the active view ("onto"
+  mode also forces the preview pane to be visible).
+- `S-up` / `S-down`: scroll the onto pane, if preserving current preview scroll
   behavior is straightforward. Otherwise prefer keeping `up`/`down` as row
-  selection and revisit preview scrolling later.
+  selection and revisit pane scrolling later.
 
 When accepting a row, update `self.repo` with `Repo::with_revision(...)`, return
 to normal session mode, and keep the session list query/selection unchanged.
 
 ## Implementation plan
 
-### 1. Make preview log output predictable
+### 1. Make log output predictable
 
 Status: Done.
 
-Update `crates/sesh/src/jj.rs::log` so preview output ignores user
-`templates.log` settings:
+Update `crates/sesh/src/jj.rs::log` so preview and onto-picker log output ignore
+user `templates.log` settings:
 
 ```rust
 Command::new("jj")
@@ -176,125 +212,53 @@ Keep `crates/sesh/src/jj.rs` limited to binary-specific command construction
 and execution. Do not put onto-picker parsing or revision-priority policy in
 `jj.rs`.
 
-Add a generic helper, for example:
-
-```rust
-pub async fn show(repo: &Path, rev: &str, template: &str) -> anyhow::Result<String>;
-```
-
-It should run:
+The helper runs:
 
 ```sh
 jj show -R <repo> -r <rev> --ignore-working-copy --color never --no-pager \
   --template <template>
 ```
 
-and return stdout on success. Error handling should mirror the other `jj.rs`
-helpers and include stderr when the command fails.
+and returns stdout on success. Error handling mirrors the other `jj.rs` helpers
+and includes stderr when the command fails.
 
-Put onto-picker-specific metadata in the onto/session-picker module, not in
-`jj.rs`, for example:
+### 3. Add onto state and current-repo log loading
 
-```rust
-const BASE_REVISION_TEMPLATE: &str =
-    r#"change_id ++ "\t" ++ self.contained_in("trunk()") ++ "\t" ++ local_bookmarks ++ "\t" ++ remote_bookmarks ++ "\n""#;
+Status: Done for the render-only milestone.
 
-struct BaseRevisionMetadata {
-    change_id: String,
-    is_trunk: bool,
-    local_bookmarks: Vec<String>,
-    remote_bookmarks: Vec<String>,
-}
-```
-
-Parser:
-
-- call `jj::show(repo, rev, BASE_REVISION_TEMPLATE)`,
-- split stdout into exactly four tab-separated fields,
-- parse `is_trunk` from `"true"` / `"false"`,
-- split bookmark fields with `split_whitespace()`,
-- return an error for malformed output.
-
-Add an onto-picker-owned method:
+`App` owns `Option<onto::State>` to represent whether onto mode is active.
+Entering mode uses the current repo context:
 
 ```rust
-impl BaseRevisionMetadata {
-    fn preferred_revision(&self) -> &str {
-        if self.is_trunk {
-            "trunk()"
-        } else if let Some(local) = self.local_bookmarks.first() {
-            local
-        } else if let Some(remote) = self.remote_bookmarks.first() {
-            remote
-        } else {
-            &self.change_id
-        }
-    }
-}
+self.onto = Some(onto::State::new(repo.source()));
 ```
 
-Unit-test the parser and priority order without shelling out. Add one
-integration-style `jj` test for `jj::show` with the base revision template if
-feasible.
+`onto::State` owns:
 
-### 3. Expose cached preview text for onto mode
+- the onto query,
+- `onto_picker::State`,
+- a worker that loads `jj log` for the current repo,
+- a cache containing renderable `ratatui::text::Text` for the current milestone.
 
-Status: Done.
+Do not route this through `preview::State` or `PreviewCache`.
 
-The current preview cache stores rendered `ratatui::text::Text`. Base mode
-should read from that cache instead of running a separate display command.
+### 4. Render the onto pane
 
-Add a narrow method to `crates/sesh/src/app/preview.rs` such as:
+Status: Done for the render-only milestone.
 
-```rust
-impl State {
-    pub(super) fn cached(
-        &self,
-        key: &Option<PathBuf>,
-    ) -> Option<Arc<anyhow::Result<Text<'static>>>>;
-}
-```
+`onto::State::draw` converts cache state into display text and delegates to
+`onto_picker::OntoPicker`. At this milestone, `onto_picker` only renders the
+provided text and its scrollbar.
 
-Keep cache ownership inside preview state so normal previews are not recreated
-when entering/leaving onto mode. Callers are responsible for deciding which
-preview key to inspect and for rendering empty/loading/error states from the
-returned cache entry.
+### 5. Segment onto log text into selectable commit blocks
 
-### 4. Add onto state to session picker UI
-
-Status: Done for initial mode/query scaffolding.
-
-Keep `App` as a coordinator. Do not move base-specific rendering and key logic
-into a large `App::handle_key`/`App::draw` branch.
-
-The initial implementation adds `crates/sesh/src/app/onto.rs` with query state
-only:
-
-```rust
-struct State {
-    query: String,
-}
-```
-
-`App` owns `Option<onto::State>` to represent whether onto mode is active. While
-active, the top prompt label is `onto:`, text input edits the revision query,
-and cancel/toggle keys leave onto mode. Selection, fuzzy matching, and metadata
-cache fields should be added once selectable preview blocks exist.
-
-`App`/session-mode controller should continue to delegate:
-
-- prompt label/query selection,
-- preview rendering,
-- base-mode key handling,
-- accept/cancel transitions.
-
-### 5. Segment cached preview text into selectable commit blocks
+Status: Not started.
 
 Do **not** assume every commit is two lines. With `builtin_log_compact`, most
 non-root commits are two lines, but root commits, elisions, graph connector
 lines, merges, and future jj graph output can vary.
 
-Represent the preview as blocks:
+Represent the parsed content as blocks:
 
 ```rust
 struct CommitBlock {
@@ -323,10 +287,9 @@ examples look like:
 ◆  zzzzzzzz root() 00000000
 ```
 
-Implement a small parser that identifies graph node markers (`@`, `○`, `◆`,
-`×`, and ascii equivalents if tests require them) and extracts the following
-alphanumeric id as `revision_hint`. Keep this parser isolated and unit-tested.
-If no id can be parsed, the line is not selectable.
+The parser should identify graph node markers (`@`, `○`, `◆`, `×`, and ascii
+equivalents if tests require them) and extract the following alphanumeric id as
+`revision_hint`. If no id can be parsed, the line is not selectable.
 
 ### 6. Fuzzy matching without filtering rows
 
@@ -380,40 +343,81 @@ lines.
 On `enter` in onto mode:
 
 1. If selected block has no `revision_hint`, no-op and stay in onto mode.
-2. Check `metadata_cache` for `(repo.source(), revision_hint)`.
+2. Optionally check a metadata cache for `(repo.source(), revision_hint)`.
 3. If absent, call `jj::show(repo.source(), revision_hint, BASE_REVISION_TEMPLATE)`
-   and parse the stdout into `BaseRevisionMetadata` in the onto-picker module.
+   and parse stdout into `BaseRevisionMetadata` in the onto-picker/onto module.
 4. Compute `preferred_revision()`.
 5. Update repo context: `repo = repo.with_revision(preferred.to_owned())`.
 6. Return to normal session mode.
 
+Base metadata shape:
+
+```rust
+const BASE_REVISION_TEMPLATE: &str =
+    r#"change_id ++ "\t" ++ self.contained_in("trunk()") ++ "\t" ++ local_bookmarks ++ "\t" ++ remote_bookmarks ++ "\n""#;
+
+struct BaseRevisionMetadata {
+    change_id: String,
+    is_trunk: bool,
+    local_bookmarks: Vec<String>,
+    remote_bookmarks: Vec<String>,
+}
+```
+
+Parser:
+
+- split stdout into exactly four tab-separated fields,
+- parse `is_trunk` from `"true"` / `"false"`,
+- split bookmark fields with `split_whitespace()`,
+- return an error for malformed output.
+
+Priority order:
+
+```rust
+impl BaseRevisionMetadata {
+    fn preferred_revision(&self) -> &str {
+        if self.is_trunk {
+            "trunk()"
+        } else if let Some(local) = self.local_bookmarks.first() {
+            local
+        } else if let Some(remote) = self.remote_bookmarks.first() {
+            remote
+        } else {
+            &self.change_id
+        }
+    }
+}
+```
+
 If metadata lookup fails, prefer staying in onto mode and showing an inline error
-in the preview/header rather than exiting the app. If that is too much for the
+in the pane/header rather than exiting the app. If that is too much for the
 first implementation, propagating the error is acceptable but should be called
 out in the PR/response.
 
 ### 9. Tests and snapshots
 
-Add or update tests for:
+Already covered:
 
-1. `jj::log` uses `builtin_log_compact` even when test config sets
-   `templates.log = "description"`.
-2. `jj::show` returns real `jj show` output for the base revision template.
-3. Base-picker metadata parsing handles the `jj show` output format.
-4. `BaseRevisionMetadata::preferred_revision` priority:
-   - trunk wins over all bookmarks,
-   - local bookmark wins over remote/change,
-   - remote bookmark wins over change,
-   - change id fallback.
-5. Base mode UI:
-   - `C-o` changes the top prompt label to `onto:`.
-   - session list remains visible/unchanged.
-   - preview log remains visible.
-   - typing a query highlights matching preview rows without hiding
-     non-matching rows.
-   - `tab`/`S-tab` jump between matching rows.
-   - `esc` cancels and restores the `session:` prompt/query.
-   - `enter` accepts a selected row and updates header `onto` text.
+- `jj::log` uses `builtin_log_compact` even when test config sets
+  `templates.log = "description"`.
+- `jj::show` returns real `jj show` output for the base revision template.
+- `C-o` changes the top prompt label to `onto:`.
+- The session list remains visible/unchanged in onto mode.
+- The onto picker renders the current repo context, not the selected row's repo.
+- `C-g` cancels onto mode and restores the `session:` prompt/query.
+
+Still needed:
+
+- Base-picker metadata parsing handles the `jj show` output format.
+- `BaseRevisionMetadata::preferred_revision` priority:
+  - trunk wins over all bookmarks,
+  - local bookmark wins over remote/change,
+  - remote bookmark wins over change,
+  - change id fallback.
+- Typing a query highlights matching preview rows without hiding non-matching
+  rows.
+- `tab`/`S-tab` jump between matching rows.
+- `enter` accepts a selected row and updates header `onto` text.
 
 When snapshots change because `jj::log` now forces `builtin_log_compact`, refresh
 with `cargo insta test --accept -p sesh` and remove any `.snap.new` artifacts.

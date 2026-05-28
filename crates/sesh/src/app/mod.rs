@@ -11,6 +11,7 @@ mod layout;
 mod list;
 mod loading;
 mod onto;
+mod onto_picker;
 mod preview;
 mod prompt;
 mod scrollbar;
@@ -189,7 +190,7 @@ impl App {
     /// The frame is split up into regions, each with its own widget. The `preview` region and its
     /// scroll bar are only visible when the preview is toggled on (defaults to visible).
     fn draw(&mut self, f: &mut ratatui::Frame<'_>) {
-        let l = layout::Layout::new(f.area(), self.preview.visible());
+        let l = layout::Layout::new(f.area(), self.preview.visible() || self.onto.is_some());
 
         let new_session = self.model.new_session(self.repo.as_ref());
 
@@ -240,11 +241,14 @@ impl App {
             f.render_widget(Block::new('─'), separator);
         }
 
-        let preview = Preview::new(self.sessions.preview());
-
-        // (4) Render the preview, if it is toggled on. This also depends on whatever the currently
-        // selected session is, so it must be rendered after the session list.
-        preview.draw(f, l_preview, &mut self.preview);
+        // (4) Render the selected session preview or current-repo onto-picker surface, if it is
+        // toggled on.
+        if let Some(onto) = &mut self.onto {
+            onto.draw(f, l_preview);
+        } else {
+            let preview = Preview::new(self.sessions.preview());
+            preview.draw(f, l_preview, &mut self.preview);
+        }
     }
 
     /// Handle a single keyboard event, returning the consequent application action.
@@ -333,8 +337,10 @@ impl App {
             }
 
             // App state
-            KC::Char('o') if key.modifiers.contains(CTRL) && self.repo.is_some() => {
-                self.onto = Some(onto::State::default());
+            KC::Char('o') if key.modifiers.contains(CTRL) => {
+                if let Some(repo) = &self.repo {
+                    self.onto = Some(onto::State::new(repo.source()));
+                }
             }
 
             KC::Char('r') if key.modifiers.contains(ALT) => self.reset_current_repo(),
