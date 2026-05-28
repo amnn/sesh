@@ -64,7 +64,7 @@ including the attached `alpha-live` session and the glob-discovered repos.
 
 ```terminal
 session:
-  7/7 | [C-r] repo: none | [C-x] close
+  7/7 | [C-r] repo: none | [C-x] close, [C-f] flag
                                                                                                                        ┃
 ▌⬤ alpha-live                               alpha                                                                      │
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────

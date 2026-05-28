@@ -14,7 +14,7 @@
 
 ## UI
 
-- [ ] Flag and unflag session.
+- [x] Flag and unflag session.
   - Add a mechanism for setting a flag on a session.
   - This causes its pip to remain lit up even if it does not have an alert (but
     with a different colour).
@@ -22,7 +22,7 @@
   - `C-f` is the setting to toggle flags. It should show up in the header with
     a `flag` or `unflag` label.
 
-- [ ] Clearer alert indicator -- the green colour is not bright enough to
+- [x] Clearer alert indicator -- the green colour is not bright enough to
   distinguish from the grey.
 
 - [ ] Spinner for deletion -- that operation can take some time, so it would be

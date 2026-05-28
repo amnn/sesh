@@ -29,7 +29,7 @@ header should offer `C-x` close, but not `C-d` delete.
 
 ```terminal
 session: alp
-  2/4 | [C-r] repo: none | [C-x] close
+  2/4 | [C-r] repo: none | [C-x] close, [C-f] flag
 ▌⬤ alpha                                                                                                               ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 
@@ -48,7 +48,7 @@ Pressing `C-d` should do nothing for a plain live tmux session.
 
 ```terminal
 session: alp
-  2/4 | [C-r] repo: none | [C-x] close
+  2/4 | [C-r] repo: none | [C-x] close, [C-f] flag
 ▌⬤ alpha                                                                                                               ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 

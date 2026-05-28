@@ -39,7 +39,7 @@ basename (`b`) spans.
 
 ```terminal
 session: onecb                                                                                     ┃
-  1/3 | [C-r] repo: none | [C-x] close                                                             ┃
+  1/3 | [C-r] repo: none | [C-x] close, [C-f] flag                                                 ┃
 ▌⬤ tone~one                                 c/blue                                                 ┃
                                                                                                    ┃
                                                                                                    ┃
@@ -84,7 +84,7 @@ to show and highlight the matched `o`.
 
 ```terminal
 session: oneob                                                                                     ┃
-  1/3 | [C-r] repo: none | [C-x] close                                                             ┃
+  1/3 | [C-r] repo: none | [C-x] close, [C-f] flag                                                 ┃
    oneob                                                                                           ┃
 ▌⬤ tone~one                                 co/blue                                                ┃
                                                                                                    ┃

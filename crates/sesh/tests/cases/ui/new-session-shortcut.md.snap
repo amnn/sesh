@@ -46,7 +46,7 @@ Pressing `C-n` should do nothing and leave the picker open in the same state.
 
 ```terminal
 session:
-  8/8 | [C-r] repo: none | [C-x] close
+  8/8 | [C-r] repo: none | [C-x] close, [C-f] flag
                                                                                                                        ┃
 ▌⬤ alpha                                    alpha                                                                      │
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -64,7 +64,7 @@ session:
 
 ```terminal
 session:
-  8/8 | [C-r] repo: none | [C-x] close
+  8/8 | [C-r] repo: none | [C-x] close, [C-f] flag
                                                                                                                        ┃
 ▌⬤ alpha                                    alpha                                                                      │
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -85,7 +85,7 @@ because `alp` is not an exact live session name.
 
 ```terminal
 session: alp
-  2/8 | [C-r] repo: none | [C-x] close
+  2/8 | [C-r] repo: none | [C-x] close, [C-f] flag
    alp                                                                                                                 ┃
 ▌⬤ alpha                                    alpha                                                                      │
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
@@ -106,7 +106,7 @@ disambiguated.
 
 ```terminal
 session: alpha
-  2/8 | [C-r] repo: none | [C-x] close
+  2/8 | [C-r] repo: none | [C-x] close, [C-f] flag
    alpha~1                                                                                                             ┃
 ▌⬤ alpha                                    alpha                                                                      │
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────

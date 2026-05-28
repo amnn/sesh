@@ -25,7 +25,7 @@ SVG snapshots cover row styling.
     :t resize-window -t ui:0 -x 80 -y 10 (success)
     :pane ui:0.0
 
-The alert row should carry green pip styling in the linked SVG snapshot.
+The alert row should carry light-yellow pip styling in the linked SVG snapshot.
 
     :settle (settled)
     :k alert
@@ -33,7 +33,7 @@ The alert row should carry green pip styling in the linked SVG snapshot.
 
 ```terminal
 session: alert
-  1/4 | [C-r] repo: none | [C-x] close
+  1/4 | [C-r] repo: none | [C-x] close, [C-f] flag
 ▌⬤ alert                                                                       ┃
 ────────────────────────────────────────────────────────────────────────────────
 
@@ -47,14 +47,14 @@ session: alert
 ![light](bell-alert.md.snap.1.light.svg)
 ![dark](bell-alert.md.snap.1.dark.svg)
 
-The quiet row is not alerted and should not carry the green pip styling.
+The quiet row is not alerted and should not carry the light-yellow pip styling.
 
     :k C-u quiet
     :snap --color
 
 ```terminal
 session: quiet
-  1/4 | [C-r] repo: none | [C-x] close
+  1/4 | [C-r] repo: none | [C-x] close, [C-f] flag
 ▌⬤ quiet                                                                       ┃
 ────────────────────────────────────────────────────────────────────────────────
 

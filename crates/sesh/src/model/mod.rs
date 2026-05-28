@@ -143,7 +143,7 @@ impl Model {
                 .and_then(|repo| self.workspace_name(repo))
                 .is_some();
 
-            let session = LiveKind::new(name, info.repo, info.alerts, can_delete);
+            let session = LiveKind::new(name, info.repo, info.alerts, info.flagged, can_delete);
             self.sessions.push(session.into());
         }
 

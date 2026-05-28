@@ -79,6 +79,9 @@ enum Action {
 
     /// Switch to the selected session, creating it first if needed.
     Switch(Session),
+
+    /// Toggle the selected live session's manual flag.
+    ToggleFlag(Session),
 }
 
 impl App {
@@ -149,6 +152,11 @@ impl App {
                         session.switch(cwd, ctx.setup).await?;
                         return Ok(());
                     }
+
+                    Some(Action::ToggleFlag(session)) => {
+                        session.toggle_flag().await?;
+                        break;
+                    }
                 }
             }
 
@@ -218,11 +226,10 @@ impl App {
         self.preview.feed(self.sessions.selected());
 
         let header = Header::new(
-            self.sessions.can_close(),
-            self.sessions.can_delete(),
             self.sessions.is_deleting(),
             items.len(),
             self.repo.as_ref(),
+            self.sessions.selected(),
             snapshot.item_count() as usize,
         );
 
@@ -301,6 +308,10 @@ impl App {
 
             KC::Char('d') if key.modifiers.contains(CTRL) && self.sessions.can_delete() => {
                 self.sessions.start_delete();
+            }
+
+            KC::Char('f') if key.modifiers.contains(CTRL) && self.sessions.can_flag() => {
+                return self.sessions.take_selected().map(Action::ToggleFlag);
             }
 
             // Scroll preview

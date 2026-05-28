@@ -64,6 +64,7 @@ Options:
 
 Key bindings:
   C-d               Delete the repository and close the session.
+  C-f               Flag or unflag a live session.
   C-n               Create the session without switching to it.
   C-p               Toggle the preview pane.
   C-r, M-r          Set or reset the current repo.

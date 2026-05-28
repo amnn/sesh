@@ -1,0 +1,103 @@
+---
+source: crates/sesh/tests/test.rs
+expression: output
+input_file: crates/sesh/tests/cases/ui/flag-session.md
+---
+# Flag session
+
+Live tmux sessions can carry a persistent manual flag in `@sesh.flag`. A
+flagged session should show an alert-like pip with distinct colour and offer an
+`unflag` shortcut in the header.
+
+    :bins jj tmux cat
+
+> [!NOTE]
+> 'jj', 'tmux', and 'cat' are available.
+
+    :t rename-session -t 0 runner (success)
+    :t new-session -d -s alpha "cat" (success)
+    :t new-session -d -s beta "cat" (success)
+    :t set-option -t beta @sesh.flag 1 (success)
+    :t new-session -d -s ui "sesh; cat" (success)
+    :t resize-window -t ui:0 -x 100 -y 10 (success)
+    :pane ui:0.0
+    :settle -d 2s (settled)
+
+Filter to the pre-flagged session. The header should offer `unflag`, and the
+linked SVG snapshot should show the pip in the flag colour rather than the alert
+colour.
+
+    :k beta
+    :snap --color
+
+```terminal
+session: beta
+  1/4 | [C-r] repo: none | [C-x] close, [C-f] unflag
+▌⬤ beta                                                                                            ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+```
+
+![light](flag-session.md.snap.1.light.svg)
+![dark](flag-session.md.snap.1.dark.svg)
+
+Pressing `C-f` should clear the persisted tmux option and update the header to
+offer `flag` again.
+
+    :k C-f
+    :settle -d 2s (settled)
+    :snap --color
+
+```terminal
+session: beta
+  1/4 | [C-r] repo: none | [C-x] close, [C-f] flag
+▌⬤ beta                                                                                            ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+```
+
+![light](flag-session.md.snap.2.light.svg)
+![dark](flag-session.md.snap.2.dark.svg)
+
+    :t display-message -p -t beta '#{@sesh.flag}' (success)
+
+Pressing `C-f` again should set the persisted tmux option back to `1`.
+
+    :k C-f
+    :settle -d 2s (settled)
+    :snap --color
+
+```terminal
+session: beta
+  1/4 | [C-r] repo: none | [C-x] close, [C-f] unflag
+▌⬤ beta                                                                                            ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+```
+
+![light](flag-session.md.snap.3.light.svg)
+![dark](flag-session.md.snap.3.dark.svg)
+
+    :t display-message -p -t beta '#{@sesh.flag}' (success)
+
+```
+1
+```
+
+---
+vim: set ft=markdown:

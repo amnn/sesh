@@ -39,7 +39,7 @@ will also show `beta~1`:
 
 ```terminal
 session: beta                                                                                                          ┃
-  3/5 | [C-r] repo: none | [C-x] close                                                                                 ┃
+  3/5 | [C-r] repo: none | [C-x] close, [C-f] flag                                                                     ┃
    beta~1                                                                                                              ┃
 ▌⬤ beta                                                                                                                ┃
    beta~1                                   ~/a/beta                                                                   ┃

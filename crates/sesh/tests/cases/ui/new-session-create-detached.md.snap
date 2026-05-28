@@ -49,7 +49,7 @@ client should still be attached to the picker session.
 
 ```terminal
 session:
-  3/3 | [C-r] repo: none | [C-x] close
+  3/3 | [C-r] repo: none | [C-x] close, [C-f] flag
 ▌⬤ runner                                                                                                              ┃
 ────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
 

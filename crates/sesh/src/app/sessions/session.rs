@@ -62,17 +62,21 @@ pub(super) fn row(session: &Session, highlighted: bool, deleting: bool, matches:
         return row.with_sigil(Span::raw(SIGIL_DELETE).on_light_red());
     }
 
+    let Some(flagged) = session.flag() else {
+        return row;
+    };
+
     let alerts = session.alerts();
-    if alerts.is_empty() {
-        if session.can_close() {
-            row.with_sigil(Span::raw(SIGIL_TMUX).dim())
-        } else {
-            row
-        }
-    } else if highlighted {
-        row.with_sigil(Span::raw(SIGIL_TMUX).on_light_green())
+    if !alerts.is_empty() && highlighted {
+        row.with_sigil(Span::raw(SIGIL_TMUX).on_light_yellow())
+    } else if !alerts.is_empty() {
+        row.with_sigil(Span::raw(SIGIL_TMUX).light_yellow())
+    } else if flagged && highlighted {
+        row.with_sigil(Span::raw(SIGIL_TMUX).on_light_blue())
+    } else if flagged {
+        row.with_sigil(Span::raw(SIGIL_TMUX).light_blue())
     } else {
-        row.with_sigil(Span::raw(SIGIL_TMUX).light_green())
+        row.with_sigil(Span::raw(SIGIL_TMUX).dim())
     }
 }
 

@@ -42,7 +42,8 @@ from changes in span ownership or styling of the same visible cells.
 
 When a UI test sends keys immediately after starting or switching to a `sesh`
 pane, use an explicit `:settle` directive before `:keys` to ensure the UI has
-reached a stable state.
+reached a stable state. For a freshly launched `sesh` pane, prefer
+`:settle -d 2s`; the default timeout can be too short on cold runs.
 
 When a UI test needs to assert behavior after `sesh` exits without
 switching the client, keep the launched tmux pane alive (for example

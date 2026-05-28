@@ -19,6 +19,9 @@ pub struct SessionInfo {
     /// Windows in the session that have an active bell alert.
     pub alerts: Vec<String>,
 
+    /// Whether the session has been manually flagged by the user.
+    pub flagged: bool,
+
     /// Optional jj repository attached to the session.
     pub repo: Option<PathBuf>,
 }
@@ -84,10 +87,11 @@ pub async fn run_shell(target: &str, cwd: &Path, script: &str) -> anyhow::Result
     Ok(())
 }
 
-/// Query tmux for current sessions, attached sesh repo metadata, and bell alerts.
+/// Query tmux for current sessions, attached sesh repo metadata, flags, and bell alerts.
 pub async fn sessions() -> anyhow::Result<BTreeMap<String, SessionInfo>> {
+    let format = format!("#{{session_name}}\t#{{@sesh.flag}}\t#{{@sesh.repo}}");
     let output = Command::new("tmux")
-        .args(["list-sessions", "-F", "#{session_name}\t#{@sesh.repo}"])
+        .args(["list-sessions", "-F", &format])
         .output()
         .await
         .context("failed to discover information on tmux sessions")?;
@@ -100,7 +104,8 @@ pub async fn sessions() -> anyhow::Result<BTreeMap<String, SessionInfo>> {
 
     let mut sessions = BTreeMap::new();
     for line in String::from_utf8_lossy(&output.stdout).lines() {
-        let Some((session, repo)) = line.split_once('\t') else {
+        let fields: Vec<_> = line.splitn(3, '\t').collect();
+        let [session, flag, repo] = fields[..] else {
             continue;
         };
 
@@ -120,6 +125,7 @@ pub async fn sessions() -> anyhow::Result<BTreeMap<String, SessionInfo>> {
             session.to_owned(),
             SessionInfo {
                 alerts: vec![],
+                flagged: is_flag_set(flag),
                 repo,
             },
         );
@@ -160,6 +166,12 @@ pub async fn sessions() -> anyhow::Result<BTreeMap<String, SessionInfo>> {
     Ok(sessions)
 }
 
+/// Set or clear sesh's manual flag on a tmux session.
+pub async fn set_flag(session: &str, flagged: bool) -> anyhow::Result<()> {
+    let value = if flagged { "1" } else { "" };
+    set_option(session, "@sesh.flag", value).await
+}
+
 /// Set a tmux session option.
 pub async fn set_option<V: AsRef<OsStr> + ?Sized>(
     session: &str,
@@ -197,4 +209,10 @@ pub async fn switch_client(session: &str) -> anyhow::Result<()> {
     );
 
     Ok(())
+}
+
+/// Return whether a tmux user option value counts as an enabled flag.
+fn is_flag_set(value: &str) -> bool {
+    let value = value.trim();
+    !value.is_empty() && !matches!(value, "0" | "false" | "no" | "off")
 }

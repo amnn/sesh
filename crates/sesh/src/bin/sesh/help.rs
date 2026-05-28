@@ -224,6 +224,7 @@ fn write_key_bindings<W: Write>(w: &mut Writer<W>) -> io::Result<()> {
 
     writeln!(w)?;
     w.def("C-d", "Delete the repository and close the session.")?;
+    w.def("C-f", "Flag or unflag a live session.")?;
     w.def("C-n", "Create the session without switching to it.")?;
     w.def("C-p", "Toggle the preview pane.")?;
     w.def("C-r, M-r", "Set or reset the current repo.")?;

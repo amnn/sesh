@@ -78,6 +78,7 @@ all picker key bindings:
 | Key | Action |
 | --- | --- |
 | `C-d` | Delete the repository and close the session. |
+| `C-f` | Flag or unflag a live session. |
 | `C-n` | Create the session if necessary without switching to it. |
 | `C-p` | Toggle the preview pane. |
 | `C-r`, `M-r` | Set or reset the current repo. |
@@ -167,6 +168,17 @@ repository path and want to attach it manually, set the user option yourself:
 
 ```sh
 tmux set-option -t SESSION @sesh.repo /path/to/repo
+```
+
+### Session flags do not appear as expected
+
+`sesh` stores manual flags in the `@sesh.flag` tmux user option for each live
+session. You can inspect or repair the flag outside the picker with:
+
+```sh
+tmux show-options -t SESSION -qv @sesh.flag
+tmux set-option -t SESSION @sesh.flag 1
+tmux set-option -t SESSION @sesh.flag ""
 ```
 
 ### Git tools do not detect a secondary jj workspace

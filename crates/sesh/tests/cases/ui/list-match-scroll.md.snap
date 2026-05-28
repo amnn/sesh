@@ -37,7 +37,7 @@ prefix.
 
 ```terminal
 session: z                                                                     ┃
-  1/3 | [C-r] repo: none | [C-x] close                                         ┃
+  1/3 | [C-r] repo: none | [C-x] close, [C-f] flag                             ┃
 ▌⬤ alifragilistic-expialidocious-alpha-supercalifragilistic-expialidocious-z   ┃
                                                                                ┃
                                                                                ┃

@@ -39,6 +39,7 @@ pub(crate) struct LiveKind {
     name: String,
     repo: Option<PathBuf>,
     alerts: Vec<String>,
+    flagged: bool,
     can_delete: bool,
 }
 
@@ -111,6 +112,14 @@ impl Session {
         self.ensure_tmux(cwd, setup).await
     }
 
+    /// Return this session's manual flag state, if this entry can be flagged.
+    pub fn flag(&self) -> Option<bool> {
+        match &self.0 {
+            Kind::Live(kind) => Some(kind.flagged),
+            Kind::New(_) | Kind::Repo(_) => None,
+        }
+    }
+
     /// Return the session name.
     pub fn name(&self) -> String {
         match &self.0 {
@@ -133,6 +142,14 @@ impl Session {
     pub async fn switch(&self, cwd: &Path, setup: &str) -> anyhow::Result<()> {
         self.create(cwd, setup).await?;
         tmux::switch_client(&self.switch_target()).await
+    }
+
+    /// Toggle this session's persisted manual flag.
+    pub async fn toggle_flag(&self) -> anyhow::Result<()> {
+        match &self.0 {
+            Kind::Live(kind) => kind.toggle_flag().await,
+            Kind::New(_) | Kind::Repo(_) => Ok(()),
+        }
     }
 
     /// Return the live tmux alert windows for this session, if any.
@@ -181,18 +198,20 @@ impl LiveKind {
     ///
     /// `name` is a tmux session name, `repo` is an optional path to a jj repository attached as a
     /// user-option on the tmux session, `alerts` is a list of windows in the session that have an
-    /// active bell alert, and `can_delete` indicates whether deletion can remove a named jj
-    /// workspace.
+    /// active bell alert, `flagged` indicates whether the user has manually flagged the session,
+    /// and `can_delete` indicates whether deletion can remove a named jj workspace.
     pub(crate) fn new(
         name: String,
         repo: Option<PathBuf>,
         alerts: Vec<String>,
+        flagged: bool,
         can_delete: bool,
     ) -> Self {
         Self {
             name,
             repo,
             alerts,
+            flagged,
             can_delete,
         }
     }
@@ -208,6 +227,11 @@ impl LiveKind {
 
     fn repo(&self) -> Option<PathBuf> {
         self.repo.clone()
+    }
+
+    /// Toggle the persistent tmux user option that stores this session's manual flag.
+    async fn toggle_flag(&self) -> anyhow::Result<()> {
+        tmux::set_flag(&self.name, !self.flagged).await
     }
 }
 

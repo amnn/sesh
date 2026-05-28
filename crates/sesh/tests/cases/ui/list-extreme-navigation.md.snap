@@ -35,7 +35,7 @@ last row and `M-up` jumps back to the first selectable session.
 
 ```terminal
 session:                                                                                           ┃
-  6/6 | [C-r] repo: none | [C-x] close                                                             ┃
+  6/6 | [C-r] repo: none | [C-x] close, [C-f] flag                                                 ┃
                                                                                                    ┃
 ▌⬤ beta                                                                                            ┃
  ⬤ delta                                                                                           ┃
@@ -53,7 +53,7 @@ session:                                                                        
 
 ```terminal
 session:                                                                                           ┃
-  6/6 | [C-r] repo: none | [C-x] close                                                             ┃
+  6/6 | [C-r] repo: none | [C-x] close, [C-f] flag                                                 ┃
                                                                                                    ┃
  ⬤ beta                                                                                            ┃
  ⬤ delta                                                                                           ┃
@@ -71,7 +71,7 @@ session:                                                                        
 
 ```terminal
 session:                                                                                           ┃
-  6/6 | [C-r] repo: none | [C-x] close                                                             ┃
+  6/6 | [C-r] repo: none | [C-x] close, [C-f] flag                                                 ┃
                                                                                                    ┃
 ▌⬤ beta                                                                                            ┃
  ⬤ delta                                                                                           ┃
@@ -92,7 +92,7 @@ The new-session row is selectable, so `M-up` jumps to that row.
 
 ```terminal
 session: et                                                                                        ┃
-  3/6 | [C-r] repo: none | [C-x] close                                                             ┃
+  3/6 | [C-r] repo: none | [C-x] close, [C-f] flag                                                 ┃
    et                                                                                              ┃
 ▌⬤ beta                                                                                            ┃
  ⬤ zeta                                                                                            ┃
@@ -110,7 +110,7 @@ session: et                                                                     
 
 ```terminal
 session: et                                                                                        ┃
-  3/6 | [C-r] repo: none | [C-x] close                                                             ┃
+  3/6 | [C-r] repo: none | [C-x] close, [C-f] flag                                                 ┃
    et                                                                                              ┃
  ⬤ beta                                                                                            ┃
  ⬤ zeta                                                                                            ┃
@@ -150,7 +150,7 @@ still jumps to it.
 
 ```terminal
 session: ta                                                                                        ┃
-  4/6 | [C-r] repo: none | [C-x] close                                                             ┃
+  4/6 | [C-r] repo: none | [C-x] close, [C-f] flag                                                 ┃
    ta~1                                                                                            ┃
 ▌⬤ ta                                                                                              ┃
  ⬤ beta                                                                                            ┃
@@ -168,7 +168,7 @@ session: ta                                                                     
 
 ```terminal
 session: ta                                                                                        ┃
-  4/6 | [C-r] repo: none | [C-x] close                                                             ┃
+  4/6 | [C-r] repo: none | [C-x] close, [C-f] flag                                                 ┃
    ta~1                                                                                            ┃
  ⬤ ta                                                                                              ┃
  ⬤ beta                                                                                            ┃
