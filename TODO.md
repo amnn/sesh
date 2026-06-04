@@ -12,6 +12,8 @@
 - [ ] Find a way to keep the session picker working even if the workspace is
   stale.
 
+- [ ] Rename session
+
 ## UI
 
 - [x] Flag and unflag session.
@@ -25,8 +27,8 @@
 - [x] Clearer alert indicator -- the green colour is not bright enough to
   distinguish from the grey.
 
-- [ ] Spinner for deletion -- that operation can take some time, so it would be
-  good to have a visual indicator that something is happening.
+- [ ] Spinner for long-running operations -- operations on `sui` can take time
+  so it would be good to have a visual indicator that something is happening.
 
 ## README
 
