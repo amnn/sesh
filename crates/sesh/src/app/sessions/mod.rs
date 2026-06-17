@@ -3,6 +3,9 @@
 
 //! Component and state for rendering the session list.
 
+pub(super) mod preview;
+mod session;
+
 use nucleo::Config;
 use nucleo::Item;
 use nucleo::Matcher;
@@ -14,11 +17,10 @@ use ratatui::widgets::ListState;
 use ratatui::widgets::ScrollbarState;
 use unicode_width::UnicodeWidthStr as _;
 
-use crate::app::list::List;
-use crate::app::row::Row;
-use crate::app::scrollbar;
-use crate::picker::Item as _;
-use crate::session::Session;
+use crate::app::component::list::List;
+use crate::app::component::row::Row;
+use crate::app::component::scrollbar;
+use crate::model::session::Session;
 
 /// Session-list component, backed by fuzzy-matched rows and an optional new session candidate.
 pub(super) struct Sessions<'s> {
@@ -92,7 +94,7 @@ impl<'s> Sessions<'s> {
 
         let selected = state.list.selected();
         if let Some(session) = &self.new {
-            rows.push(session.render(selected == Some(0), false, &[]))
+            rows.push(session::row(session, selected == Some(0), false, &[]))
         } else {
             rows.push(Row::empty())
         }
@@ -107,7 +109,7 @@ impl<'s> Sessions<'s> {
             indices.dedup();
 
             let highlighted = selected == Some(i);
-            let row = item.data.render(highlighted, state.deleting, &indices);
+            let row = session::row(item.data, highlighted, state.deleting, &indices);
 
             let margin = indices.last().copied().map(|off| right_margin(text, off));
             rows.push(row.with_right_margin(margin));

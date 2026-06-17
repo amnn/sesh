@@ -3,19 +3,13 @@
 
 //! Picker UI state, rendering, and input handling.
 
-pub(crate) mod row;
-
-mod block;
+mod component;
 mod header;
+mod highlight;
 mod layout;
-mod list;
-mod loading;
 mod onto;
-mod onto_picker;
-mod preview;
-mod prompt;
-mod scrollbar;
 mod sessions;
+mod span;
 
 use std::io;
 use std::io::ErrorKind;
@@ -33,15 +27,18 @@ use crossterm::event::KeyModifiers;
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 
-use crate::app::block::Block;
+use crate::app::component::block::Block;
+use crate::app::component::loading;
+use crate::app::component::loading::Loading;
+use crate::app::component::prompt;
 use crate::app::header::Header;
-use crate::app::loading::Loading;
-use crate::app::preview::Preview;
 use crate::app::sessions::Sessions;
-use crate::jj;
+use crate::app::sessions::preview;
+use crate::app::sessions::preview::Preview;
+use crate::cmd::jj;
 use crate::model::Model;
-use crate::session::Repo;
-use crate::session::Session;
+use crate::model::session::Repo;
+use crate::model::session::Session;
 use crate::terminal::AlternateScreenGuard;
 
 /// Timeout for waiting for a key event.

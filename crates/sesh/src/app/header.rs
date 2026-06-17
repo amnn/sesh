@@ -9,10 +9,10 @@ use ratatui::style::Stylize as _;
 use ratatui::text::Line;
 use ratatui::text::Span;
 
-use crate::session::Repo;
-use crate::ui::Highlight;
-use crate::ui::push_repo_path_spans;
-use crate::ui::push_shortcut_span;
+use crate::app::highlight::Highlight;
+use crate::app::span::push_repo_path_spans;
+use crate::app::span::push_shortcut_span;
+use crate::model::session::Repo;
 
 /// Header bar component showing counts, repo context, and available actions.
 pub(super) struct Header<'r> {

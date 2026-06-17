@@ -19,13 +19,13 @@ const SELECTED: &str = "▌";
 ///
 /// Works like `ratatui::widgets::List`, but the rows can be custom widgets, they must be of height
 /// one, and the styling of selected rows is hardcoded.
-pub(super) struct List<I> {
+pub(crate) struct List<I> {
     items: Vec<I>,
 }
 
 impl<I> List<I> {
     /// Create a list from custom items.
-    pub(super) fn new(items: Vec<I>) -> Self {
+    pub(crate) fn new(items: Vec<I>) -> Self {
         Self { items }
     }
 }

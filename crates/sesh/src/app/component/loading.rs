@@ -23,14 +23,15 @@ pub(crate) struct State {
 }
 
 impl Loading {
-    pub(super) fn new(enabled: bool) -> Self {
+    /// Create a loading spinner, enabled only when `enabled` is true.
+    pub(crate) fn new(enabled: bool) -> Self {
         Self(enabled)
     }
 }
 
 impl State {
     /// Create a fresh loading state, for an inactive loading spinner.
-    pub(super) fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             start: Instant::now(),
         }

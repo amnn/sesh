@@ -3,6 +3,8 @@
 
 //! State for `onto` revision selection mode.
 
+mod picker;
+
 use std::path::Path;
 use std::sync::Arc;
 use std::sync::OnceLock;
@@ -17,9 +19,8 @@ use ratatui::layout::Rect;
 use ratatui::text::Text;
 use tokio_util::task::AbortOnDropHandle;
 
-use crate::app::onto_picker;
-use crate::app::onto_picker::OntoPicker;
-use crate::jj;
+use crate::app::onto::picker::OntoPicker;
+use crate::cmd::jj;
 
 /// Result of handling a key while `onto` revision selection is active.
 pub(super) enum Action {
@@ -30,7 +31,7 @@ pub(super) enum Action {
 /// Query, picker, and loading state for `onto` revision selection.
 pub(super) struct State {
     cache: Arc<OnceLock<OntoPicker>>,
-    picker: onto_picker::State,
+    picker: picker::State,
     query: String,
     _worker: AbortOnDropHandle<()>,
 }
@@ -61,7 +62,7 @@ impl State {
 
         Self {
             cache,
-            picker: onto_picker::State::default(),
+            picker: picker::State::default(),
             query: String::new(),
             _worker: AbortOnDropHandle::new(worker),
         }

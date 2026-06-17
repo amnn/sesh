@@ -9,7 +9,7 @@ use ratatui::text::Text;
 use ratatui::widgets::Paragraph;
 use ratatui::widgets::ScrollbarState;
 
-use crate::app::scrollbar;
+use crate::app::component::scrollbar;
 
 /// Onto-picker view over renderable log text for the current repo context.
 pub(super) struct OntoPicker {

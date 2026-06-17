@@ -17,9 +17,9 @@ use clap::Parser as _;
 use sesh::App;
 use sesh::Context;
 use sesh::Model;
+use sesh::cmd::jj;
+use sesh::cmd::tmux;
 use sesh::config::SeshConfig;
-use sesh::jj;
-use sesh::tmux;
 
 #[derive(Debug, clap::Parser)]
 #[command(name = "sesh", version, about, styles = help::STYLES)]

@@ -1,35 +1,23 @@
 // Copyright (c) Ashok Menon
 // SPDX-License-Identifier: Apache-2.0
 
-//! Session model and picker rendering.
+//! Session domain model.
 
 use std::collections::BTreeSet;
 use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Context as _;
-use async_trait::async_trait;
-use ratatui::style::Style;
-use ratatui::style::Stylize as _;
-use ratatui::text::Line;
-use ratatui::text::Span;
-use unicode_width::UnicodeWidthStr as _;
 
-use crate::app::row::Row;
-use crate::cache::Preview;
-use crate::jj;
+use crate::cmd::jj;
+use crate::cmd::tmux;
+use crate::model::picker::Pickable;
 use crate::path::TruncatedExt as _;
-use crate::picker::Item;
-use crate::tmux;
-use crate::ui::Highlight;
-use crate::ui::push_repo_path_spans;
 
-const DELIM_SUFFIX: &str = "~";
+pub(crate) const DELIM_SUFFIX: &str = "~";
+pub(crate) const NAME_WIDTH: usize = 40;
+
 const DELIM_WORKSPACE: &str = "/";
-
-const NAME_WIDTH: usize = 40;
-const SIGIL_DELETE: &str = "×";
-const SIGIL_TMUX: &str = "⬤";
 const TMUX_REPO_OPTION: &str = "@sesh.repo";
 
 /// A tmux session or potential session.
@@ -147,21 +135,29 @@ impl Session {
         tmux::switch_client(&self.switch_target()).await
     }
 
+    /// Return the live tmux alert windows for this session, if any.
+    pub(crate) fn alerts(&self) -> &[String] {
+        match &self.0 {
+            Kind::Live(kind) => &kind.alerts,
+            Kind::New(_) | Kind::Repo(_) => &[],
+        }
+    }
+
+    /// Return the repository whose log should be shown in the preview pane.
+    pub(crate) fn preview_repo(&self) -> Option<PathBuf> {
+        match &self.0 {
+            Kind::Live(kind) => kind.repo(),
+            Kind::New(kind) => kind.preview_repo(),
+            Kind::Repo(kind) => kind.repo(),
+        }
+    }
+
     /// Ensure the tmux session we are switching to is ready.
     async fn ensure_tmux(&self, cwd: &Path, setup: &str) -> anyhow::Result<()> {
         match &self.0 {
             Kind::Live(_) => Ok(()),
             Kind::New(kind) => kind.ensure_tmux(cwd, setup).await,
             Kind::Repo(kind) => kind.ensure_tmux(setup).await,
-        }
-    }
-
-    /// Return the repository whose log should be shown in the preview pane.
-    fn preview_repo(&self) -> Option<PathBuf> {
-        match &self.0 {
-            Kind::Live(kind) => kind.repo(),
-            Kind::New(kind) => kind.preview_repo(),
-            Kind::Repo(kind) => kind.repo(),
         }
     }
 
@@ -423,39 +419,7 @@ impl From<RepoKind> for Session {
     }
 }
 
-impl Item for Session {
-    type Widget = Row;
-
-    fn render(&self, highlighted: bool, deleting: bool, matches: &[u32]) -> Self::Widget {
-        let mut hl = Highlight::new(matches.to_vec());
-        let mut line = Line::default();
-        push_session_name_spans(&mut line, self, &mut hl, deleting, highlighted);
-
-        if let Some(repo) = self.repo() {
-            let padding = NAME_WIDTH.saturating_sub(self.name().width()) + 1;
-            line.extend(hl.highlight(Span::raw(" ".repeat(padding))));
-            push_repo_path_spans(&mut line, &repo, &mut hl);
-        };
-
-        let row = Row::new(line);
-
-        if highlighted && deleting {
-            return row.with_sigil(Span::raw(SIGIL_DELETE).on_light_red());
-        }
-
-        let Kind::Live(LiveKind { alerts, .. }) = &self.0 else {
-            return row;
-        };
-
-        if !alerts.is_empty() && highlighted {
-            row.with_sigil(Span::raw(SIGIL_TMUX).on_light_green())
-        } else if !alerts.is_empty() {
-            row.with_sigil(Span::raw(SIGIL_TMUX).light_green())
-        } else {
-            row.with_sigil(Span::raw(SIGIL_TMUX).dim())
-        }
-    }
-
+impl Pickable for Session {
     fn text(&self) -> String {
         let Some(repo) = self.repo() else {
             return self.name();
@@ -466,26 +430,6 @@ impl Item for Session {
             self.name(),
             repo.truncated().display()
         )
-    }
-}
-
-#[async_trait]
-impl Preview for Session {
-    type Key = Option<PathBuf>;
-
-    fn key(&self) -> Self::Key {
-        self.preview_repo()
-    }
-
-    /// Render a `jj log` preview for this session's attached repository.
-    async fn preview(&self) -> anyhow::Result<String> {
-        let Some(repo) = self.preview_repo() else {
-            return Ok(String::new());
-        };
-
-        jj::log(&repo)
-            .await
-            .with_context(|| format!("failed to build preview for repo '{}'", repo.display()))
     }
 }
 
@@ -509,34 +453,6 @@ pub(crate) fn sanitize(name: &str) -> String {
     }
 
     sanitized
-}
-
-/// Push styled session name spans, dimming a disambiguation suffix when present.
-fn push_session_name_spans<'a>(
-    spans: &mut impl Extend<Span<'a>>,
-    session: &Session,
-    hl: &mut Highlight,
-    deleting: bool,
-    highlighted: bool,
-) {
-    let name = session.name();
-
-    let name_style = if deleting && highlighted {
-        Style::new().on_light_red().bold()
-    } else {
-        Style::new()
-    };
-
-    let suffix_style = name_style.dim();
-
-    let Some((prefix, suffix)) = name.rsplit_once(DELIM_SUFFIX) else {
-        spans.extend(hl.highlight(Span::styled(name, name_style)));
-        return;
-    };
-
-    spans.extend(hl.highlight(Span::styled(prefix.to_owned(), name_style)));
-    spans.extend(hl.highlight(Span::styled(DELIM_SUFFIX, suffix_style)));
-    spans.extend(hl.highlight(Span::styled(suffix.to_owned(), suffix_style)));
 }
 
 /// Derive a workspace-aware tmux session name.
@@ -589,19 +505,6 @@ mod tests {
 
         assert_eq!(session.name(), "repo/feature");
         assert_eq!(session.repo(), Some(temp.path().join("repo.feature")));
-    }
-
-    #[test]
-    fn new_workspace_sessions_share_preview_cache_with_base_repo() {
-        let temp = tempdir().unwrap();
-        let default = temp.path().join("repo");
-        let new = Session::from(NewKind::new(
-            "feature",
-            Base::Repo(Repo::new(default.clone())),
-        ));
-        let repo = Session::from(RepoKind::new(None, default.clone(), default.clone(), false));
-
-        assert_eq!(new.key(), repo.key());
     }
 
     #[test]

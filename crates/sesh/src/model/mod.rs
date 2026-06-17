@@ -3,6 +3,10 @@
 
 //! Application model for discovered sessions and derived session candidates.
 
+pub(crate) mod picker;
+pub(crate) mod prefetch;
+pub(crate) mod session;
+
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -13,15 +17,15 @@ use futures::stream::StreamExt as _;
 use nucleo::Snapshot;
 use nucleo::Status;
 
-use crate::jj;
-use crate::picker::Picker;
-use crate::session::Base;
-use crate::session::LiveKind;
-use crate::session::NewKind;
-use crate::session::Repo;
-use crate::session::RepoKind;
-use crate::session::Session;
-use crate::tmux;
+use crate::cmd::jj;
+use crate::cmd::tmux;
+use crate::model::picker::Picker;
+use crate::model::session::Base;
+use crate::model::session::LiveKind;
+use crate::model::session::NewKind;
+use crate::model::session::Repo;
+use crate::model::session::RepoKind;
+use crate::model::session::Session;
 
 /// Application-level model for the session picker.
 ///

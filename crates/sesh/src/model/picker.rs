@@ -1,7 +1,7 @@
 // Copyright (c) Ashok Menon
 // SPDX-License-Identifier: Apache-2.0
 
-//! Fuzzy matching adapter for the session picker.
+//! Fuzzy matching adapter for pickable items.
 
 use std::sync::Arc;
 
@@ -12,19 +12,12 @@ use nucleo::Status;
 use nucleo::Utf32String;
 use nucleo::pattern::CaseMatching;
 use nucleo::pattern::Normalization;
-use ratatui::widgets::Widget;
 
 const TICK_TIMEOUT_MS: u64 = 10;
 
-/// Items that can be displayed and matched in the picker.
-pub(crate) trait Item {
-    /// Widget used to render this item in the picker list.
-    type Widget: Widget;
-
-    /// Render this item for the picker list.
-    fn render(&self, highlighted: bool, deleting: bool, matches: &[u32]) -> Self::Widget;
-
-    /// Return the text shown for this item in the picker list.
+/// Items that can be fuzzy matched by the picker.
+pub(crate) trait Pickable {
+    /// Return the text matched by the picker.
     fn text(&self) -> String;
 }
 
@@ -34,7 +27,7 @@ pub(crate) struct Picker<I: Send + Sync + 'static> {
     query: String,
 }
 
-impl<I: Item + Send + Sync + 'static> Picker<I> {
+impl<I: Pickable + Send + Sync + 'static> Picker<I> {
     /// Construct an empty fuzzy matcher seeded with `query`.
     pub(crate) fn new(query: String) -> Self {
         let matcher = Nucleo::new(Config::DEFAULT, Arc::new(|| {}), None, 1);

@@ -54,11 +54,16 @@ helpers can exit immediately and make sessions disappear.
 ## Architecture
 
 Keep direct interactions with external binaries behind a dedicated module per
-binary. For example, `tmux` command construction and process execution belong
-in `crates/sesh/src/tmux.rs`, while `jj` command construction and process
-execution belong in `crates/sesh/src/jj.rs`. Other modules may decide when to
-request an operation, but the binary-specific modules should abstract how that
-operation is performed.
+binary under `crates/sesh/src/cmd/`. For example, `tmux` command construction
+and process execution belong in `crates/sesh/src/cmd/tmux.rs`, while `jj`
+command construction and process execution belong in
+`crates/sesh/src/cmd/jj.rs`. Other modules may decide when to request an
+operation, but the binary-specific modules should abstract how that operation
+is performed.
+
+Keep `model` modules free of ratatui widgets and other concrete view types.
+Session-specific rendering belongs in `app::sessions`, while generic reusable
+widgets belong in `app::component`.
 
 When moving behavior onto domain types, keep configuration arguments narrow:
 pass only the values the method needs rather than the full `SeshConfig`.
