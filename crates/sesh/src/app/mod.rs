@@ -347,7 +347,7 @@ impl App {
             // App state
             KC::Char('o') if key.modifiers.contains(CTRL) => {
                 if let Some(repo) = &self.repo {
-                    self.onto = Some(onto::State::new(repo.source()));
+                    self.onto = Some(onto::State::new(repo.source().to_owned()));
                 }
             }
 

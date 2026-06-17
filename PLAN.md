@@ -236,9 +236,9 @@ self.onto = Some(onto::State::new(repo.source()));
 `onto::State` owns:
 
 - the onto query,
-- `onto_picker::State`,
+- `picker::State`,
 - a worker that loads `jj log` for the current repo,
-- a cache containing renderable `ratatui::text::Text` for the current milestone.
+- a retained `picker::Picker` view received from that worker when loading completes.
 
 Do not route this through `preview::State` or `PreviewCache`.
 
@@ -246,8 +246,8 @@ Do not route this through `preview::State` or `PreviewCache`.
 
 Status: Done for the render-only milestone.
 
-`onto::State::draw` converts cache state into display text and delegates to
-`onto_picker::OntoPicker`. At this milestone, `onto_picker` only renders the
+`onto::State::draw` receives the retained picker view once it is ready and
+delegates to `picker::Picker`. At this milestone, `picker` only renders the
 provided text and its scrollbar.
 
 ### 5. Segment onto log text into selectable commit blocks

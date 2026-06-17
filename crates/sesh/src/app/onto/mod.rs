@@ -5,9 +5,7 @@
 
 mod picker;
 
-use std::path::Path;
-use std::sync::Arc;
-use std::sync::OnceLock;
+use std::path::PathBuf;
 
 use ansi_to_tui::IntoText as _;
 use anyhow::Context as _;
@@ -17,9 +15,11 @@ use crossterm::event::KeyModifiers;
 use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::text::Text;
+use tokio::sync::oneshot;
+use tokio::sync::oneshot::error::TryRecvError;
 use tokio_util::task::AbortOnDropHandle;
 
-use crate::app::onto::picker::OntoPicker;
+use crate::app::onto::picker::Picker;
 use crate::cmd::jj;
 
 /// Result of handling a key while `onto` revision selection is active.
@@ -30,19 +30,17 @@ pub(super) enum Action {
 
 /// Query, picker, and loading state for `onto` revision selection.
 pub(super) struct State {
-    cache: Arc<OnceLock<OntoPicker>>,
     picker: picker::State,
     query: String,
+    pick_rx: oneshot::Receiver<Picker>,
+    view: Option<Picker>,
     _worker: AbortOnDropHandle<()>,
 }
 
 impl State {
     /// Create onto-selection state and start loading the current repo's log output.
-    pub(super) fn new(repo: &Path) -> Self {
-        let cache = Arc::new(OnceLock::new());
-        let repo = repo.to_owned();
-        let result = cache.clone();
-
+    pub(super) fn new(repo: PathBuf) -> Self {
+        let (tx, pick_rx) = oneshot::channel();
         let worker = tokio::task::spawn(async move {
             let text = jj::log(&repo)
                 .await
@@ -56,24 +54,38 @@ impl State {
                 })
                 .unwrap_or_else(|err| Text::raw(format!("Error: {err}")));
 
-            let picker = OntoPicker::new(text);
-            result.set(picker).ok();
+            tx.send(Picker::new(text)).ok();
         });
 
         Self {
-            cache,
             picker: picker::State::default(),
             query: String::new(),
+            pick_rx,
+            view: None,
             _worker: AbortOnDropHandle::new(worker),
         }
     }
 
     /// Render the onto picker into `area`.
     pub(super) fn draw(&mut self, f: &mut Frame<'_>, area: Rect) {
-        if let Some(picker) = self.cache.get() {
-            picker.draw(f, area, &mut self.picker);
-        } else {
-            f.render_widget(Text::raw("Loading..."), area);
+        if let Some(view) = &mut self.view {
+            view.draw(f, area, &mut self.picker);
+            return;
+        }
+
+        match self.pick_rx.try_recv() {
+            Ok(mut view) => {
+                view.draw(f, area, &mut self.picker);
+                self.view = Some(view);
+            }
+
+            Err(TryRecvError::Empty) => {
+                f.render_widget("Loading...", area);
+            }
+
+            Err(TryRecvError::Closed) => {
+                f.render_widget("Error: onto picker worker stopped", area);
+            }
         }
     }
 

@@ -66,6 +66,13 @@ Keep `model` modules free of ratatui widgets and other concrete view types.
 Session-specific rendering belongs in `app::sessions`, while generic reusable
 widgets belong in `app::component`.
 
+Only retain ratatui widgets for content that is both expensive and stable across
+draw calls, such as loaded `jj log` text in preview or onto panes. Keep small or
+highly dynamic chrome (prompt, header, separators) in immediate-mode style unless
+profiling shows otherwise. When retaining a `Paragraph`, keep it in the owning
+view and update its scroll before rendering it by reference; do not add a generic
+retained-mode wrapper unless multiple views need the same abstraction.
+
 When moving behavior onto domain types, keep configuration arguments narrow:
 pass only the values the method needs rather than the full `SeshConfig`.
 
