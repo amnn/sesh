@@ -89,9 +89,9 @@ pub async fn run_shell(target: &str, cwd: &Path, script: &str) -> anyhow::Result
 
 /// Query tmux for current sessions, attached sesh repo metadata, flags, and bell alerts.
 pub async fn sessions() -> anyhow::Result<BTreeMap<String, SessionInfo>> {
-    let format = format!("#{{session_name}}\t#{{@sesh.flag}}\t#{{@sesh.repo}}");
+    let format = "#{session_name}\t#{@sesh.flag}\t#{@sesh.repo}";
     let output = Command::new("tmux")
-        .args(["list-sessions", "-F", &format])
+        .args(["list-sessions", "-F", format])
         .output()
         .await
         .context("failed to discover information on tmux sessions")?;
