@@ -14,11 +14,8 @@ use crossterm::event::KeyEvent;
 use crossterm::event::KeyModifiers;
 use ratatui::Frame;
 use ratatui::layout::Rect;
-use ratatui::text::Text;
-use tokio::sync::oneshot;
-use tokio::sync::oneshot::error::TryRecvError;
-use tokio_util::task::AbortOnDropHandle;
 
+use crate::app::component::loader::Loader;
 use crate::app::onto::picker::Picker;
 use crate::cmd::jj;
 
@@ -30,63 +27,37 @@ pub(super) enum Action {
 
 /// Query, picker, and loading state for `onto` revision selection.
 pub(super) struct State {
-    picker: picker::State,
+    picker: Loader<Picker>,
+    picker_state: picker::State,
     query: String,
-    pick_rx: oneshot::Receiver<Picker>,
-    view: Option<Picker>,
-    _worker: AbortOnDropHandle<()>,
 }
 
 impl State {
     /// Create onto-selection state and start loading the current repo's log output.
     pub(super) fn new(repo: PathBuf) -> Self {
-        let (tx, pick_rx) = oneshot::channel();
-        let worker = tokio::task::spawn(async move {
+        let picker = Loader::new(async move {
             let text = jj::log(&repo)
                 .await
                 .with_context(|| {
                     format!("failed to build onto picker for repo '{}'", repo.display())
-                })
-                .and_then(|log| {
-                    log.into_bytes()
-                        .into_text()
-                        .context("failed to render jj log output")
-                })
-                .unwrap_or_else(|err| Text::raw(format!("Error: {err}")));
+                })?
+                .into_bytes()
+                .into_text()
+                .context("failed to render jj log output")?;
 
-            tx.send(Picker::new(text)).ok();
+            Ok(Picker::new(text))
         });
 
         Self {
-            picker: picker::State::default(),
+            picker,
+            picker_state: picker::State::default(),
             query: String::new(),
-            pick_rx,
-            view: None,
-            _worker: AbortOnDropHandle::new(worker),
         }
     }
 
     /// Render the onto picker into `area`.
     pub(super) fn draw(&mut self, f: &mut Frame<'_>, area: Rect) {
-        if let Some(view) = &self.view {
-            view.draw(f, area, &mut self.picker);
-            return;
-        }
-
-        match self.pick_rx.try_recv() {
-            Ok(view) => {
-                view.draw(f, area, &mut self.picker);
-                self.view = Some(view);
-            }
-
-            Err(TryRecvError::Empty) => {
-                f.render_widget("Loading...", area);
-            }
-
-            Err(TryRecvError::Closed) => {
-                f.render_widget("Error: onto picker worker stopped", area);
-            }
-        }
+        f.render_stateful_widget(&self.picker, area, &mut self.picker_state);
     }
 
     /// Handle a key event while `onto` revision selection mode is active.

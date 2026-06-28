@@ -7,6 +7,7 @@
 
 pub(crate) mod block;
 pub(crate) mod list;
+pub(crate) mod loader;
 pub(crate) mod prompt;
 pub(crate) mod row;
 pub(crate) mod scroll;

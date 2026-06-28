@@ -3,9 +3,10 @@
 
 //! Rendering for the `onto` revision picker.
 
-use ratatui::Frame;
+use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
 use ratatui::text::Text;
+use ratatui::widgets::StatefulWidget;
 
 use crate::app::component::scroll;
 
@@ -27,9 +28,12 @@ impl Picker {
             log: scroll::Scroll::new(text),
         }
     }
+}
 
-    /// Render the picker into `area` using log text as its source.
-    pub(super) fn draw(&self, f: &mut Frame<'_>, area: Rect, state: &mut State) {
-        f.render_stateful_widget(&self.log, area, &mut state.scroll);
+impl StatefulWidget for &Picker {
+    type State = State;
+
+    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+        self.log.render(area, buf, &mut state.scroll);
     }
 }
