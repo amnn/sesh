@@ -237,8 +237,8 @@ self.onto = Some(onto::State::new(repo.source()));
 
 - the onto query,
 - `picker::State`,
-- a worker that loads `jj log` for the current repo,
-- a retained `picker::Picker` view received from that worker when loading completes.
+- a retained `component::loader::Loader<picker::Picker>` that loads `jj log` for
+  the current repo.
 
 Do not route this through `preview::State` or `PreviewCache`.
 
@@ -246,9 +246,9 @@ Do not route this through `preview::State` or `PreviewCache`.
 
 Status: Done for the render-only milestone.
 
-`onto::State::draw` receives the retained picker view once it is ready and
-delegates to `picker::Picker`. At this milestone, `picker` only renders the
-provided text and its scrollbar.
+`onto::State::draw` renders the retained loader, which delegates to
+`picker::Picker` once loading completes. At this milestone, `picker` only
+renders the provided text and its scrollbar.
 
 ### 5. Segment onto log text into selectable commit blocks
 
