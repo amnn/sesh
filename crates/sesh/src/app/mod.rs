@@ -28,9 +28,9 @@ use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
 
 use crate::app::component::block::Block;
-use crate::app::component::loading;
-use crate::app::component::loading::Loading;
 use crate::app::component::prompt;
+use crate::app::component::spinner;
+use crate::app::component::spinner::Spinner;
 use crate::app::header::Header;
 use crate::app::sessions::Sessions;
 use crate::app::sessions::preview;
@@ -48,7 +48,7 @@ const POLL_TIMEOUT: Duration = Duration::from_millis(16);
 pub struct App {
     onto: Option<onto::State>,
     repo: Option<Repo>,
-    load: loading::State,
+    spinner: spinner::State,
     model: Model,
     preview: preview::State,
     sessions: sessions::State,
@@ -96,7 +96,7 @@ impl App {
         Self {
             onto: None,
             repo: repo.map(Repo::new),
-            load: loading::State::new(),
+            spinner: spinner::State::new(),
             model,
             preview,
             sessions: sessions::State::new(),
@@ -211,7 +211,7 @@ impl App {
 
         // (1) Render picker state
         f.render_widget(prompt::widget(label, query), l.prompt);
-        f.render_stateful_widget(Loading::new(status.running), l.loading, &mut self.load);
+        f.render_stateful_widget(Spinner::new(status.running), l.loading, &mut self.spinner);
 
         let sessions = Sessions::new(new_session, &items, snapshot.pattern().column_pattern(0));
 

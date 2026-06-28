@@ -1,7 +1,7 @@
 // Copyright (c) Ashok Menon
 // SPDX-License-Identifier: Apache-2.0
 
-//! Widget for representing an animated loading spinner.
+//! Widget for representing an animated spinner.
 
 use std::time::Duration;
 use std::time::Instant;
@@ -13,24 +13,24 @@ use ratatui::widgets::StatefulWidget;
 const FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧"];
 const FRAME_DURATION: Duration = Duration::from_millis(100);
 
-/// An animated loading spinner.
-pub(crate) struct Loading(bool);
+/// An animated spinner.
+pub(crate) struct Spinner(bool);
 
-/// The state of the loading spinner. This remembers when the animation started. Animation duration
-/// and therefore frame calculation is based on this start time.
+/// The state of the spinner. This remembers when the animation started. Animation duration and
+/// therefore frame calculation is based on this start time.
 pub(crate) struct State {
     start: Instant,
 }
 
-impl Loading {
-    /// Create a loading spinner, enabled only when `enabled` is true.
+impl Spinner {
+    /// Create a spinner, enabled only when `enabled` is true.
     pub(crate) fn new(enabled: bool) -> Self {
         Self(enabled)
     }
 }
 
 impl State {
-    /// Create a fresh loading state, for an inactive loading spinner.
+    /// Create a fresh spinner state, for an inactive spinner.
     pub(crate) fn new() -> Self {
         Self {
             start: Instant::now(),
@@ -38,7 +38,7 @@ impl State {
     }
 }
 
-impl StatefulWidget for Loading {
+impl StatefulWidget for Spinner {
     type State = State;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
