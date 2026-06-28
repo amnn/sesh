@@ -6,11 +6,9 @@
 use ratatui::Frame;
 use ratatui::layout::Rect;
 use ratatui::text::Text;
-use ratatui::widgets::Paragraph;
-use ratatui::widgets::ScrollDirection;
-use ratatui::widgets::ScrollbarState;
 
-use crate::app::component::scrollbar;
+use crate::app::component::scroll;
+use crate::app::component::scroll::Scroll;
 use crate::model::prefetch::Prefetch;
 use crate::model::session::Session;
 
@@ -22,7 +20,7 @@ pub(crate) struct Preview<'s> {
 /// Mutable preview pane state shared across renders.
 pub(crate) struct State {
     cache: Prefetch<Session>,
-    scroll: ScrollbarState,
+    scroll: scroll::State,
     visible: bool,
 }
 
@@ -34,20 +32,8 @@ impl<'s> Preview<'s> {
 
     /// Render the preview text and its scrollbar into `area`.
     pub(crate) fn draw(&self, f: &mut Frame<'_>, area: Rect, state: &mut State) {
-        let text = self.text(state);
-
-        let overflow = text.height().saturating_sub(area.height as usize);
-        let content = if overflow == 0 { 0 } else { overflow + 1 };
-
-        state.scroll = state
-            .scroll
-            .content_length(content)
-            .viewport_content_length(area.height as usize);
-
-        let paragraph = Paragraph::new(text).scroll((state.scroll.get_position() as u16, 0));
-
-        f.render_widget(paragraph, area);
-        f.render_stateful_widget(scrollbar::widget(), area, &mut state.scroll);
+        let text = Scroll::new(self.text(state));
+        f.render_stateful_widget(&text, area, &mut state.scroll);
     }
 
     /// Resolve the selected session's cached preview text.
@@ -72,7 +58,7 @@ impl State {
     pub(crate) fn new() -> Self {
         Self {
             cache: Prefetch::new(),
-            scroll: ScrollbarState::default(),
+            scroll: scroll::State::default(),
             visible: true,
         }
     }
@@ -84,23 +70,23 @@ impl State {
 
     /// Move the scroll position to the start of the content.
     pub(crate) fn first(&mut self) {
-        self.scroll.first();
+        scroll::first(&mut self.scroll);
     }
 
     /// Scroll down by one unit.
     pub(crate) fn scroll_down(&mut self) {
-        self.scroll.scroll(ScrollDirection::Forward);
+        scroll::down(&mut self.scroll);
     }
 
     /// Scroll up by one unit.
     pub(crate) fn scroll_up(&mut self) {
-        self.scroll.scroll(ScrollDirection::Backward);
+        scroll::up(&mut self.scroll);
     }
 
     /// Toggle visibility (also resets scroll position to the start).
     pub(crate) fn toggle(&mut self) {
         self.visible = !self.visible;
-        self.scroll.first();
+        scroll::first(&mut self.scroll);
     }
 
     /// Return whether the preview pane is currently visible.

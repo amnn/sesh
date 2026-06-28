@@ -68,13 +68,13 @@ impl State {
 
     /// Render the onto picker into `area`.
     pub(super) fn draw(&mut self, f: &mut Frame<'_>, area: Rect) {
-        if let Some(view) = &mut self.view {
+        if let Some(view) = &self.view {
             view.draw(f, area, &mut self.picker);
             return;
         }
 
         match self.pick_rx.try_recv() {
-            Ok(mut view) => {
+            Ok(view) => {
                 view.draw(f, area, &mut self.picker);
                 self.view = Some(view);
             }
