@@ -1,0 +1,38 @@
+---
+source: crates/sesh/tests/test.rs
+expression: output
+input_file: crates/sesh/tests/cases/ui/flag-session-target-collision.md
+---
+# Flag session target collision
+
+Flagging a session should target the selected tmux session even when the current
+session has a window whose name prefixes the selected session name.
+
+    :bins jj tmux cat
+
+> [!NOTE]
+> 'jj', 'tmux', and 'cat' are available.
+
+    :t rename-session -t 0 runner (success)
+    :t new-session -d -s nvim "cat" (success)
+    :t new-session -d -s ui -n "nvim - ui" "sesh; cat" (success)
+    :t resize-window -t ui:0 -x 100 -y 10 (success)
+    :pane ui:0.0
+    :settle -d 2s (settled)
+
+Select the `nvim` session from inside a `ui` window whose name also starts with
+`nvim`. Pressing `C-f` should set `@sesh.flag` on `nvim`, not on `ui`.
+
+    :k nvim C-f
+    :settle -d 2s (settled)
+
+    :t display-message -p -t nvim: '#{@sesh.flag}' (success)
+
+```
+1
+```
+
+    :t display-message -p -t ui: '#{@sesh.flag}' (success)
+
+---
+vim: set ft=markdown:

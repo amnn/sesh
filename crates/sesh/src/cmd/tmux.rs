@@ -179,7 +179,7 @@ pub async fn set_option<V: AsRef<OsStr> + ?Sized>(
     value: &V,
 ) -> anyhow::Result<()> {
     let output = Command::new("tmux")
-        .args(["set-option", "-t", session, option])
+        .args(["set-option", "-t", &format!("={session}:"), option])
         .arg(value)
         .output()
         .await
