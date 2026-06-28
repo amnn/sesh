@@ -3,13 +3,18 @@
 
 //! Rendering and state for the session preview pane.
 
+use std::collections::HashMap;
+use std::path::PathBuf;
+
+use ansi_to_tui::IntoText as _;
+use anyhow::Context as _;
 use ratatui::Frame;
 use ratatui::layout::Rect;
-use ratatui::text::Text;
 
+use crate::app::component::loader::Loader;
 use crate::app::component::scroll;
 use crate::app::component::scroll::Scroll;
-use crate::model::prefetch::Prefetch;
+use crate::cmd::jj;
 use crate::model::session::Session;
 
 /// View over the currently selected session's cached preview content.
@@ -19,7 +24,7 @@ pub(crate) struct Preview<'s> {
 
 /// Mutable preview pane state shared across renders.
 pub(crate) struct State {
-    cache: Prefetch<Session>,
+    entries: HashMap<PathBuf, Loader<Scroll>>,
     scroll: scroll::State,
     visible: bool,
 }
@@ -32,24 +37,16 @@ impl<'s> Preview<'s> {
 
     /// Render the preview text and its scrollbar into `area`.
     pub(crate) fn draw(&self, f: &mut Frame<'_>, area: Rect, state: &mut State) {
-        let text = Scroll::new(self.text(state));
-        f.render_stateful_widget(&text, area, &mut state.scroll);
-    }
-
-    /// Resolve the selected session's cached preview text.
-    fn text(&self, state: &State) -> Text<'static> {
-        let Some(session) = self.selected else {
-            return Text::raw("");
+        let Some(repo) = self.selected.and_then(|s| s.preview_repo()) else {
+            return;
         };
 
-        let Some(preview) = state.cache.get(session) else {
-            return Text::raw("Loading...");
-        };
+        let preview = state
+            .entries
+            .entry(repo.clone())
+            .or_insert_with(|| loader(repo));
 
-        match preview.as_ref() {
-            Ok(preview) => preview.clone(),
-            Err(err) => Text::raw(format!("Error: {err}")),
-        }
+        f.render_stateful_widget(&*preview, area, &mut state.scroll);
     }
 }
 
@@ -57,7 +54,7 @@ impl State {
     /// Create preview pane state with an empty cache.
     pub(crate) fn new() -> Self {
         Self {
-            cache: Prefetch::new(),
+            entries: HashMap::new(),
             scroll: scroll::State::default(),
             visible: true,
         }
@@ -65,7 +62,11 @@ impl State {
 
     /// Start generating previews for sessions that are not already cached.
     pub(crate) fn feed<'a>(&mut self, sessions: impl IntoIterator<Item = &'a Session>) {
-        self.cache.feed(sessions);
+        for repo in sessions.into_iter().filter_map(|s| s.preview_repo()) {
+            self.entries
+                .entry(repo.clone())
+                .or_insert_with(|| loader(repo));
+        }
     }
 
     /// Move the scroll position to the start of the content.
@@ -93,4 +94,17 @@ impl State {
     pub(crate) fn visible(&self) -> bool {
         self.visible
     }
+}
+
+/// Create a preview loader that loads `repo`'s log in the background.
+fn loader(repo: PathBuf) -> Loader<Scroll> {
+    Loader::new(async move {
+        jj::log(&repo)
+            .await
+            .with_context(|| format!("failed to build preview for repo '{}'", repo.display()))?
+            .into_bytes()
+            .into_text()
+            .context("failed to render jj log output")
+            .map(Scroll::new)
+    })
 }

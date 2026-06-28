@@ -1,48 +1,23 @@
 // Copyright (c) Ashok Menon
 // SPDX-License-Identifier: Apache-2.0
 
-//! Rendering and preview prefetching for individual sessions.
+//! Rendering for individual sessions.
 
-use ansi_to_tui::IntoText as _;
-use anyhow::Context as _;
-use async_trait::async_trait;
 use ratatui::style::Style;
 use ratatui::style::Stylize as _;
 use ratatui::text::Line;
 use ratatui::text::Span;
-use ratatui::text::Text;
 use unicode_width::UnicodeWidthStr as _;
 
 use crate::app::component::row::Row;
 use crate::app::highlight::Highlight;
 use crate::app::span::push_repo_path_spans;
-use crate::cmd::jj;
-use crate::model::prefetch;
 use crate::model::session::DELIM_SUFFIX;
 use crate::model::session::NAME_WIDTH;
 use crate::model::session::Session;
 
 const SIGIL_DELETE: &str = "×";
 const SIGIL_TMUX: &str = "⬤";
-
-#[async_trait]
-impl prefetch::Key for Session {
-    type Value = Text<'static>;
-
-    /// Render a `jj log` preview for this session's attached repository.
-    async fn fetch(&self) -> anyhow::Result<Self::Value> {
-        let Some(repo) = self.preview_repo() else {
-            return Ok(Text::raw(""));
-        };
-
-        jj::log(&repo)
-            .await
-            .with_context(|| format!("failed to build preview for repo '{}'", repo.display()))?
-            .into_bytes()
-            .into_text()
-            .context("failed to render jj log output")
-    }
-}
 
 /// Render `session` as a session-list row.
 pub(super) fn row(session: &Session, highlighted: bool, deleting: bool, matches: &[u32]) -> Row {

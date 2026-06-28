@@ -4,7 +4,6 @@
 //! Application model for discovered sessions and derived session candidates.
 
 pub(crate) mod picker;
-pub(crate) mod prefetch;
 pub(crate) mod session;
 
 use std::collections::BTreeMap;
