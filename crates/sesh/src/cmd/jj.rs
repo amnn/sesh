@@ -94,6 +94,7 @@ pub async fn log(repo: &Path) -> anyhow::Result<String> {
         .arg(repo)
         .arg("--ignore-working-copy")
         .arg("--no-pager")
+        .args(["--config", "ui.graph.style=curved"])
         .args(["--color", "always"])
         .args(["--template", "builtin_log_compact"])
         .output()
@@ -308,6 +309,36 @@ mod tests {
                 .unwrap()
                 .contains_key(&Some("feature".to_owned()))
         );
+    }
+
+    #[tokio::test]
+    async fn logs_with_curved_graph_style_despite_repo_config() {
+        let temp = tempdir().unwrap();
+        let repo = temp.path().join("repo");
+
+        let output = Command::new("jj")
+            .args(["git", "init"])
+            .arg(&repo)
+            .output()
+            .await
+            .unwrap();
+        assert!(output.status.success());
+
+        let output = Command::new("jj")
+            .args(["config", "set"])
+            .arg("-R")
+            .arg(&repo)
+            .arg("--repo")
+            .args(["ui.graph.style", "ascii"])
+            .output()
+            .await
+            .unwrap();
+        assert!(output.status.success());
+
+        let output = log(&repo).await.unwrap();
+
+        assert!(output.contains('◆'), "log output: {output:?}");
+        assert!(!output.contains("+  zzzzzzzz"), "log output: {output:?}");
     }
 
     #[test]

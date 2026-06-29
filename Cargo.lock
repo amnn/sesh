@@ -1650,6 +1650,7 @@ dependencies = [
  "nucleo",
  "once_cell",
  "ratatui",
+ "regex",
  "serde",
  "sesh-integration-tests",
  "telemetry-subscribers",

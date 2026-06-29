@@ -18,6 +18,7 @@ glob.workspace = true
 nucleo.workspace = true
 once_cell.workspace = true
 ratatui.workspace = true
+regex.workspace = true
 serde.workspace = true
 textwrap.workspace = true
 tokio.workspace = true

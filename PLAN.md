@@ -198,11 +198,14 @@ Command::new("jj")
     .arg(repo)
     .arg("--ignore-working-copy")
     .arg("--no-pager")
+    .args(["--config", "ui.graph.style=curved"])
     .args(["--color", "always"])
     .args(["--template", "builtin_log_compact"])
 ```
 
-The completed implementation uses `--ignore-working-copy` and `--no-pager`.
+The completed implementation uses `--ignore-working-copy`, `--no-pager`, and a
+forced curved graph style so onto log parsing does not need to support
+user-configured ASCII graph output.
 
 ### 2. Add a generic `jj show` helper in `jj.rs`
 
@@ -250,46 +253,43 @@ Status: Done for the render-only milestone.
 `picker::Picker` once loading completes. At this milestone, `picker` only
 renders the provided text and its scrollbar.
 
-### 5. Segment onto log text into selectable commit blocks
+### 5. Segment onto log text into selectable commits
 
-Status: Not started.
+Status: Done for the index-only render milestone.
 
 Do **not** assume every commit is two lines. With `builtin_log_compact`, most
 non-root commits are two lines, but root commits, elisions, graph connector
 lines, merges, and future jj graph output can vary.
 
-Represent the parsed content as blocks:
+The picker stores the original rendered text and an index keyed by each commit's
+first rendered row:
 
 ```rust
-struct CommitBlock {
-    lines: Vec<Line<'static>>,
-    searchable: String,
-    revision_hint: Option<String>,
+struct Picker {
+    text: Text<'static>,
+    index: BTreeMap<usize, Commit>,
+}
+
+struct Commit {
+    text: Vec<String>,
+    revision_hint: String,
 }
 ```
+
+`Text` remains the rendering source of truth. The index carries only semantic
+search and selection metadata. Commit height is derived from `text.len()` when
+needed.
 
 Parsing approach:
 
 1. Flatten each `Line` into plain text for detection/search.
-2. Detect commit header lines in `builtin_log_compact` output.
-3. A commit block starts at a detected header and continues until the next
-   detected header.
-4. Lines before the first commit header or between blocks without a detected
-   header remain visible as unselectable context.
-
-Header detection can be heuristic because `builtin_log_compact` is fixed. The
-first token after a graph node marker is the short change id. For current jj,
-examples look like:
-
-```text
-@  wromuovm user date refs commitid
-│ ○  abcdefgh user date refs commitid
-◆  zzzzzzzz root() 00000000
-```
-
-The parser should identify graph node markers (`@`, `○`, `◆`, `×`, and ascii
-equivalents if tests require them) and extract the following alphanumeric id as
-`revision_hint`. If no id can be parsed, the line is not selectable.
+2. Detect commit header lines in forced-curved `builtin_log_compact` output with
+   `^(?:│ )*[@○◆×](?: │)* {2,}(?P<rev>[a-z]+)(?:\s|$)`.
+3. A commit starts at a detected header and continues until the next detected
+   header.
+4. A `~` elision/gap line terminates the current commit and remains visible but
+   unindexed.
+5. Lines before the first commit header remain visible but unindexed.
 
 ### 6. Fuzzy matching without filtering rows
 
