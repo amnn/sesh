@@ -14,6 +14,8 @@ use ratatui::widgets::StatefulWidget;
 use ratatui::widgets::Widget as _;
 use regex::Regex;
 
+use crate::app::component::scrollbar;
+
 /// Matches commit header lines in forced-curved `builtin_log_compact` output.
 static COMMIT: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(?:│ )*[@○◆×](?: │)* {2,}(?P<rev>[a-z]+)(?:\s|$)")
@@ -67,6 +69,7 @@ impl Picker {
         }
 
         index.extend(current.take());
+
         Self { text, index }
     }
 }
@@ -74,16 +77,25 @@ impl Picker {
 impl StatefulWidget for &Picker {
     type State = State;
 
-    fn render(self, area: Rect, buf: &mut Buffer, _state: &mut Self::State) {
+    fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         let area = area.intersection(buf.area);
         if area.is_empty() {
             return;
         }
 
+        let overflow = self.text.lines.len().saturating_sub(area.height as usize);
+        let content = if overflow == 0 { 0 } else { overflow + 1 };
+        *state = state
+            .content_length(content)
+            .viewport_content_length(area.height as usize)
+            .position(0);
+
         buf.set_style(area, self.text.style);
         for (line, line_area) in self.text.lines.iter().zip(area.rows()) {
             line.render(line_area, buf);
         }
+
+        scrollbar::widget().render(area, buf, state);
     }
 }
 
@@ -108,11 +120,8 @@ mod tests {
                 let rendered: Vec<_> = picker.text.lines[*row..end]
                     .iter()
                     .map(|line| {
-                        let rendered: String = line
-                            .spans
-                            .iter()
-                            .map(|span| span.content.as_ref())
-                            .collect();
+                        let rendered: String =
+                            line.spans.iter().map(|s| s.content.as_ref()).collect();
                         rendered
                     })
                     .collect();
@@ -272,7 +281,7 @@ mod tests {
     }
 
     #[test]
-    fn requires_two_spaces_between_graph_and_revision_hint() {
+    fn requires_two_spaces_between_graph_and_rev() {
         let picker = picker(&[
             "@ abcdefgh user@example.com 2026-06-29 aaaaaaaa",
             "│ ○ ijklmnop user@example.com 2026-06-28 bbbbbbbb",
