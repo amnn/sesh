@@ -12,9 +12,11 @@ use unicode_width::UnicodeWidthStr as _;
 use crate::app::component::row::Row;
 use crate::app::highlight::Highlight;
 use crate::app::span::push_repo_path_spans;
+use crate::model::session::Session;
 use crate::model::session::DELIM_SUFFIX;
 use crate::model::session::NAME_WIDTH;
-use crate::model::session::Session;
+
+const HIGHLIGHT: Style = Style::new().blue().bold();
 
 const SIGIL_DELETE: &str = "×";
 
@@ -26,7 +28,7 @@ pub(super) fn row(
     deleting: bool,
     matches: &[u32],
 ) -> Row {
-    let mut hl = Highlight::new(matches.to_vec());
+    let mut hl = Highlight::new(matches.to_vec(), |_| HIGHLIGHT);
     let mut line = Line::default();
     push_session_name_spans(&mut line, session, &mut hl, deleting, highlighted);
 
@@ -62,10 +64,10 @@ pub(super) fn row(
 }
 
 /// Push styled session name spans, dimming a disambiguation suffix when present.
-fn push_session_name_spans<'a>(
+fn push_session_name_spans<'a, F: Fn(Style) -> Style>(
     spans: &mut impl Extend<Span<'a>>,
     session: &Session,
-    hl: &mut Highlight,
+    hl: &mut Highlight<F>,
     deleting: bool,
     highlighted: bool,
 ) {

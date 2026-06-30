@@ -9,29 +9,34 @@ use std::vec;
 use ratatui::style::Style;
 use ratatui::text::Span;
 
-pub(super) static HIGHLIGHT: Style = Style::new().blue().bold();
-
 /// Stateful highlighter for character indices matched by the active fuzzy query.
-pub(crate) struct Highlight {
+pub(crate) struct Highlight<F> {
     indices: Peekable<vec::IntoIter<u32>>,
     processed: u32,
+    transform: F,
 }
 
-impl Highlight {
-    /// Construct a highlighter from character positions in matcher text.
-    pub(crate) fn new(mut indices: Vec<u32>) -> Self {
+impl Highlight<fn(Style) -> Style> {
+    /// An instance that applies no highlighting (spans are returned unchanged).
+    pub(crate) fn none() -> Self {
+        Self::new(Vec::new(), |s| s)
+    }
+}
+
+impl<F> Highlight<F>
+where
+    F: Fn(Style) -> Style,
+{
+    /// Construct a highlighter from character positions and a matched-style transform.
+    pub(crate) fn new(mut indices: Vec<u32>, transform: F) -> Self {
         indices.sort_unstable();
         indices.dedup();
 
         Self {
             indices: indices.into_iter().peekable(),
             processed: 0,
+            transform,
         }
-    }
-
-    /// An instance that applies no highlighting (spans are returned unchanged).
-    pub(crate) fn none() -> Self {
-        Self::new(Vec::new())
     }
 
     /// Overlay fuzzy match highlighting onto `span`, preserving its style when unmatched.
@@ -57,7 +62,7 @@ impl Highlight {
                 output.push(Span::styled(plain, span.style));
             }
 
-            // Gather the prefix of highlighted characters, overriding their style.
+            // Gather the prefix of highlighted characters and apply the configured style.
             let mut highlighted = String::new();
             while let (Some(&ch), Some(&ix)) = (chars.peek(), self.indices.peek())
                 && ix == self.processed
@@ -69,7 +74,7 @@ impl Highlight {
             }
 
             if !highlighted.is_empty() {
-                output.push(Span::styled(highlighted, HIGHLIGHT));
+                output.push(Span::styled(highlighted, (self.transform)(span.style)));
             }
         }
 
@@ -84,8 +89,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn highlight_match_indices_overlays_existing_span_styles() {
-        let mut hl = Highlight::new(vec![2, 1, 1]);
+    fn highlight_match_indices_replaces_existing_span_styles() {
+        let style = Style::new().blue().bold();
+        let mut hl = Highlight::new(vec![2, 1, 1], |_| style);
         let mut spans = hl.highlight(Span::raw("ab").dim());
         spans.extend(hl.highlight(Span::raw("cd").green()));
 
@@ -93,10 +99,22 @@ mod tests {
             spans,
             vec![
                 Span::raw("a").dim(),
-                Span::styled("b", HIGHLIGHT),
-                Span::styled("c", HIGHLIGHT),
+                Span::styled("b", style),
+                Span::styled("c", style),
                 Span::raw("d").green(),
             ]
+        );
+    }
+
+    #[test]
+    fn transform_match_indices_preserves_existing_span_styles() {
+        let ul = Style::new().underlined();
+        let mut hl = Highlight::new(vec![1], |style| style.patch(ul));
+        let spans = hl.highlight(Span::raw("ab").green());
+
+        assert_eq!(
+            spans,
+            vec![Span::raw("a").green(), Span::raw("b").green().underlined()]
         );
     }
 }

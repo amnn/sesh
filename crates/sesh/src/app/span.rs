@@ -18,11 +18,13 @@ use crate::path::TruncatedExt as _;
 /// `hl` indicates which part of the path should be highlighted as part of the match. All
 /// highlighted parts are kept, but otherwise only the separators and initial non `.` characters of
 /// the parent path are kept.
-pub(crate) fn push_repo_path_spans<'a>(
+pub(crate) fn push_repo_path_spans<'a, F>(
     spans: &mut impl Extend<Span<'a>>,
     repo: &Path,
-    hl: &mut Highlight,
-) {
+    hl: &mut Highlight<F>,
+) where
+    F: Fn(Style) -> Style,
+{
     let repo = repo.truncated();
     let (parent, base) = repo.split_last();
 
@@ -85,10 +87,11 @@ mod tests {
     use ratatui::style::Stylize as _;
     use ratatui::text::Line;
 
-    use crate::app::highlight::HIGHLIGHT;
+    use crate::app::highlight::Highlight;
 
     use super::*;
 
+    const HIGHLIGHT: Style = Style::new().blue().bold();
     const SEP: &str = MAIN_SEPARATOR_STR;
 
     #[test]
@@ -154,8 +157,8 @@ mod tests {
         // 01234567890123456789
         //    |     |        |
         // /Users/dev/Code/sesh
-        let mut hl = Highlight::new(vec![3, 9, 18]);
-        push_repo_path_spans(&mut line, &path, &mut hl);
+        let mut highlight = Highlight::new(vec![3, 9, 18], |_| HIGHLIGHT);
+        push_repo_path_spans(&mut line, &path, &mut highlight);
 
         assert_eq!(
             line.spans,
