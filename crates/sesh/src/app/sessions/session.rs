@@ -17,10 +17,15 @@ use crate::model::session::NAME_WIDTH;
 use crate::model::session::Session;
 
 const SIGIL_DELETE: &str = "×";
-const SIGIL_TMUX: &str = "⬤";
 
 /// Render `session` as a session-list row.
-pub(super) fn row(session: &Session, highlighted: bool, deleting: bool, matches: &[u32]) -> Row {
+pub(super) fn row(
+    sigil: char,
+    session: &Session,
+    highlighted: bool,
+    deleting: bool,
+    matches: &[u32],
+) -> Row {
     let mut hl = Highlight::new(matches.to_vec());
     let mut line = Line::default();
     push_session_name_spans(&mut line, session, &mut hl, deleting, highlighted);
@@ -42,16 +47,17 @@ pub(super) fn row(session: &Session, highlighted: bool, deleting: bool, matches:
     };
 
     let alerts = session.alerts();
+    let sigil = Span::raw(sigil.to_string());
     if !alerts.is_empty() && highlighted {
-        row.with_sigil(Span::raw(SIGIL_TMUX).on_light_yellow())
+        row.with_sigil(sigil.on_light_yellow())
     } else if !alerts.is_empty() {
-        row.with_sigil(Span::raw(SIGIL_TMUX).light_yellow())
+        row.with_sigil(sigil.light_yellow())
     } else if flagged && highlighted {
-        row.with_sigil(Span::raw(SIGIL_TMUX).on_light_blue())
+        row.with_sigil(sigil.on_light_blue())
     } else if flagged {
-        row.with_sigil(Span::raw(SIGIL_TMUX).light_blue())
+        row.with_sigil(sigil.light_blue())
     } else {
-        row.with_sigil(Span::raw(SIGIL_TMUX).dim())
+        row.with_sigil(sigil.dim())
     }
 }
 

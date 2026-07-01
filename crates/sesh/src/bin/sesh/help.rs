@@ -191,6 +191,11 @@ fn write_config_help<W: Write>(w: &mut Writer<W>) -> io::Result<()> {
          targets and relative paths.",
     )?;
 
+    w.def(
+        "ui.sigil",
+        "Character used to mark live tmux sessions in the picker.",
+    )?;
+
     writeln!(w)?;
     w.header(|out| writeln!(out, "Example:"))?;
 
@@ -211,7 +216,10 @@ fn write_config_help<W: Write>(w: &mut Writer<W>) -> io::Result<()> {
         writeln!(out, "  setup = '''")?;
         writeln!(out, "  tmux rename-window shell")?;
         writeln!(out, "  tmux new-window -n editor 'nvim .'")?;
-        writeln!(out, "  '''")
+        writeln!(out, "  '''")?;
+        writeln!(out)?;
+        writeln!(out, "  [ui]")?;
+        writeln!(out, "  sigil = \"●\"")
     })?;
 
     Ok(())

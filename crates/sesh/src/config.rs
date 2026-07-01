@@ -33,6 +33,9 @@ pub struct SeshConfig {
 
     /// Configuration for creating and initializing tmux sessions.
     pub tmux: TmuxConfig,
+
+    /// Configuration for picker rendering.
+    pub ui: UiConfig,
 }
 
 /// Configuration for creating and initializing tmux sessions.
@@ -41,6 +44,14 @@ pub struct SeshConfig {
 pub struct TmuxConfig {
     /// Shell script to run after creating a detached tmux session.
     pub setup: String,
+}
+
+/// Configuration for picker rendering.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(default)]
+pub struct UiConfig {
+    /// Character used to mark live tmux sessions in the picker.
+    pub sigil: char,
 }
 
 impl SeshConfig {
@@ -54,6 +65,12 @@ impl SeshConfig {
         };
 
         toml::from_str(&contents).context("could not parse config")
+    }
+}
+
+impl Default for UiConfig {
+    fn default() -> Self {
+        Self { sigil: '⬤' }
     }
 }
 

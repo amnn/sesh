@@ -24,6 +24,7 @@ use crate::model::session::Session;
 
 /// Session-list component, backed by fuzzy-matched rows and an optional new session candidate.
 pub(super) struct Sessions<'s> {
+    sigil: char,
     new: Option<Session>,
     rest: &'s [Item<'s, Session>],
     pattern: &'s Pattern,
@@ -42,11 +43,17 @@ impl<'s> Sessions<'s> {
     /// `rest` being the other candidates. The `pattern` is what was used to filter down to these
     /// candidates, and is used to highlight the matching parts of candidate text.
     pub(super) fn new(
+        sigil: char,
         new: Option<Session>,
         rest: &'s [Item<'s, Session>],
         pattern: &'s Pattern,
     ) -> Self {
-        Self { new, pattern, rest }
+        Self {
+            sigil,
+            new,
+            rest,
+            pattern,
+        }
     }
 
     /// Render the session rows and keep the selected session state in sync with the list.
@@ -94,7 +101,13 @@ impl<'s> Sessions<'s> {
 
         let selected = state.list.selected();
         if let Some(session) = &self.new {
-            rows.push(session::row(session, selected == Some(0), false, &[]))
+            rows.push(session::row(
+                self.sigil,
+                session,
+                selected == Some(0),
+                false,
+                &[],
+            ))
         } else {
             rows.push(Row::empty())
         }
@@ -109,7 +122,7 @@ impl<'s> Sessions<'s> {
             indices.dedup();
 
             let highlighted = selected == Some(i);
-            let row = session::row(item.data, highlighted, state.deleting, &indices);
+            let row = session::row(self.sigil, item.data, highlighted, state.deleting, &indices);
 
             let margin = indices.last().copied().map(|off| right_margin(text, off));
             rows.push(row.with_right_margin(margin));

@@ -127,6 +127,7 @@ async fn main() -> anyhow::Result<ExitCode> {
     let context = Context {
         globs: &globs,
         setup: &config.tmux.setup,
+        sigil: config.ui.sigil,
     };
 
     App::new(repo, model).run(&cwd, context).await?;

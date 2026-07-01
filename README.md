@@ -97,15 +97,19 @@ all picker key bindings:
 `~/.config/sesh/sesh.toml` when `$XDG_CONFIG_HOME` is unset. You can also pass
 an explicit config file with `--config PATH`.
 
-The config file is optional. The default configuration has no repository globs
-and does not run any extra setup after creating a tmux session.
+The config file is optional. The default configuration has no repository globs,
+does not run any extra setup after creating a tmux session, and uses `⬤` to
+mark live tmux sessions in the picker.
 
 Use `[repo].globs` to surface jj repositories alongside existing tmux sessions.
 These stack with any `--repo`/`-r` globs supplied on the command line.
 
 Use `[tmux].setup` to run a shell script after `sesh` creates a detached tmux
 session. The script runs in the new session's tmux context and working
-directory, so commands can use default tmux targets and relative paths:
+directory, so commands can use default tmux targets and relative paths.
+
+Use `[ui].sigil` to choose the single character that marks live tmux sessions in
+the picker:
 
 ```toml
 [repo]
@@ -119,6 +123,9 @@ setup = '''
 tmux rename-window shell
 tmux new-window -n editor 'nvim .'
 '''
+
+[ui]
+sigil = "●"
 ```
 
 ## Troubleshooting

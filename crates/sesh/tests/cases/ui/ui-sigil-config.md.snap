@@ -1,0 +1,48 @@
+---
+source: crates/sesh/tests/test.rs
+expression: output
+input_file: crates/sesh/tests/cases/ui/ui-sigil-config.md
+---
+# UI sigil config
+
+A custom UI sigil should replace the default live tmux session marker.
+
+    :bins jj cat
+
+> [!NOTE]
+> 'jj', and 'cat' are available.
+
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
+    :w .config/sesh/sesh.toml (written)
+```toml
+[ui]
+sigil = "*"
+```
+
+    :t rename-session -t 0 runner (success)
+    :t new-session -d -s alpha "cat" (success)
+    :t new-session -d -s ui "sesh" (success)
+    :t resize-window -t ui:0 -x 80 -y 10 (success)
+    :pane ui:0.0
+    :settle -d 2s (settled)
+
+The live session row should use the configured sigil.
+
+    :snap
+
+```terminal
+session:
+  3/3 | [C-r] repo: none | [C-x] close, [C-f] flag
+▌* alpha                                                                       ┃
+────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+```
+
+---
+vim: set ft=markdown:

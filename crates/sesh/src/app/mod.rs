@@ -61,6 +61,9 @@ pub struct Context<'a> {
 
     /// Shell setup to run when creating a tmux session.
     pub setup: &'a str,
+
+    /// Character used to mark live tmux sessions in the picker.
+    pub sigil: char,
 }
 
 /// Completed action chosen from the picker.
@@ -110,7 +113,7 @@ impl App {
 
         loop {
             loop {
-                terminal.draw(|frame| self.draw(frame))?;
+                terminal.draw(|frame| self.draw(frame, ctx.sigil))?;
 
                 if !event::poll(POLL_TIMEOUT)? {
                     continue;
@@ -194,7 +197,7 @@ impl App {
     ///
     /// The frame is split up into regions, each with its own widget. The `preview` region and its
     /// scroll bar are only visible when the preview is toggled on (defaults to visible).
-    fn draw(&mut self, f: &mut ratatui::Frame<'_>) {
+    fn draw(&mut self, f: &mut ratatui::Frame<'_>, sigil: char) {
         let l = layout::Layout::new(f.area(), self.preview.visible() || self.onto.is_some());
 
         let new_session = self.model.new_session(self.repo.as_ref());
@@ -213,7 +216,12 @@ impl App {
         f.render_widget(prompt::widget(label, query), l.prompt);
         f.render_stateful_widget(Spinner::new(status.running), l.loading, &mut self.spinner);
 
-        let sessions = Sessions::new(new_session, &items, snapshot.pattern().column_pattern(0));
+        let sessions = Sessions::new(
+            sigil,
+            new_session,
+            &items,
+            snapshot.pattern().column_pattern(0),
+        );
 
         // (2) Render session list. This also updates `self.sessions`, so that the selected index
         // and session are up-to-date and valid.
