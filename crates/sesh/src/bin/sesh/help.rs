@@ -240,7 +240,9 @@ fn write_key_bindings<W: Write>(w: &mut Writer<W>) -> io::Result<()> {
     w.def("C-x", "Close a live session.")?;
     w.def("C-y", "Confirm a pending deletion.")?;
     w.def("up, down", "Move selection by one row.")?;
+    w.def("C-k, C-j", "Move selection by one row.")?;
     w.def("M-up, M-down", "Move selection to the first or last row.")?;
+    w.def("M-k, M-j", "Move selection to the first or last row.")?;
     w.def("S-up, S-down", "Scroll the preview pane up or down.")?;
     w.def("enter", "Switch to the session, creating it if necessary.")?;
     w.def("esc, C-g, C-c", "Close the UI.")?;

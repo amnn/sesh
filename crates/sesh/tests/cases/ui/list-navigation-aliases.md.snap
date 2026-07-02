@@ -1,0 +1,129 @@
+---
+source: crates/sesh/tests/test.rs
+expression: output
+input_file: crates/sesh/tests/cases/ui/list-navigation-aliases.md
+---
+# List navigation aliases
+
+`C-j` and `C-k` move down and up by one row, while `M-j` and `M-k`
+jump to the last and first selectable rows in the session list.
+
+    :bins jj cat
+
+> [!NOTE]
+> 'jj', and 'cat' are available.
+
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
+    :t rename-session -t 0 runner (success)
+    :t new-session -d -s alpha "cat" (success)
+    :t new-session -d -s beta "cat" (success)
+    :t new-session -d -s gamma "cat" (success)
+    :t new-session -d -s zeta "cat" (success)
+    :t new-session -d -s ui "sesh" (success)
+    :t resize-window -t ui:0 -x 100 -y 12 (success)
+    :pane ui:0.0
+    :settle -d 2s (settled)
+
+Hide the preview so the selected row movement is easy to inspect.
+
+    :k C-p
+    :snap
+
+```terminal
+session:                                                                                           ┃
+  6/6 | [C-r] repo: none | [C-x] close, [C-f] flag                                                 ┃
+                                                                                                   ┃
+▌⬤ alpha                                                                                           ┃
+ ⬤ beta                                                                                            ┃
+ ⬤ gamma                                                                                           ┃
+ ⬤ runner                                                                                          ┃
+ ⬤ ui                                                                                              ┃
+ ⬤ zeta                                                                                            ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+```
+
+`C-j` moves the selection down by one row.
+
+    :k C-j
+    :snap
+
+```terminal
+session:                                                                                           ┃
+  6/6 | [C-r] repo: none | [C-x] close, [C-f] flag                                                 ┃
+                                                                                                   ┃
+ ⬤ alpha                                                                                           ┃
+▌⬤ beta                                                                                            ┃
+ ⬤ gamma                                                                                           ┃
+ ⬤ runner                                                                                          ┃
+ ⬤ ui                                                                                              ┃
+ ⬤ zeta                                                                                            ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+```
+
+`C-k` moves the selection back up by one row.
+
+    :k C-k
+    :snap
+
+```terminal
+session:                                                                                           ┃
+  6/6 | [C-r] repo: none | [C-x] close, [C-f] flag                                                 ┃
+                                                                                                   ┃
+▌⬤ alpha                                                                                           ┃
+ ⬤ beta                                                                                            ┃
+ ⬤ gamma                                                                                           ┃
+ ⬤ runner                                                                                          ┃
+ ⬤ ui                                                                                              ┃
+ ⬤ zeta                                                                                            ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+```
+
+`M-j` jumps to the last selectable row.
+
+    :k M-j
+    :snap
+
+```terminal
+session:                                                                                           ┃
+  6/6 | [C-r] repo: none | [C-x] close, [C-f] flag                                                 ┃
+                                                                                                   ┃
+ ⬤ alpha                                                                                           ┃
+ ⬤ beta                                                                                            ┃
+ ⬤ gamma                                                                                           ┃
+ ⬤ runner                                                                                          ┃
+ ⬤ ui                                                                                              ┃
+▌⬤ zeta                                                                                            ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+```
+
+`M-k` jumps back to the first selectable row.
+
+    :k M-k
+    :snap
+
+```terminal
+session:                                                                                           ┃
+  6/6 | [C-r] repo: none | [C-x] close, [C-f] flag                                                 ┃
+                                                                                                   ┃
+▌⬤ alpha                                                                                           ┃
+ ⬤ beta                                                                                            ┃
+ ⬤ gamma                                                                                           ┃
+ ⬤ runner                                                                                          ┃
+ ⬤ ui                                                                                              ┃
+ ⬤ zeta                                                                                            ┃
+                                                                                                   ┃
+                                                                                                   ┃
+                                                                                                   ┃
+```
+
+---
+vim: set ft=markdown:

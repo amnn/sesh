@@ -80,6 +80,9 @@ pass only the values the method needs rather than the full `SeshConfig`.
 When adding or changing config fields, keep the schema, CLI long help, README
 config examples, and markdown snapshot coverage in sync.
 
+When adding or changing picker key bindings, keep input handling, `sesh --help`,
+the README key table, and markdown snapshot coverage in sync.
+
 For read-only `jj` commands on startup or hot paths, pass
 `--ignore-working-copy` unless fresh working-copy state is required; otherwise
 large repositories can spend visible time snapshotting before `sesh` renders.

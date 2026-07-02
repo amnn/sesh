@@ -85,8 +85,8 @@ all picker key bindings:
 | `C-u` | Clear the filter. |
 | `C-x` | Close a live session. |
 | `C-y` | Confirm a pending deletion. |
-| `up`, `down` | Move selection by one row. |
-| `M-up`, `M-down` | Move selection to the first or last row. |
+| `up`, `down`, `C-k`, `C-j` | Move selection by one row. |
+| `M-up`, `M-down`, `M-k`, `M-j` | Move selection to the first or last row. |
 | `S-up`, `S-down` | Scroll the preview pane up or down. |
 | `enter` | Switch to the session, creating it if necessary. |
 | `esc`, `C-g`, `C-c` | Close the UI. |

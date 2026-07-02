@@ -332,12 +332,12 @@ impl App {
             }
 
             // Session list selection
-            KC::Up if key.modifiers.contains(ALT) => {
+            KC::Up | KC::Char('k') if key.modifiers.contains(ALT) => {
                 self.sessions.select_first();
                 self.preview.first();
             }
 
-            KC::Down if key.modifiers.contains(ALT) => {
+            KC::Down | KC::Char('j') if key.modifiers.contains(ALT) => {
                 self.sessions.select_last();
                 self.preview.first();
             }
@@ -347,7 +347,17 @@ impl App {
                 self.preview.first();
             }
 
+            KC::Char('k') if key.modifiers.contains(CTRL) => {
+                self.sessions.select_previous();
+                self.preview.first();
+            }
+
             KC::Down => {
+                self.sessions.select_next();
+                self.preview.first();
+            }
+
+            KC::Char('j') if key.modifiers.contains(CTRL) => {
                 self.sessions.select_next();
                 self.preview.first();
             }
