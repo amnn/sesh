@@ -103,7 +103,7 @@ impl<V> State<V> {
     }
 
     /// Poll the background task and update the status if the load completed.
-    pub(crate) fn poll(&mut self) {
+    fn poll(&mut self) {
         match &mut self.status {
             Status::Loading(task) => match task.rx.try_recv() {
                 Ok(Ok(view)) => self.status = Status::Loaded { view, done: false },

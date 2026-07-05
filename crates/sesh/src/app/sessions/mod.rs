@@ -112,8 +112,10 @@ impl<'s> Sessions<'s> {
             rows.push(Row::empty())
         }
 
+        // Reuse the matcher's scratch buffer across all candidates.
+        let mut matcher = Matcher::new(Config::DEFAULT);
+
         for (i, item) in (1..).zip(self.rest) {
-            let mut matcher = Matcher::new(Config::DEFAULT);
             let mut indices = Vec::new();
             let text = item.matcher_columns[0].slice(..);
 

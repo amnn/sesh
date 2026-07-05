@@ -1,8 +1,9 @@
 # Onto scrollbar
 
 This scenario verifies that the onto picker renders a scrollbar for a current
-repo log that overflows the preview-shaped pane. Scrolling is not wired yet, so
-this only checks that the scrollbar is present at the top of the pane.
+repo log that overflows the preview-shaped pane, then applies fuzzy-match
+underlines to matching log text. Scrolling is not wired yet, so the first check
+only asserts that the scrollbar is present at the top of the pane.
 
     :bins jj cat python3
 
@@ -37,6 +38,13 @@ at the top edge.
     :settle -d 2s
     :k C-o
     :snap -d 2s "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
+Typing an onto query should update the fuzzy model used by rendering. The SVG
+snapshot preserves the underlines on the matching characters in the visible
+`line 06` description.
+
+    :k pty6
+    :snap --color "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 ---
 vim: set ft=markdown:

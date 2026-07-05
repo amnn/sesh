@@ -17,10 +17,8 @@ use ratatui::layout::Rect;
 
 use crate::app::component::loader;
 use crate::app::component::loader::Loader;
-use crate::app::onto::picker::Candidate;
 use crate::app::onto::picker::Picker;
 use crate::cmd::jj;
-use crate::model;
 
 /// Result of handling a key while `onto` revision selection is active.
 pub(super) enum Action {
@@ -32,7 +30,6 @@ pub(super) enum Action {
 pub(super) struct State {
     picker: loader::State<Picker>,
     state: picker::State,
-    model: model::picker::Picker<Candidate>,
 }
 
 impl State {
@@ -54,18 +51,17 @@ impl State {
         Self {
             picker,
             state: picker::State::default(),
-            model: model::picker::Picker::new(String::new()),
         }
     }
 
     /// Render the onto picker into `area`.
     pub(super) fn draw(&mut self, f: &mut Frame<'_>, area: Rect) {
+        f.render_stateful_widget(Loader::new(&mut self.state), area, &mut self.picker);
+
         if let Some(picker) = self.picker.pending() {
-            self.model.inject(picker.candidates());
+            self.state.model.inject(picker.candidates());
             self.picker.finish();
         }
-
-        f.render_stateful_widget(Loader::new(&mut self.state), area, &mut self.picker);
     }
 
     /// Handle a key event while `onto` revision selection mode is active.
@@ -84,10 +80,10 @@ impl State {
             }
 
             // Edit query
-            KC::Backspace => self.pop_query(),
-            KC::Char('u') if key.modifiers.contains(CTRL) => self.clear_query(),
-            KC::Char(c) if key.modifiers.is_empty() => self.push_query(c),
-            KC::Char(c) if key.modifiers.contains(SHIFT) => self.push_query(c),
+            KC::Backspace => self.state.model.pop(),
+            KC::Char('u') if key.modifiers.contains(CTRL) => self.state.model.clear(),
+            KC::Char(c) if key.modifiers.is_empty() => self.state.model.push(c),
+            KC::Char(c) if key.modifiers.contains(SHIFT) => self.state.model.push(c),
 
             _ => {}
         }
@@ -97,21 +93,6 @@ impl State {
 
     /// Return the current `onto` revision query.
     pub(super) fn query(&self) -> &str {
-        &self.model.query()
-    }
-
-    /// Clear the `onto` revision query.
-    fn clear_query(&mut self) {
-        self.model.clear();
-    }
-
-    /// Remove the final character from the `onto` revision query.
-    fn pop_query(&mut self) {
-        self.model.pop();
-    }
-
-    /// Append `c` to the `onto` revision query.
-    fn push_query(&mut self, c: char) {
-        self.model.push(c);
+        self.state.model.query()
     }
 }

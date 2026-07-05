@@ -6,8 +6,12 @@
 use std::collections::BTreeMap;
 use std::sync::LazyLock;
 
+use nucleo::Config;
+use nucleo::Matcher;
 use ratatui::buffer::Buffer;
 use ratatui::layout::Rect;
+use ratatui::style::Style;
+use ratatui::text::Line;
 use ratatui::text::Text;
 use ratatui::widgets::ScrollbarState;
 use ratatui::widgets::StatefulWidget;
@@ -15,13 +19,22 @@ use ratatui::widgets::Widget as _;
 use regex::Regex;
 
 use crate::app::component::scrollbar;
-use crate::model::picker::Pickable;
+use crate::app::highlight::Highlight;
+use crate::model::picker as model;
 
 /// Matches commit header lines in forced-curved `builtin_log_compact` output.
 static COMMIT: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(?:│ )*[@○◆×](?: │)* {2,}(?P<rev>[a-z]+)(?:\s|$)")
         .expect("valid jj log header regex")
 });
+
+/// A candidate line from a commit for the fuzzy-finder.
+pub(super) struct Candidate {
+    /// The candidate line's zero-based row in the rendered log.
+    offset: usize,
+    /// The flattened rendered text for this line of the commit.
+    text: String,
+}
 
 /// Picker view over renderable log text for the current repo context.
 pub(super) struct Picker {
@@ -32,15 +45,9 @@ pub(super) struct Picker {
 }
 
 /// Mutable state owned by the onto-picker preview surface.
-pub(super) type State = ScrollbarState;
-
-/// A candidate line from a commit for the fuzzy-finder.
-pub(super) struct Candidate {
-    /// The offset of the start of the commit's log lines in the rendered log text.
-    #[allow(dead_code)]
-    offset: usize,
-    /// THe flattened rendered text for this line of the commit.
-    text: String,
+pub(super) struct State {
+    pub(super) model: model::Picker<Candidate>,
+    scrollbar: ScrollbarState,
 }
 
 /// Search and selection metadata for a commit in the rendered log.
@@ -90,12 +97,16 @@ impl Picker {
                 .text
                 .iter()
                 .cloned()
-                .map(move |text| Candidate { offset, text })
+                .enumerate()
+                .map(move |(line_offset, text)| Candidate {
+                    offset: offset + line_offset,
+                    text,
+                })
         })
     }
 }
 
-impl Pickable for Candidate {
+impl model::Pickable for Candidate {
     fn text(&self) -> String {
         self.text.clone()
     }
@@ -112,17 +123,59 @@ impl StatefulWidget for &Picker {
 
         let overflow = self.text.lines.len().saturating_sub(area.height as usize);
         let content = if overflow == 0 { 0 } else { overflow + 1 };
-        *state = state
+        state.scrollbar = state
+            .scrollbar
             .content_length(content)
             .viewport_content_length(area.height as usize)
             .position(0);
 
-        buf.set_style(area, self.text.style);
-        for (line, line_area) in self.text.lines.iter().zip(area.rows()) {
-            line.render(line_area, buf);
+        let (_, snapshot, _) = state.model.refresh();
+        let pattern = snapshot.pattern().column_pattern(0);
+        let mut matcher = Matcher::new(Config::DEFAULT);
+        let mut highlights = vec![Vec::new(); self.text.lines.len()];
+
+        for item in snapshot.matched_items(..) {
+            let indices = &mut highlights[item.data.offset];
+            let text = item.matcher_columns[0].slice(..);
+
+            pattern.indices(text, &mut matcher, indices);
+            indices.sort_unstable();
+            indices.dedup();
         }
 
-        scrollbar::widget().render(area, buf, state);
+        buf.set_style(area, self.text.style);
+        for ((line, indices), line_area) in self.text.lines.iter().zip(highlights).zip(area.rows())
+        {
+            highlight(line, indices).render(line_area, buf);
+        }
+
+        scrollbar::widget().render(area, buf, &mut state.scrollbar);
+    }
+}
+
+impl Default for State {
+    fn default() -> Self {
+        Self {
+            model: model::Picker::new(String::new()),
+            scrollbar: ScrollbarState::default(),
+        }
+    }
+}
+
+/// Return `line` with underlines overlaid at fuzzy-match character positions in `indices`.
+fn highlight(line: &Line<'static>, indices: Vec<u32>) -> Line<'static> {
+    let mut hl = Highlight::new(indices, Style::underlined);
+    let spans = line
+        .spans
+        .iter()
+        .cloned()
+        .flat_map(|span| hl.highlight(span))
+        .collect();
+
+    Line {
+        style: line.style,
+        alignment: line.alignment,
+        spans,
     }
 }
 

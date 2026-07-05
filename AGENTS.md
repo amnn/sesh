@@ -14,6 +14,9 @@ When validating multiple Rust tests, avoid parallel `cargo test` invocations:
 they contend on Cargo's package and build locks. Prefer a single `cargo
 nextest run` command that covers the desired cases.
 
+For UI/rendering behavior, prefer markdown-driven E2E snapshot cases over unit
+tests; keep unit tests focused on pure parsing, model, or helper logic.
+
 For Python maintenance scripts in `scripts/`, run `python3 -m py_compile` and a
 small end-to-end fixture when the script mutates jj or Git metadata.
 
