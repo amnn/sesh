@@ -15,6 +15,7 @@ use crossterm::event::KeyModifiers;
 use ratatui::Frame;
 use ratatui::layout::Rect;
 
+use crate::app::component::loader;
 use crate::app::component::loader::Loader;
 use crate::app::onto::picker::Picker;
 use crate::cmd::jj;
@@ -27,15 +28,15 @@ pub(super) enum Action {
 
 /// Query, picker, and loading state for `onto` revision selection.
 pub(super) struct State {
-    picker: Loader<Picker>,
-    picker_state: picker::State,
+    picker: loader::State<Picker>,
+    state: picker::State,
     query: String,
 }
 
 impl State {
     /// Create onto-selection state and start loading the current repo's log output.
     pub(super) fn new(repo: PathBuf) -> Self {
-        let picker = Loader::new(async move {
+        let picker = loader::State::new(async move {
             let text = jj::log(&repo)
                 .await
                 .with_context(|| {
@@ -50,14 +51,14 @@ impl State {
 
         Self {
             picker,
-            picker_state: picker::State::default(),
+            state: picker::State::default(),
             query: String::new(),
         }
     }
 
     /// Render the onto picker into `area`.
     pub(super) fn draw(&mut self, f: &mut Frame<'_>, area: Rect) {
-        f.render_stateful_widget(&self.picker, area, &mut self.picker_state);
+        f.render_stateful_widget(Loader::new(&mut self.state), area, &mut self.picker);
     }
 
     /// Handle a key event while `onto` revision selection mode is active.

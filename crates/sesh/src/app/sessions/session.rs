@@ -12,9 +12,9 @@ use unicode_width::UnicodeWidthStr as _;
 use crate::app::component::row::Row;
 use crate::app::highlight::Highlight;
 use crate::app::span::push_repo_path_spans;
-use crate::model::session::Session;
 use crate::model::session::DELIM_SUFFIX;
 use crate::model::session::NAME_WIDTH;
+use crate::model::session::Session;
 
 const HIGHLIGHT: Style = Style::new().blue().bold();
 

@@ -70,9 +70,10 @@ Only retain rendered views for content that is both expensive and stable across
 draw calls, such as loaded `jj log` text in preview or onto panes. Keep small or
 highly dynamic chrome (prompt, header, separators) in immediate-mode style unless
 profiling shows otherwise. Use `app::component::scroll::Scroll` for scrollable
-log text and `app::component::loader::Loader` for background-loaded retained
-views; keep user interaction state such as scrollbar position outside the
-retained view.
+log text. For background-loaded panes, keep `app::component::loader::Loader` as
+an immediate-mode widget and retain only the load task and loaded view in
+`app::component::loader::State`; keep reusable inner widget state outside the
+loader state so owners can share it when needed.
 
 When moving behavior onto domain types, keep configuration arguments narrow:
 pass only the values the method needs rather than the full `SeshConfig`.

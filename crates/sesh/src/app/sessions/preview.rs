@@ -11,6 +11,7 @@ use anyhow::Context as _;
 use ratatui::Frame;
 use ratatui::layout::Rect;
 
+use crate::app::component::loader;
 use crate::app::component::loader::Loader;
 use crate::app::component::scroll;
 use crate::app::component::scroll::Scroll;
@@ -24,7 +25,7 @@ pub(crate) struct Preview<'s> {
 
 /// Mutable preview pane state shared across renders.
 pub(crate) struct State {
-    entries: HashMap<PathBuf, Loader<Scroll>>,
+    entries: HashMap<PathBuf, loader::State<Scroll>>,
     scroll: scroll::State,
     visible: bool,
 }
@@ -46,7 +47,7 @@ impl<'s> Preview<'s> {
             .entry(repo.clone())
             .or_insert_with(|| loader(repo));
 
-        f.render_stateful_widget(&*preview, area, &mut state.scroll);
+        f.render_stateful_widget(Loader::new(&mut state.scroll), area, preview);
     }
 }
 
@@ -97,8 +98,8 @@ impl State {
 }
 
 /// Create a preview loader that loads `repo`'s log in the background.
-fn loader(repo: PathBuf) -> Loader<Scroll> {
-    Loader::new(async move {
+fn loader(repo: PathBuf) -> loader::State<Scroll> {
+    loader::State::new(async move {
         jj::log(&repo)
             .await
             .with_context(|| format!("failed to build preview for repo '{}'", repo.display()))?
