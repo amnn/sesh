@@ -79,7 +79,6 @@ where
 
 impl<V> State<V> {
     /// Mark a loaded view as handled without changing its rendered output.
-    #[allow(dead_code)]
     pub(crate) fn finish(&mut self) -> bool {
         self.poll();
 
@@ -91,6 +90,15 @@ impl<V> State<V> {
                 *done = true;
                 true
             }
+        }
+    }
+
+    /// Return the view if it has loaded and has not yet been marked handled.
+    pub(crate) fn pending(&self) -> Option<&V> {
+        if let Status::Loaded { view, done: false } = &self.status {
+            Some(view)
+        } else {
+            None
         }
     }
 
@@ -106,18 +114,6 @@ impl<V> State<V> {
                 }
             },
             Status::Error(_) | Status::Loaded { .. } => { /* nop */ }
-        }
-    }
-
-    /// Return the view if it has loaded and has not yet been marked handled.
-    #[allow(dead_code)]
-    pub(crate) fn view(&mut self) -> Option<&V> {
-        self.poll();
-
-        if let Status::Loaded { view, done: false } = &self.status {
-            Some(view)
-        } else {
-            None
         }
     }
 }

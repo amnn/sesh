@@ -17,8 +17,10 @@ use ratatui::layout::Rect;
 
 use crate::app::component::loader;
 use crate::app::component::loader::Loader;
+use crate::app::onto::picker::Candidate;
 use crate::app::onto::picker::Picker;
 use crate::cmd::jj;
+use crate::model;
 
 /// Result of handling a key while `onto` revision selection is active.
 pub(super) enum Action {
@@ -30,7 +32,7 @@ pub(super) enum Action {
 pub(super) struct State {
     picker: loader::State<Picker>,
     state: picker::State,
-    query: String,
+    model: model::picker::Picker<Candidate>,
 }
 
 impl State {
@@ -52,12 +54,17 @@ impl State {
         Self {
             picker,
             state: picker::State::default(),
-            query: String::new(),
+            model: model::picker::Picker::new(String::new()),
         }
     }
 
     /// Render the onto picker into `area`.
     pub(super) fn draw(&mut self, f: &mut Frame<'_>, area: Rect) {
+        if let Some(picker) = self.picker.pending() {
+            self.model.inject(picker.candidates());
+            self.picker.finish();
+        }
+
         f.render_stateful_widget(Loader::new(&mut self.state), area, &mut self.picker);
     }
 
@@ -90,21 +97,21 @@ impl State {
 
     /// Return the current `onto` revision query.
     pub(super) fn query(&self) -> &str {
-        &self.query
+        &self.model.query()
     }
 
     /// Clear the `onto` revision query.
     fn clear_query(&mut self) {
-        self.query.clear();
+        self.model.clear();
     }
 
     /// Remove the final character from the `onto` revision query.
     fn pop_query(&mut self) {
-        self.query.pop();
+        self.model.pop();
     }
 
     /// Append `c` to the `onto` revision query.
     fn push_query(&mut self, c: char) {
-        self.query.push(c);
+        self.model.push(c);
     }
 }

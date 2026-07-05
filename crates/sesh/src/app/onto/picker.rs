@@ -15,6 +15,7 @@ use ratatui::widgets::Widget as _;
 use regex::Regex;
 
 use crate::app::component::scrollbar;
+use crate::model::picker::Pickable;
 
 /// Matches commit header lines in forced-curved `builtin_log_compact` output.
 static COMMIT: LazyLock<Regex> = LazyLock::new(|| {
@@ -32,6 +33,15 @@ pub(super) struct Picker {
 
 /// Mutable state owned by the onto-picker preview surface.
 pub(super) type State = ScrollbarState;
+
+/// A candidate line from a commit for the fuzzy-finder.
+pub(super) struct Candidate {
+    /// The offset of the start of the commit's log lines in the rendered log text.
+    #[allow(dead_code)]
+    offset: usize,
+    /// THe flattened rendered text for this line of the commit.
+    text: String,
+}
 
 /// Search and selection metadata for a commit in the rendered log.
 #[derive(Debug, Eq, PartialEq)]
@@ -71,6 +81,23 @@ impl Picker {
         index.extend(current.take());
 
         Self { text, index }
+    }
+
+    /// List all candidate lines for fuzzy-finding.
+    pub(super) fn candidates(&self) -> impl Iterator<Item = Candidate> + '_ {
+        self.index.iter().flat_map(|(&offset, commit)| {
+            commit
+                .text
+                .iter()
+                .cloned()
+                .map(move |text| Candidate { offset, text })
+        })
+    }
+}
+
+impl Pickable for Candidate {
+    fn text(&self) -> String {
+        self.text.clone()
     }
 }
 

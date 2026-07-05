@@ -43,7 +43,7 @@ impl<I: Pickable + Send + Sync + 'static> Picker<I> {
     }
 
     /// Inject replacement items into the matcher.
-    pub(crate) fn inject(&self, items: Vec<I>) {
+    pub(crate) fn inject(&self, items: impl IntoIterator<Item = I>) {
         let injector = self.matcher.injector();
         for item in items {
             injector.push(item, |item, columns| {
