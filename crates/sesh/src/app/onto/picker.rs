@@ -4,6 +4,7 @@
 //! Rendering for the `onto` revision picker.
 
 use std::collections::BTreeMap;
+use std::ops::Range;
 use std::sync::LazyLock;
 
 use nucleo::Config;
@@ -24,14 +25,19 @@ use crate::model::picker as model;
 
 /// Matches commit header lines in forced-curved `builtin_log_compact` output.
 static COMMIT: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^(?:│ )*[@○◆×](?: │)* {2,}(?P<rev>[a-z]+)(?:\s|$)")
+    Regex::new(r"^(?:│ )*(?P<node>[@○◆×])(?: │)* {2,}(?P<rev>[a-z]+)(?:\s|$)")
         .expect("valid jj log header regex")
+});
+
+/// Matches elision lines in forced-curved `builtin_log_compact` output.
+static ELISION: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(?:│ )*~(?: │)*(?: {2,}|$)").expect("valid jj log elision regex")
 });
 
 /// A candidate line from a commit for the fuzzy-finder.
 pub(super) struct Candidate {
-    /// The candidate line's zero-based row in the rendered log.
-    offset: usize,
+    /// The zero-based position of this line in the rendered text.
+    index: usize,
     /// The flattened rendered text for this line of the commit.
     text: String,
 }
@@ -39,20 +45,25 @@ pub(super) struct Candidate {
 /// Picker view over renderable log text for the current repo context.
 pub(super) struct Picker {
     text: Text<'static>,
-    /// Commit metadata keyed by the commit's starting rendered row.
-    #[allow(dead_code)]
-    index: BTreeMap<usize, Commit>,
+    /// Commit metadata in rendered row order.
+    commits: Vec<Commit>,
 }
 
 /// Mutable state owned by the onto-picker preview surface.
 pub(super) struct State {
     pub(super) model: model::Picker<Candidate>,
     scrollbar: ScrollbarState,
+    /// Zero-based index of the selected commit.
+    selected: Option<usize>,
 }
 
 /// Search and selection metadata for a commit in the rendered log.
 #[derive(Debug, Eq, PartialEq)]
 struct Commit {
+    /// The commit's zero-based starting row in the rendered log.
+    start: usize,
+    /// Whether this is the current workspace's working-copy commit.
+    head: bool,
     /// Flattened rendered lines matched by the picker.
     text: Vec<String>,
     /// Change-id token suitable for passing back to `jj`.
@@ -62,8 +73,8 @@ struct Commit {
 impl Picker {
     /// Create a picker view over renderable `jj log` text.
     pub(super) fn new(text: Text<'static>) -> Self {
-        let mut current: Option<(usize, Commit)> = None;
-        let mut index = BTreeMap::new();
+        let mut current: Option<Commit> = None;
+        let mut commits = Vec::new();
 
         for (i, line) in text.lines.iter().enumerate() {
             let line: String = line.spans.iter().map(|s| s.content.as_ref()).collect();
@@ -71,38 +82,71 @@ impl Picker {
             if let Some(captures) = COMMIT.captures(&line)
                 && let Some(rev) = captures.name("rev")
             {
-                index.extend(current.take());
+                commits.extend(current.take());
                 let commit = Commit {
+                    start: i,
+                    head: captures
+                        .name("node")
+                        .is_some_and(|node| node.as_str() == "@"),
                     rev: rev.as_str().to_owned(),
                     text: vec![line],
                 };
 
-                current = Some((i, commit));
-            } else if line.trim_start().starts_with('~') {
-                index.extend(current.take());
-            } else if let Some((_, commit)) = &mut current {
+                current = Some(commit);
+            } else if ELISION.is_match(&line) {
+                commits.extend(current.take());
+            } else if let Some(commit) = &mut current {
                 commit.text.push(line);
             }
         }
 
-        index.extend(current.take());
+        commits.extend(current.take());
 
-        Self { text, index }
+        Self { text, commits }
     }
 
     /// List all candidate lines for fuzzy-finding.
     pub(super) fn candidates(&self) -> impl Iterator<Item = Candidate> + '_ {
-        self.index.iter().flat_map(|(&offset, commit)| {
+        self.commits.iter().flat_map(|commit| {
             commit
                 .text
                 .iter()
                 .cloned()
                 .enumerate()
-                .map(move |(line_offset, text)| Candidate {
-                    offset: offset + line_offset,
+                .map(move |(line, text)| Candidate {
+                    index: commit.start + line,
                     text,
                 })
         })
+    }
+}
+
+impl State {
+    /// Initialize commit selection and fuzzy candidates from a loaded picker.
+    pub(super) fn initialize(&mut self, picker: &Picker) {
+        self.selected = picker
+            .commits
+            .iter()
+            .position(|commit| commit.head)
+            .or((!picker.commits.is_empty()).then_some(0));
+        self.model.inject(picker.candidates());
+    }
+
+    /// Move selection down by one commit.
+    pub(super) fn select_next(&mut self) {
+        self.selected = self.selected.map(|selected| selected.saturating_add(1));
+    }
+
+    /// Move selection up by one commit.
+    pub(super) fn select_previous(&mut self) {
+        self.selected = self.selected.map(|selected| selected.saturating_sub(1));
+    }
+}
+
+impl Commit {
+    /// Range of lines in the rendered text that belong to this commit.
+    fn rows(&self) -> Range<usize> {
+        self.start..self.start + self.text.len()
     }
 }
 
@@ -121,33 +165,68 @@ impl StatefulWidget for &Picker {
             return;
         }
 
-        let overflow = self.text.lines.len().saturating_sub(area.height as usize);
+        let height = area.height as usize;
+        let overflow = self.text.lines.len().saturating_sub(height);
         let content = if overflow == 0 { 0 } else { overflow + 1 };
-        state.scrollbar = state
-            .scrollbar
-            .content_length(content)
-            .viewport_content_length(area.height as usize)
-            .position(0);
 
+        // Clamp the selected commit.
+        state.selected = state
+            .selected
+            .filter(|_| !self.commits.is_empty())
+            .map(|s| s.min(self.commits.len() - 1));
+
+        let selected = state.selected.map(|s| &self.commits[s]);
+
+        // Adjust scroll to keep selected commit visible, and minimize redundant trailing empty
+        // rows.
+        let mut position = state.scrollbar.get_position().min(overflow);
+        if let Some(selected) = selected.map(Commit::rows) {
+            position = selected.end.max(position + height) - height;
+            position = selected.start.min(position);
+        }
+
+        let position = position;
+        let viewport = position..(position + height).min(self.text.lines.len());
+
+        // Calculate fuzzy-matching highlights for visible candidate lines.
         let (_, snapshot, _) = state.model.refresh();
         let pattern = snapshot.pattern().column_pattern(0);
         let mut matcher = Matcher::new(Config::DEFAULT);
-        let mut highlights = vec![Vec::new(); self.text.lines.len()];
+        let mut highlights = BTreeMap::new();
 
         for item in snapshot.matched_items(..) {
-            let indices = &mut highlights[item.data.offset];
+            if !viewport.contains(&item.data.index) {
+                continue;
+            }
+
+            let mut indices = Vec::new();
             let text = item.matcher_columns[0].slice(..);
 
-            pattern.indices(text, &mut matcher, indices);
+            pattern.indices(text, &mut matcher, &mut indices);
             indices.sort_unstable();
             indices.dedup();
+
+            highlights.insert(item.data.index, indices);
         }
 
+        // Render the lines in the viewport.
         buf.set_style(area, self.text.style);
-        for ((line, indices), line_area) in self.text.lines.iter().zip(highlights).zip(area.rows())
-        {
-            highlight(line, indices).render(line_area, buf);
+        for (i, (area, line)) in area.rows().zip(&self.text.lines[viewport]).enumerate() {
+            let offset = position + i;
+            let indices = highlights.remove(&offset).unwrap_or_default();
+            highlight(line, indices).render(area, buf);
+
+            if selected.is_some_and(|commit| commit.rows().contains(&offset)) {
+                buf.set_style(area, Style::new().reversed());
+            }
         }
+
+        // Render the scrollbar.
+        state.scrollbar = state
+            .scrollbar
+            .content_length(content)
+            .viewport_content_length(height)
+            .position(position);
 
         scrollbar::widget().render(area, buf, &mut state.scrollbar);
     }
@@ -158,6 +237,7 @@ impl Default for State {
         Self {
             model: model::Picker::new(String::new()),
             scrollbar: ScrollbarState::default(),
+            selected: None,
         }
     }
 }
@@ -189,15 +269,16 @@ mod tests {
     macro_rules! assert_index_invariants {
         ($picker:expr $(,)?) => {{
             let picker = $picker;
-            for (row, commit) in &picker.index {
-                let end = row + commit.text.len();
-                assert!(*row < picker.text.lines.len());
-                assert!(*row < end);
-                assert!(end <= picker.text.lines.len());
+            for commit in &picker.commits {
+                assert!(commit.start < picker.text.lines.len());
                 assert!(!commit.text.is_empty());
                 assert!(!commit.rev.is_empty());
 
-                let rendered: Vec<_> = picker.text.lines[*row..end]
+                let rendered: Vec<_> = picker
+                    .text
+                    .lines
+                    .get(commit.rows())
+                    .unwrap()
                     .iter()
                     .map(|line| {
                         let rendered: String =
@@ -227,11 +308,11 @@ mod tests {
 
     fn summary(picker: &Picker) -> Vec<(usize, &str, Vec<&str>)> {
         picker
-            .index
+            .commits
             .iter()
-            .map(|(start, commit)| {
+            .map(|commit| {
                 (
-                    *start,
+                    commit.start,
                     commit.rev.as_str(),
                     commit.text.iter().map(String::as_str).collect(),
                 )
@@ -361,6 +442,22 @@ mod tests {
     }
 
     #[test]
+    fn initially_selects_head_when_it_is_not_the_first_commit() {
+        let picker = picker(&[
+            "○  childone user@example.com 2026-06-30 bbbbbbbb",
+            "│  child description",
+            "@  abcdefgh user@example.com 2026-06-29 aaaaaaaa",
+            "│  working-copy description",
+            "◆  zzzzzzzz root() 00000000",
+        ]);
+        let mut state = State::default();
+
+        state.initialize(&picker);
+
+        assert_eq!(state.selected, Some(1));
+    }
+
+    #[test]
     fn requires_two_spaces_between_graph_and_rev() {
         let picker = picker(&[
             "@ abcdefgh user@example.com 2026-06-29 aaaaaaaa",
@@ -399,6 +496,40 @@ mod tests {
                     ],
                 ),
                 (3, "zzzzzzzz", vec!["◆  zzzzzzzz root() 00000000"]),
+            ]
+        );
+    }
+
+    #[test]
+    fn treats_nested_elisions_and_connectors_as_unindexed_gaps() {
+        let picker = picker(&[
+            "│ ◆  abcdefgh user@example.com 2026-06-29 aaaaaaaa",
+            "│ │  first description",
+            "│ ~  (elided revisions)",
+            "├─╯",
+            "│ ○  ijklmnop user@example.com 2026-06-28 bbbbbbbb",
+            "├─╯  second description",
+        ]);
+
+        assert_summary!(
+            &picker,
+            vec![
+                (
+                    0,
+                    "abcdefgh",
+                    vec![
+                        "│ ◆  abcdefgh user@example.com 2026-06-29 aaaaaaaa",
+                        "│ │  first description",
+                    ],
+                ),
+                (
+                    4,
+                    "ijklmnop",
+                    vec![
+                        "│ ○  ijklmnop user@example.com 2026-06-28 bbbbbbbb",
+                        "├─╯  second description",
+                    ],
+                ),
             ]
         );
     }

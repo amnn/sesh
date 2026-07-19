@@ -59,7 +59,7 @@ impl State {
         f.render_stateful_widget(Loader::new(&mut self.state), area, &mut self.picker);
 
         if let Some(picker) = self.picker.pending() {
-            self.state.model.inject(picker.candidates());
+            self.state.initialize(picker);
             self.picker.finish();
         }
     }
@@ -78,6 +78,10 @@ impl State {
             KC::Char('c' | 'g' | 'o') if key.modifiers.contains(CTRL) => {
                 return Some(Action::Cancel);
             }
+
+            // Select commit
+            KC::Up => self.state.select_previous(),
+            KC::Down => self.state.select_next(),
 
             // Edit query
             KC::Backspace => self.state.model.pop(),

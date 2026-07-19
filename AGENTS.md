@@ -91,6 +91,10 @@ For read-only `jj` commands on startup or hot paths, pass
 `--ignore-working-copy` unless fresh working-copy state is required; otherwise
 large repositories can spend visible time snapshotting before `sesh` renders.
 
+When parsing graphical `jj log` output, treat nodes as lane-relative: markers
+such as `@`, `○`, and `~` may be preceded by one or more `│ ` lanes. Include
+non-leftmost nodes and adjacent connector lines in parser fixtures.
+
 ## Truth Seeking
 
 Default to verified claims over plausible guesses.

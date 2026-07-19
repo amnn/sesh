@@ -261,24 +261,25 @@ Do **not** assume every commit is two lines. With `builtin_log_compact`, most
 non-root commits are two lines, but root commits, elisions, graph connector
 lines, merges, and future jj graph output can vary.
 
-The picker stores the original rendered text and an index keyed by each commit's
-first rendered row:
+The picker stores the original rendered text and commit metadata in rendered
+row order. Each commit records its first rendered row:
 
 ```rust
 struct Picker {
     text: Text<'static>,
-    index: BTreeMap<usize, Commit>,
+    commits: Vec<Commit>,
 }
 
 struct Commit {
+    start: usize,
     text: Vec<String>,
     revision_hint: String,
 }
 ```
 
-`Text` remains the rendering source of truth. The index carries only semantic
-search and selection metadata. Commit height is derived from `text.len()` when
-needed.
+`Text` remains the rendering source of truth. The commit list carries only
+semantic search and selection metadata. Commit height is derived from
+`text.len()` when needed.
 
 Parsing approach:
 
@@ -287,8 +288,8 @@ Parsing approach:
    `^(?:│ )*[@○◆×](?: │)* {2,}(?P<rev>[a-z]+)(?:\s|$)`.
 3. A commit starts at a detected header and continues until the next detected
    header.
-4. A `~` elision/gap line terminates the current commit and remains visible but
-   unindexed.
+4. A `~` elision/gap node in any graph lane terminates the current commit and
+   remains visible but unindexed.
 5. Lines before the first commit header remain visible but unindexed.
 
 ### 6. Fuzzy matching without filtering rows
@@ -301,12 +302,16 @@ pattern.reparse(&query, CaseMatching::Smart, Normalization::Smart);
 pattern.indices(utf32_searchable.slice(..), &mut matcher, &mut indices);
 ```
 
-For each commit block store:
+Candidate lines identify both their commit's position in `Picker::commits` and
+their line within that commit. The commit position supports direct selection
+for match navigation, while the local line identifies the rendered row to
+highlight:
 
 ```rust
-struct MatchState {
-    score: Option<u32>,
-    indices: Vec<u32>,
+struct Candidate {
+    commit: usize,
+    line: usize,
+    text: String,
 }
 ```
 
@@ -326,11 +331,15 @@ spans may not invert the full row width.
 
 ### 7. Navigation behavior
 
+Status: Working-copy selection and `up` / `down` navigation are done; match
+navigation is still pending.
+
 Maintain selection as an index into selectable commit blocks, not raw terminal
 lines.
 
-- On entering onto mode, select the first visible selectable block, preferably
-  the block corresponding to the current preview's top/current row if easy.
+- On entering onto mode, select the current workspace's working-copy block
+  marked `@`, even when it is not the first commit in the rendered log. Fall
+  back to the first selectable block when no working-copy block can be parsed.
 - `up` / `down`: previous/next selectable block.
 - `tab` / `S-tab`: next/previous block whose `score.is_some()` when query is
   non-empty. If query is empty, either no-op or behave like down/up; pick one
