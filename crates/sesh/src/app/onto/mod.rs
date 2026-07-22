@@ -82,6 +82,8 @@ impl State {
             // Select commit
             KC::Up => self.state.select_previous(),
             KC::Down => self.state.select_next(),
+            KC::Tab => self.state.select_next_match(),
+            KC::BackTab => self.state.select_previous_match(),
 
             // Edit query
             KC::Backspace => self.state.model.pop(),

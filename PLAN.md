@@ -331,8 +331,7 @@ spans may not invert the full row width.
 
 ### 7. Navigation behavior
 
-Status: Working-copy selection and `up` / `down` navigation are done; match
-navigation is still pending.
+Status: Done.
 
 Maintain selection as an index into selectable commit blocks, not raw terminal
 lines.
@@ -342,10 +341,15 @@ lines.
   back to the first selectable block when no working-copy block can be parsed.
 - `up` / `down`: previous/next selectable block.
 - `tab` / `S-tab`: next/previous block whose `score.is_some()` when query is
-  non-empty. If query is empty, either no-op or behave like down/up; pick one
-  and test it.
+  non-empty, wrapping at the end/beginning. Both keys are no-ops when the query
+  is empty or has no matches.
 - If the query changes and the current selection no longer matches, keep the
   selection where it is. `tab`/`S-tab` are the explicit match navigation.
+
+The render pass stores matching commit positions in a `BTreeSet` on picker
+state. This keeps navigation synchronized with the fuzzy snapshot that was
+actually rendered and gives `tab`/`S-tab` logarithmic next/previous range
+lookups instead of scanning the matches.
 
 ### 8. Accepting a base row
 
@@ -414,6 +418,9 @@ Already covered:
 - The session list remains visible/unchanged in onto mode.
 - The onto picker renders the current repo context, not the selected row's repo.
 - `C-g` cancels onto mode and restores the `session:` prompt/query.
+- Typing a query highlights matching preview rows without hiding non-matching
+  rows.
+- `tab`/`S-tab` jump between matching rows and wrap in rendered order.
 
 Still needed:
 
@@ -423,9 +430,6 @@ Still needed:
   - local bookmark wins over remote/change,
   - remote bookmark wins over change,
   - change id fallback.
-- Typing a query highlights matching preview rows without hiding non-matching
-  rows.
-- `tab`/`S-tab` jump between matching rows.
 - `enter` accepts a selected row and updates header `onto` text.
 
 When snapshots change because `jj::log` now forces `builtin_log_compact`, refresh

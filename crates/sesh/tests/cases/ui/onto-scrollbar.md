@@ -1,8 +1,8 @@
 # Onto scrollbar
 
 This scenario verifies that the onto picker selects and inverts the working-copy
-commit, navigates commits independently from fuzzy matching, and scrolls an
-overflowing current-repo log.
+commit, navigates commits independently from fuzzy matching, jumps between
+matches, and scrolls an overflowing current-repo log.
 
     :bins jj cat python3
 
@@ -63,6 +63,25 @@ Pressing `Up` twice should move to the child commit, then remain there because i
 is the first commit in the view.
 
     :k Up Up
+    :snap --color "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
+Search for every numbered `line` commit. `Tab` should skip the selected,
+non-matching child and select the next matching commit in rendered order.
+
+    :k C-u line
+    :settle
+
+    :k Tab
+    :snap --color "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
+`S-tab` should wrap to the final matching commit before the root.
+
+    :k BTab
+    :snap --color "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
+`Tab` should wrap back to the first matching commit.
+
+    :k Tab
     :snap --color "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 Repeatedly pressing `Down` past the other end should leave the root commit

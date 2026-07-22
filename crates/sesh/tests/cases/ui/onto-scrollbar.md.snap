@@ -6,8 +6,8 @@ input_file: crates/sesh/tests/cases/ui/onto-scrollbar.md
 # Onto scrollbar
 
 This scenario verifies that the onto picker selects and inverts the working-copy
-commit, navigates commits independently from fuzzy matching, and scrolls an
-overflowing current-repo log.
+commit, navigates commits independently from fuzzy matching, jumps between
+matches, and scrolls an overflowing current-repo log.
 
     :bins jj cat python3
 
@@ -153,6 +153,73 @@ onto: pty6
 ![light](onto-scrollbar.md.snap.5.light.svg)
 ![dark](onto-scrollbar.md.snap.5.dark.svg)
 
+Search for every numbered `line` commit. `Tab` should skip the selected,
+non-matching child and select the next matching commit in rendered order.
+
+    :k C-u line
+    :settle (settled)
+
+    :k Tab
+    :snap --color "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
+```terminal
+onto: line
+  4/4 | [C-r] repo: ~/long, [C-o] onto: trunk() | [C-x] close, [C-f] flag
+▌⬤ plain                                                                                 ┃
+──────────────────────────────────────────────────────────────────────────────────────────
+○  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh                                  ┃
+│  (empty) child                                                                         ┃
+@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh                                  │
+│  (empty) line 06                                                                       │
+○  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh                                  │
+│  (empty) line 05                                                                       │
+```
+
+![light](onto-scrollbar.md.snap.6.light.svg)
+![dark](onto-scrollbar.md.snap.6.dark.svg)
+
+`S-tab` should wrap to the final matching commit before the root.
+
+    :k BTab
+    :snap --color "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
+```terminal
+onto: line
+  4/4 | [C-r] repo: ~/long, [C-o] onto: trunk() | [C-x] close, [C-f] flag
+▌⬤ plain                                                                                 ┃
+──────────────────────────────────────────────────────────────────────────────────────────
+○  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh                                  │
+│  (empty) line 03                                                                       │
+○  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh                                  │
+│  (empty) line 02                                                                       ┃
+○  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh                                  ┃
+│  (empty) line 01                                                                       ┃
+```
+
+![light](onto-scrollbar.md.snap.7.light.svg)
+![dark](onto-scrollbar.md.snap.7.dark.svg)
+
+`Tab` should wrap back to the first matching commit.
+
+    :k Tab
+    :snap --color "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
+
+```terminal
+onto: line
+  4/4 | [C-r] repo: ~/long, [C-o] onto: trunk() | [C-x] close, [C-f] flag
+▌⬤ plain                                                                                 ┃
+──────────────────────────────────────────────────────────────────────────────────────────
+@  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh                                  │
+│  (empty) line 06                                                                       ┃
+○  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh                                  ┃
+│  (empty) line 05                                                                       │
+○  wwwwwwww (no email set) ttttttttttttttttttt hhhhhhhh                                  │
+│  (empty) line 04                                                                       │
+```
+
+![light](onto-scrollbar.md.snap.8.light.svg)
+![dark](onto-scrollbar.md.snap.8.dark.svg)
+
 Repeatedly pressing `Down` past the other end should leave the root commit
 selected and scroll it into view.
 
@@ -160,7 +227,7 @@ selected and scroll it into view.
     :snap --color "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 ```terminal
-onto: pty6
+onto: line
   4/4 | [C-r] repo: ~/long, [C-o] onto: trunk() | [C-x] close, [C-f] flag
 ▌⬤ plain                                                                                 ┃
 ──────────────────────────────────────────────────────────────────────────────────────────
@@ -172,8 +239,8 @@ onto: pty6
 ◆  wwwwwwww root() hhhhhhhh                                                              ┃
 ```
 
-![light](onto-scrollbar.md.snap.6.light.svg)
-![dark](onto-scrollbar.md.snap.6.dark.svg)
+![light](onto-scrollbar.md.snap.9.light.svg)
+![dark](onto-scrollbar.md.snap.9.dark.svg)
 
 ---
 vim: set ft=markdown:

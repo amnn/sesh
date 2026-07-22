@@ -4,6 +4,9 @@
 //! Rendering for the `onto` revision picker.
 
 use std::collections::BTreeMap;
+use std::collections::BTreeSet;
+use std::ops::Bound::Excluded;
+use std::ops::Bound::Unbounded;
 use std::ops::Range;
 use std::sync::LazyLock;
 
@@ -36,8 +39,10 @@ static ELISION: LazyLock<Regex> = LazyLock::new(|| {
 
 /// A candidate line from a commit for the fuzzy-finder.
 pub(super) struct Candidate {
-    /// The zero-based position of this line in the rendered text.
-    index: usize,
+    /// The zero-based position of this candidate's commit.
+    commit: usize,
+    /// The zero-based position of this line within its commit.
+    line: usize,
     /// The flattened rendered text for this line of the commit.
     text: String,
 }
@@ -52,6 +57,8 @@ pub(super) struct Picker {
 /// Mutable state owned by the onto-picker preview surface.
 pub(super) struct State {
     pub(super) model: model::Picker<Candidate>,
+    /// Commit positions matched by the fuzzy snapshot used for the latest render.
+    matches: BTreeSet<usize>,
     scrollbar: ScrollbarState,
     /// Zero-based index of the selected commit.
     selected: Option<usize>,
@@ -107,14 +114,15 @@ impl Picker {
 
     /// List all candidate lines for fuzzy-finding.
     pub(super) fn candidates(&self) -> impl Iterator<Item = Candidate> + '_ {
-        self.commits.iter().flat_map(|commit| {
-            commit
+        self.commits.iter().enumerate().flat_map(|(i, metadata)| {
+            metadata
                 .text
                 .iter()
                 .cloned()
                 .enumerate()
                 .map(move |(line, text)| Candidate {
-                    index: commit.start + line,
+                    commit: i,
+                    line,
                     text,
                 })
         })
@@ -137,9 +145,27 @@ impl State {
         self.selected = self.selected.map(|selected| selected.saturating_add(1));
     }
 
+    /// Move selection to the next matching commit, wrapping at the end.
+    pub(super) fn select_next_match(&mut self) {
+        self.selected = self
+            .selected
+            .and_then(|s| self.matches.range((Excluded(s), Unbounded)).next())
+            .or_else(|| self.matches.first())
+            .copied();
+    }
+
     /// Move selection up by one commit.
     pub(super) fn select_previous(&mut self) {
         self.selected = self.selected.map(|selected| selected.saturating_sub(1));
+    }
+
+    /// Move selection to the previous matching commit, wrapping at the beginning.
+    pub(super) fn select_previous_match(&mut self) {
+        self.selected = self
+            .selected
+            .and_then(|s| self.matches.range((Unbounded, Excluded(s))).next_back())
+            .or_else(|| self.matches.last())
+            .copied();
     }
 }
 
@@ -160,6 +186,8 @@ impl StatefulWidget for &Picker {
     type State = State;
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
+        state.matches.clear();
+
         let area = area.intersection(buf.area);
         if area.is_empty() {
             return;
@@ -188,14 +216,23 @@ impl StatefulWidget for &Picker {
         let position = position;
         let viewport = position..(position + height).min(self.text.lines.len());
 
-        // Calculate fuzzy-matching highlights for visible candidate lines.
+        // Calculate fuzzy-matching highlights for visible candidate lines, while indexing every
+        // matching commit from the same snapshot used for this render.
         let (_, snapshot, _) = state.model.refresh();
         let pattern = snapshot.pattern().column_pattern(0);
         let mut matcher = Matcher::new(Config::DEFAULT);
         let mut highlights = BTreeMap::new();
 
         for item in snapshot.matched_items(..) {
-            if !viewport.contains(&item.data.index) {
+            // An empty pattern matches everything, but we don't want to tab through every commit in
+            // that case, so ignore matches if the pattern is empty.
+            if !snapshot.pattern().is_empty() {
+                state.matches.insert(item.data.commit);
+            }
+
+            let commit = &self.commits[item.data.commit];
+            let index = commit.start + item.data.line;
+            if !viewport.contains(&index) {
                 continue;
             }
 
@@ -206,7 +243,7 @@ impl StatefulWidget for &Picker {
             indices.sort_unstable();
             indices.dedup();
 
-            highlights.insert(item.data.index, indices);
+            highlights.insert(index, indices);
         }
 
         // Render the lines in the viewport.
@@ -236,6 +273,7 @@ impl Default for State {
     fn default() -> Self {
         Self {
             model: model::Picker::new(String::new()),
+            matches: BTreeSet::new(),
             scrollbar: ScrollbarState::default(),
             selected: None,
         }
@@ -454,6 +492,42 @@ mod tests {
 
         state.initialize(&picker);
 
+        assert_eq!(state.selected, Some(1));
+    }
+
+    #[test]
+    fn match_navigation_is_no_op_without_rendered_matches() {
+        let picker = picker(&[
+            "○  childone user@example.com 2026-06-30 bbbbbbbb",
+            "@  abcdefgh user@example.com 2026-06-29 aaaaaaaa",
+            "◆  zzzzzzzz root() 00000000",
+        ]);
+        let mut state = State::default();
+        state.initialize(&picker);
+
+        state.select_next_match();
+        assert_eq!(state.selected, Some(1));
+
+        state.select_previous_match();
+        assert_eq!(state.selected, Some(1));
+    }
+
+    #[test]
+    fn match_navigation_uses_rendered_index_and_wraps() {
+        let mut state = State::default();
+        state.matches.extend([1, 4, 7]);
+        state.selected = Some(2);
+
+        state.select_next_match();
+        assert_eq!(state.selected, Some(4));
+
+        state.select_previous_match();
+        assert_eq!(state.selected, Some(1));
+
+        state.select_previous_match();
+        assert_eq!(state.selected, Some(7));
+
+        state.select_next_match();
         assert_eq!(state.selected, Some(1));
     }
 

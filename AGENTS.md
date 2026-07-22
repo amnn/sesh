@@ -78,6 +78,12 @@ an immediate-mode widget and retain only the load task and loaded view in
 `app::component::loader::State`; keep reusable inner widget state outside the
 loader state so owners can share it when needed.
 
+For actions based on asynchronously refreshed matcher output, derive and retain
+the action index from the exact snapshot used by the render pass. Input handlers
+must use that retained index instead of refreshing matcher state independently.
+Use an ordered index for next/previous navigation rather than repeatedly
+scanning matches.
+
 When moving behavior onto domain types, keep configuration arguments narrow:
 pass only the values the method needs rather than the full `SeshConfig`.
 
