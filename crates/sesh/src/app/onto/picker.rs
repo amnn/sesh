@@ -146,7 +146,13 @@ impl State {
     }
 
     /// Move selection to the next matching commit, wrapping at the end.
+    ///
+    /// Does nothing when the latest rendered fuzzy-match snapshot has no matches.
     pub(super) fn select_next_match(&mut self) {
+        if self.matches.is_empty() {
+            return;
+        }
+
         self.selected = self
             .selected
             .and_then(|s| self.matches.range((Excluded(s), Unbounded)).next())
@@ -160,7 +166,13 @@ impl State {
     }
 
     /// Move selection to the previous matching commit, wrapping at the beginning.
+    ///
+    /// Does nothing when the latest rendered fuzzy-match snapshot has no matches.
     pub(super) fn select_previous_match(&mut self) {
+        if self.matches.is_empty() {
+            return;
+        }
+
         self.selected = self
             .selected
             .and_then(|s| self.matches.range((Unbounded, Excluded(s))).next_back())
@@ -250,12 +262,17 @@ impl StatefulWidget for &Picker {
         buf.set_style(area, self.text.style);
         for (i, (area, line)) in area.rows().zip(&self.text.lines[viewport]).enumerate() {
             let offset = position + i;
-            let indices = highlights.remove(&offset).unwrap_or_default();
-            highlight(line, indices).render(area, buf);
+            let selected = selected.is_some_and(|commit| commit.rows().contains(&offset));
+            let (row, matched) = if selected {
+                (Style::new().reversed(), Style::new().not_reversed())
+            } else {
+                (Style::new().not_reversed(), Style::new().reversed())
+            };
 
-            if selected.is_some_and(|commit| commit.rows().contains(&offset)) {
-                buf.set_style(area, Style::new().reversed());
-            }
+            buf.set_style(area, row);
+
+            let indices = highlights.remove(&offset).unwrap_or_default();
+            highlight(line, indices, row, matched).render(area, buf);
         }
 
         // Render the scrollbar.
@@ -280,20 +297,18 @@ impl Default for State {
     }
 }
 
-/// Return `line` with underlines overlaid at fuzzy-match character positions in `indices`.
-fn highlight(line: &Line<'static>, indices: Vec<u32>) -> Line<'static> {
-    let mut hl = Highlight::new(indices, Style::underlined);
-    let spans = line
-        .spans
-        .iter()
-        .cloned()
-        .flat_map(|span| hl.highlight(span))
-        .collect();
+/// Return `line` with every character patched by `row` and fuzzy matches patched by `matched`.
+fn highlight(line: &Line<'static>, indices: Vec<u32>, row: Style, matched: Style) -> Line<'static> {
+    let mut hl = Highlight::new(indices, move |style| style.patch(matched));
+    let spans = line.spans.iter().cloned().flat_map(|mut span| {
+        span.style = span.style.patch(row);
+        hl.highlight(span)
+    });
 
     Line {
         style: line.style,
         alignment: line.alignment,
-        spans,
+        spans: spans.collect(),
     }
 }
 

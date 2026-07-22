@@ -318,8 +318,9 @@ struct Candidate {
 Rendering rules:
 
 - all preview lines remain visible,
-- matching commit blocks get character-level highlight using existing
-  `ui::Highlight`,
+- matching commit blocks get character-level reversed highlighting using
+  existing `ui::Highlight`; inside the fully reversed selected block, matched
+  characters remove the reversal so they remain visible,
 - non-matching blocks remain visible unchanged,
 - selected commit block is inverted/reversed across the full rendered row width,
 - unselectable context lines are never selected but remain visible.

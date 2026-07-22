@@ -41,15 +41,16 @@ inverted. The scrollbar thumb should remain visible at the top edge.
     :k C-o
     :snap --color -d 2s "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
-Typing an onto query should update the fuzzy model used by rendering. The SVG
-snapshot preserves the underlines on the matching characters in the selected
-`line 06` commit.
+Typing an onto query should update the fuzzy model used by rendering. Matching
+characters should be reversed against their surrounding row; inside the selected
+reversed `line 06` row, they should be switched back for contrast.
 
     :k pty6
     :snap --color "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
 
 `Down` should move selection to `line 05` even though it does not match the
-query. The match underline stays on `line 06` while the inversion moves down.
+query. The matching characters stay reversed on `line 06` while the full-row
+inversion moves down.
 
     :k Down
     :snap --color "/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{1,2}/t" "/(?:@|○|◆)\s+([a-z]{8})/w" "/\b([0-9a-f]{8})\b/h"
