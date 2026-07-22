@@ -48,6 +48,12 @@ pane, use an explicit `:settle` directive before `:keys` to ensure the UI has
 reached a stable state. For a freshly launched `sesh` pane, prefer
 `:settle -d 2s`; the default timeout can be too short on cold runs.
 
+Do not use `:settle` as the completion signal for an asynchronous action when
+the unchanged pane can settle while that action is still running. Synchronize
+on an observable side effect first, such as a one-shot tmux hook plus
+`wait-for` or the creation of an expected file, before querying resulting
+state.
+
 When a UI test needs to assert behavior after `sesh` exits without
 switching the client, keep the launched tmux pane alive (for example
 `"sesh ...; cat"`) so later markdown directives can still query the tmux

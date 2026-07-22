@@ -127,7 +127,7 @@ impl App {
                     continue;
                 }
 
-                match self.handle_key(key) {
+                match self.handle_key(key).await {
                     None => continue,
                     Some(Action::Cancel) => return Ok(()),
 
@@ -164,6 +164,21 @@ impl App {
             }
 
             self.discover(ctx.globs).await?;
+        }
+    }
+
+    /// Accept the selected onto-picker commit as the base for new workspaces.
+    ///
+    /// Reloads the picker when the selected revision can no longer be resolved.
+    async fn accept_onto(&mut self) {
+        let (Some(onto), Some(repo)) = (self.onto.take(), &self.repo) else {
+            return;
+        };
+
+        if let Ok(revision) = onto.accept().await {
+            self.repo = Some(repo.with_revision(revision));
+        } else {
+            self.onto = Some(onto::State::new(repo.source().to_owned()));
         }
     }
 
@@ -264,7 +279,7 @@ impl App {
     }
 
     /// Handle a single keyboard event, returning the consequent application action.
-    fn handle_key(&mut self, key: KeyEvent) -> Option<Action> {
+    async fn handle_key(&mut self, key: KeyEvent) -> Option<Action> {
         use KeyCode as KC;
         use KeyModifiers as KM;
 
@@ -288,7 +303,9 @@ impl App {
         }
 
         if let Some(onto) = &mut self.onto {
-            match onto.handle_key(key) {
+            let action = onto.handle_key(key);
+            match action {
+                Some(onto::Action::Accept) => self.accept_onto().await,
                 Some(onto::Action::Cancel) => self.onto = None,
                 None => {}
             }

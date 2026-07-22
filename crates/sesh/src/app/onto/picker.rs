@@ -179,6 +179,13 @@ impl State {
             .or_else(|| self.matches.last())
             .copied();
     }
+
+    /// Return the selected commit's revision hint.
+    pub(super) fn selected_revision<'p>(&self, picker: &'p Picker) -> Option<&'p str> {
+        self.selected
+            .and_then(|selected| picker.commits.get(selected))
+            .map(|commit| commit.rev.as_str())
+    }
 }
 
 impl Commit {
@@ -562,6 +569,22 @@ mod tests {
                 vec!["@  qrstuvwx user@example.com 2026-06-27 cccccccc"],
             ),]
         );
+    }
+
+    #[test]
+    fn returns_selected_revision() {
+        let picker = picker(&[
+            "@  abcdefgh user@example.com 2026-06-29 aaaaaaaa",
+            "○  ijklmnop user@example.com 2026-06-28 bbbbbbbb",
+        ]);
+
+        let mut state = State::default();
+        state.initialize(&picker);
+
+        assert_eq!(state.selected_revision(&picker), Some("abcdefgh"));
+
+        state.select_next();
+        assert_eq!(state.selected_revision(&picker), Some("ijklmnop"));
     }
 
     #[test]

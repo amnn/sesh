@@ -373,6 +373,15 @@ impl Repo {
             revision: self.revision.clone(),
         }
     }
+
+    /// Return a copy of this repo with the base revision overridden.
+    pub(crate) fn with_revision(&self, revision: String) -> Self {
+        Self {
+            source: self.source.clone(),
+            default: self.default.clone(),
+            revision,
+        }
+    }
 }
 
 impl RepoKind {

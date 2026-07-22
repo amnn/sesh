@@ -2,7 +2,7 @@
 
 ## Session and Repo Lifecycle
 
-- [ ] Add `C-o` to pick the `onto` revision used for new workspaces.
+- [x] Add `C-o` to pick the `onto` revision used for new workspaces.
   - Label this as `onto:` in the header and user-facing text.
   - Define revision resolution rules for mixed repo types.
 

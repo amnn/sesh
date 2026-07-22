@@ -136,7 +136,7 @@ pub fn repos(globs: &[String]) -> anyhow::Result<BTreeSet<PathBuf>> {
     Ok(repos)
 }
 
-/// Fetch `jj show` output for `rev` in the repository at `repo` using `template`.
+/// Fetch template-only `jj show` output for `rev` in the repository at `repo`.
 pub async fn show(repo: &Path, rev: &str, template: &str) -> anyhow::Result<String> {
     let output = Command::new("jj")
         .arg("show")
@@ -145,6 +145,7 @@ pub async fn show(repo: &Path, rev: &str, template: &str) -> anyhow::Result<Stri
         .args(["-r", rev])
         .arg("--ignore-working-copy")
         .arg("--no-pager")
+        .arg("--no-patch")
         .args(["--color", "never"])
         .args(["--template", template])
         .output()
@@ -365,7 +366,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn shows_revision_with_template() {
+    async fn shows_non_empty_revision_with_template_without_patch() {
         let temp = tempdir().unwrap();
         let repo = temp.path().join("repo");
 
@@ -377,15 +378,30 @@ mod tests {
             .unwrap();
         assert!(output.status.success());
 
-        let template = concat!(
-            "change_id ++ \"\\t\" ++ self.contained_in(\"trunk()\") ++ \"\\t\" ++ ",
-            "local_bookmarks ++ \"\\t\" ++ remote_bookmarks ++ \"\\n\"",
-        );
-        let output = show(&repo, "root()", template).await.unwrap();
-        let fields: Vec<_> = output.trim_end_matches('\n').split('\t').collect();
+        fs::write(repo.join("file"), "contents").unwrap();
+        let output = Command::new("jj")
+            .arg("describe")
+            .arg("-R")
+            .arg(&repo)
+            .args(["-m", "non-empty"])
+            .output()
+            .await
+            .unwrap();
+        assert!(output.status.success());
 
+        let template = concat!(
+            r#"change_id.short() ++ "\t" ++ self.contained_in("trunk()") ++ "\t" ++ "#,
+            r#"local_bookmarks ++ "\t" ++ remote_bookmarks ++ "\n""#,
+        );
+
+        let output = show(&repo, "@", template).await.unwrap();
+        let lines: Vec<_> = output.lines().collect();
+
+        assert_eq!(lines.len(), 1, "output: {output:?}");
+        let fields: Vec<_> = lines[0].split('\t').collect();
         assert_eq!(fields.len(), 4);
-        assert!(fields[0].chars().all(|c| c == 'z'), "rev: {:?}", fields[0]);
+        assert_eq!(fields[0].len(), 12);
+        assert!(fields[0].chars().all(|c| c.is_ascii_lowercase()));
         assert!(matches!(fields[1], "true" | "false"));
         assert_eq!(fields[2], "");
         assert_eq!(fields[3], "");

@@ -102,6 +102,15 @@ impl<V> State<V> {
         }
     }
 
+    /// Return the loaded view, including after it has been marked handled.
+    pub(crate) fn view(&self) -> Option<&V> {
+        if let Status::Loaded { view, .. } = &self.status {
+            Some(view)
+        } else {
+            None
+        }
+    }
+
     /// Poll the background task and update the status if the load completed.
     fn poll(&mut self) {
         match &mut self.status {
