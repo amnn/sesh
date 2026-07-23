@@ -15,7 +15,8 @@ The switcher is configured via a configuration file at
 `~/.config/sesh/sesh.toml`, containing the following properties:
 
 - `repo.globs`: A list of glob patterns to locate jj repositories. These stack
-  with repository globs supplied on the command line.
+  with repository globs supplied on the command line. A leading `~` path
+  component expands to the user's home directory.
 - `ui.sigil`: A character used to indicate a live tmux session.
 - `workspace.template`: A template for naming new workspaces. This can be
   a relative path that ends in a directory name that contains the `{repo}`

@@ -56,6 +56,19 @@ impl TruncatedExt for PathBuf {
     }
 }
 
+/// Replace a leading `~` component in `path` with the home directory, if known. Otherwise, return
+/// `path` unchanged.
+pub(crate) fn expand_home(path: impl AsRef<Path>) -> PathBuf {
+    let path = path.as_ref();
+    if let Some(home) = HOME_DIR.as_deref()
+        && let Ok(rest) = path.strip_prefix("~")
+    {
+        home.join(rest)
+    } else {
+        path.to_owned()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::path::MAIN_SEPARATOR_STR;

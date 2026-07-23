@@ -20,7 +20,7 @@ pub const PATH: &str = "sesh.toml";
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default)]
 pub struct RepoConfig {
-    /// Glob patterns to search for jj repositories.
+    /// Glob patterns to search for jj repositories, with leading `~` components expanded.
     pub globs: Vec<String>,
 }
 

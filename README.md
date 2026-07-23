@@ -38,11 +38,14 @@ config:
 ```toml
 [repo]
 globs = [
-  "/Users/alice/Code/*",
-  "/Users/alice/.bootstrap",
-  "/Users/alice/.config/nvim"
+  "~/Code/*",
+  "~/.bootstrap",
+  "~/.config/nvim"
 ]
 ```
+
+A leading `~` path component in a repository glob expands to your home
+directory (like it would in your shell).
 
 You can also pass one or more repository globs to `sesh`. Command-line globs
 stack with `repo.globs` from config:
@@ -116,8 +119,8 @@ the picker:
 ```toml
 [repo]
 globs = [
-  "/Users/alice/Code/*",
-  "/Users/alice/.config/nvim"
+  "~/Code/*",
+  "~/.config/nvim"
 ]
 
 [tmux]

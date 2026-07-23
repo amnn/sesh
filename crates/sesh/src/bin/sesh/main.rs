@@ -67,7 +67,8 @@ struct Args {
         action = ArgAction::Append,
         long_help = "Additional repository globs to surface alongside existing tmux sessions. \
                      Pass once per glob; these stack with repo.globs from config, and each \
-                     matching jj repo can be used as context for new repo-backed workspaces."
+                     matching jj repo can be used as context for new repo-backed workspaces. A \
+                     leading ~ path component expands to the user's home directory."
     )]
     repos: Vec<String>,
 }

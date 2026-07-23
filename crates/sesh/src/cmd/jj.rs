@@ -13,6 +13,8 @@ use anyhow::ensure;
 use tokio::process::Command;
 use which::which;
 
+use crate::path::expand_home;
+
 /// The default revision used as the parent for newly-created workspaces.
 pub const DEFAULT_BASE_REVSET: &str = "trunk()";
 
@@ -120,10 +122,15 @@ pub fn repo_root(path: &Path) -> Option<PathBuf> {
 }
 
 /// Discover valid jj repositories from directories matching `globs`.
+///
+/// A leading `~` path component in a glob is expanded to the user's home directory. Returns an
+/// error if a glob is invalid or a leading `~` cannot be expanded into a UTF-8 path.
 pub fn repos(globs: &[String]) -> anyhow::Result<BTreeSet<PathBuf>> {
     let mut repos = BTreeSet::new();
     for pattern in globs {
-        for path in glob::glob(pattern).with_context(|| format!("invalid glob: '{pattern}'"))? {
+        let expanded = expand_home(pattern);
+        let expanded = expanded.to_str().context("invalid glob")?;
+        for path in glob::glob(expanded).with_context(|| format!("invalid glob: '{pattern}'"))? {
             if let Ok(path) = path
                 && path.join(".jj").is_dir()
                 && let Ok(path) = path.canonicalize()

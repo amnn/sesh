@@ -57,7 +57,8 @@ Options:
   -r, --repo <GLOB>
           Additional repository globs to surface alongside existing tmux sessions. Pass once per
           glob; these stack with repo.globs from config, and each matching jj repo can be used as
-          context for new repo-backed workspaces.
+          context for new repo-backed workspaces. A leading ~ path component expands to the user's
+          home directory.
 
   -V, --version
           Print version
@@ -88,7 +89,8 @@ Configuration:
 
   repo.globs        Glob patterns for jj repositories to surface alongside
                     existing tmux sessions. These stack with any --repo command-
-                    line globs.
+                    line globs. A leading ~ path component expands to the user's
+                    home directory.
   tmux.setup        Shell script to run after sesh creates a detached tmux
                     session. The script runs in the new session's tmux context
                     and working directory, so commands can use default tmux
@@ -101,8 +103,8 @@ Example:
 
   [repo]
   globs = [
-    "/Users/alice/Code/*",
-    "/Users/alice/.config/nvim"
+    "~/Code/*",
+    "~/.config/nvim"
   ]
 
   [tmux]

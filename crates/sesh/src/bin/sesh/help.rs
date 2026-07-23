@@ -181,7 +181,8 @@ fn write_config_help<W: Write>(w: &mut Writer<W>) -> io::Result<()> {
     w.def(
         "repo.globs",
         "Glob patterns for jj repositories to surface alongside existing tmux sessions. These \
-         stack with any --repo command-line globs.",
+         stack with any --repo command-line globs. A leading ~ path component expands to the \
+         user's home directory.",
     )?;
 
     w.def(
@@ -208,8 +209,8 @@ fn write_config_help<W: Write>(w: &mut Writer<W>) -> io::Result<()> {
     w.code(|out| {
         writeln!(out, "  [repo]")?;
         writeln!(out, "  globs = [")?;
-        writeln!(out, "    \"/Users/alice/Code/*\",")?;
-        writeln!(out, "    \"/Users/alice/.config/nvim\"")?;
+        writeln!(out, "    \"~/Code/*\",")?;
+        writeln!(out, "    \"~/.config/nvim\"")?;
         writeln!(out, "  ]")?;
         writeln!(out)?;
         writeln!(out, "  [tmux]")?;
