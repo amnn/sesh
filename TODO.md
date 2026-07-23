@@ -12,7 +12,18 @@
 - [ ] Find a way to keep the session picker working even if the workspace is
   stale.
 
+- [ ] Repo handling after a deletion. Operations that require the repo seem to
+  break after the current repo gets deleted.
+
 - [ ] Rename session
+
+## Harnesses
+
+- [ ] Agent progress indicator -- `sesh` exposes commands that agents can call
+  to set their status (which in turn set a tmux user option on the underlying
+  pane. Harness extensions call these commands to indicate when an agent is
+  idle, running, waiting for input, succeeded or failed. `sesh` displays this
+  information in the session list.
 
 ## UI
 
