@@ -26,7 +26,8 @@ use crate::cmd::jj;
 /// Template used to resolve a selected log row into semantic revision metadata.
 const BASE_REVISION_TEMPLATE: &str = concat!(
     r#"change_id.short() ++ "\t" ++ self.contained_in("trunk()") ++ "\t" ++ "#,
-    r#"local_bookmarks ++ "\t" ++ remote_bookmarks ++ "\n""#,
+    r#"local_bookmarks.map(|bookmark| bookmark.name()).join(" ") ++ "\t" ++ "#,
+    r#"remote_bookmarks ++ "\n""#,
 );
 
 /// Result of handling a key while `onto` revision selection is active.

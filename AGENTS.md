@@ -103,6 +103,10 @@ For read-only `jj` commands on startup or hot paths, pass
 `--ignore-working-copy` unless fresh working-copy state is required; otherwise
 large repositories can spend visible time snapshotting before `sesh` renders.
 
+When a `jj` template emits local bookmark names for later use as revisions,
+render each `CommitRef.name()` instead of the `CommitRef` itself. The latter is
+human-facing and can append state markers such as `*` for an unpushed bookmark.
+
 When parsing graphical `jj log` output, treat nodes as lane-relative: markers
 such as `@`, `○`, and `~` may be preceded by one or more `│ ` lanes. Include
 non-leftmost nodes and adjacent connector lines in parser fixtures.

@@ -6,20 +6,30 @@ input_file: crates/sesh/tests/cases/ui/onto-accept.md
 # Accept onto revision
 
 This scenario selects a bookmarked commit from the onto picker and verifies that
-accepting it returns to session mode with the semantic bookmark in the header.
+accepting it returns to session mode with the semantic bookmark in the header,
+without the push-status marker rendered by `jj`.
 
-    :bins jj tmux sh sleep grep
+    :bins git jj tmux sh sleep grep
 
 > [!NOTE]
-> 'jj', 'tmux', 'sh', 'sleep', and 'grep' are available.
+> 'git', 'jj', 'tmux', 'sh', 'sleep', and 'grep' are available.
 
     :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
 
     :t rename-session -t 0 runner (success)
+    :$ jj config set --user user.name "Test User" (exit: 0)
+    :$ jj config set --user user.email test@example.com (exit: 0)
+    :$ git init --bare -q origin.git (exit: 0)
     :$ jj git init alpha (exit: 0)
+    :$ sh -c 'printf "pushed\n" > alpha/pushed.txt' (exit: 0)
+    :$ jj describe -R alpha -m "pushed commit" (exit: 0)
+    :$ jj bookmark create -R alpha -r @ base (exit: 0)
+    :$ jj git remote add -R alpha origin origin.git (exit: 0)
+    :$ jj git push -R alpha --bookmark base (exit: 0)
+    :$ jj new -R alpha (exit: 0)
     :$ sh -c 'printf "base\n" > alpha/base.txt' (exit: 0)
     :$ jj describe -R alpha -m "base commit" (exit: 0)
-    :$ jj bookmark create -R alpha -r @ base (exit: 0)
+    :$ jj bookmark set -R alpha -r @ base (exit: 0)
     :$ jj new -R alpha (exit: 0)
     :$ jj describe -R alpha -m "working copy" (exit: 0)
     :t new-session -d -s ui "cd alpha && sesh -r ../alpha" (success)
@@ -41,7 +51,9 @@ mode.
     :$ sh -c 'until pane=$(tmux capture-pane -p -t ui:0) && ! printf "%s\n" "$pane" | grep -q "working copy" && printf "%s\n" "$pane" | grep -q "base commit"; do sleep 0.01; done' (exit: 0)
 
 Move from the refreshed working-copy commit to the bookmarked base and accept
-it. The session query and selection should remain unchanged.
+it. Although the local bookmark is ahead of its remote and renders as `base*` in
+the log, the semantic revision in the header should be `base`. The session query
+and selection should remain unchanged.
 
     :k down enter
     :snap -d 2s
