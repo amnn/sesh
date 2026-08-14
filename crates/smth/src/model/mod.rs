@@ -103,6 +103,14 @@ impl Model {
             .collect()
     }
 
+    /// Return the discovered session matching an optional repository base and name.
+    pub fn session(&self, base: Option<&Path>, name: Option<&str>) -> Option<&Session> {
+        match base {
+            Some(base) => self.session_by_workspace(base, name),
+            None => name.and_then(|name| self.session_by_name(name)),
+        }
+    }
+
     /// Return all matched sessions after the matcher has finished processing pending updates.
     pub fn matches(&mut self) -> Vec<Session> {
         loop {
@@ -346,6 +354,33 @@ impl Model {
         }
     }
 
+    /// Return the plain session matching `name`.
+    fn session_by_name(&self, name: &str) -> Option<&Session> {
+        self.sessions
+            .iter()
+            .find(|session| session.repo().is_none() && session.name() == name)
+    }
+
+    /// Return the session matching a repository family and workspace name.
+    fn session_by_workspace(&self, base: &Path, name: Option<&str>) -> Option<&Session> {
+        let selected = self.workspace_info(base)?;
+        let name = name.or(selected.name.as_deref());
+        let base = existing_default(selected).unwrap_or(base);
+
+        self.sessions.iter().find(|session| {
+            let Some(repo) = session.repo() else {
+                return false;
+            };
+
+            let Some(workspace) = self.workspace_info(&repo) else {
+                return false;
+            };
+
+            workspace.name.as_deref() == name
+                && existing_default(workspace).unwrap_or(&repo) == base
+        })
+    }
+
     /// Return workspace metadata for `repo`.
     fn workspace_info(&self, repo: &Path) -> Option<&Workspace> {
         self.workspaces.get(repo).and_then(Option::as_ref)
@@ -397,19 +432,34 @@ mod tests {
     use super::*;
 
     fn model_with_workspace(workspace: &Path, default: PathBuf) -> Model {
+        let session =
+            RepoKind::new(Some("feature"), default.clone(), workspace.to_owned(), true).into();
+
+        let mut workspaces = BTreeMap::from([(
+            workspace.to_owned(),
+            Some(Workspace {
+                name: Some("feature".to_owned()),
+                default: Some(default.clone()),
+            }),
+        )]);
+
+        if default.exists() {
+            workspaces.insert(
+                default.clone(),
+                Some(Workspace {
+                    name: None,
+                    default: Some(default),
+                }),
+            );
+        }
+
         Model {
             picker: Picker::new(String::new()),
-            sessions: Vec::new(),
+            sessions: vec![session],
             recently_attached: None,
             seen_tmux_names: BTreeSet::new(),
             seen_workspaces: BTreeMap::new(),
-            workspaces: BTreeMap::from([(
-                workspace.to_owned(),
-                Some(Workspace {
-                    name: Some("feature".to_owned()),
-                    default: Some(default),
-                }),
-            )]),
+            workspaces,
         }
     }
 
@@ -434,5 +484,47 @@ mod tests {
         let model = model_with_workspace(&workspace, default.clone());
 
         assert_eq!(model.repo_context(workspace).path(), default);
+    }
+
+    #[test]
+    fn session_finds_non_live_workspace() {
+        let temp = tempdir().unwrap();
+        let workspace = temp.path().join("repo.feature");
+        let default = temp.path().join("repo");
+        fs::create_dir(&workspace).unwrap();
+        fs::create_dir(&default).unwrap();
+        let model = model_with_workspace(&workspace, default.clone());
+
+        let session = model.session(Some(&default), Some("feature")).unwrap();
+        assert_eq!(session.repo().as_deref(), Some(workspace.as_path()));
+        assert!(!session.is_live());
+    }
+
+    #[test]
+    fn session_finds_plain_session_by_name() {
+        let temp = tempdir().unwrap();
+        let workspace = temp.path().join("repo.feature");
+        let default = temp.path().join("repo");
+        let mut model = model_with_workspace(&workspace, default);
+        let repo = LiveKind::new(
+            "scratch".to_owned(),
+            Some(workspace),
+            BTreeMap::new(),
+            BTreeSet::new(),
+            false,
+            false,
+        );
+        let plain = LiveKind::new(
+            "scratch".to_owned(),
+            None,
+            BTreeMap::new(),
+            BTreeSet::new(),
+            false,
+            false,
+        );
+        model.sessions = vec![repo.into(), plain.into()];
+
+        let session = model.session(None, Some("scratch")).unwrap();
+        assert!(session.repo().is_none());
     }
 }
