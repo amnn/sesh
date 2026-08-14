@@ -29,6 +29,7 @@ Options:
   -1, --select-1       Automatically switch when the initial query has only one match
   -0, --exit-0         Exit without opening the UI if the initial query has no matches
   -f, --filter         Filter non-interactively using the initial query
+      --json           Print structured information about discovered entries
   -r, --repo <GLOB>    Additional repository globs to surface alongside existing tmux sessions
   -V, --version        Print version
 ```
@@ -113,6 +114,10 @@ Options:
 
   -f, --filter
           Filter non-interactively using the initial query
+
+      --json
+          Print structured JSON information about discovered live sessions and repository
+          candidates. The optional query narrows records using the same fuzzy matcher as the picker.
 
   -r, --repo <GLOB>
           Additional repository globs to surface alongside existing tmux sessions. Pass once per

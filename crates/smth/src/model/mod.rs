@@ -5,6 +5,7 @@
 
 pub(crate) mod agent;
 pub(crate) mod picker;
+pub(crate) mod serialize;
 pub(crate) mod session;
 
 use std::collections::BTreeMap;
@@ -21,6 +22,7 @@ use crate::cmd::jj;
 use crate::cmd::tmux;
 use crate::model::agent::AgentState;
 use crate::model::picker::Picker;
+use crate::model::serialize::SerializedSession;
 use crate::model::session::Base;
 use crate::model::session::LiveKind;
 use crate::model::session::NewKind;
@@ -90,6 +92,15 @@ impl Model {
 
         model.discover(globs, current).await?;
         Ok(model)
+    }
+
+    /// Return serialized records for all sessions matched by the seeded query.
+    pub fn matches_json(&mut self) -> Vec<SerializedSession> {
+        let sessions = self.matches();
+        sessions
+            .iter()
+            .map(|session| self.serialize_session(session))
+            .collect()
     }
 
     /// Return all matched sessions after the matcher has finished processing pending updates.
@@ -298,10 +309,46 @@ impl Model {
 
     /// Return the exact jj workspace name for `repo`, if it is a named workspace.
     pub(crate) fn workspace_name(&self, repo: &Path) -> Option<&str> {
-        self.workspaces
-            .get(repo)
-            .and_then(|w| w.as_ref())
-            .and_then(|w| w.name.as_deref())
+        self.workspace_info(repo).and_then(|w| w.name.as_deref())
+    }
+
+    /// Convert one picker session into its stable serialized schema.
+    fn serialize_session(&self, session: &Session) -> SerializedSession {
+        let path = session.repo();
+        let (base, name) = if let Some(path) = path.as_deref() {
+            if let Some(workspace) = self.workspace_info(path) {
+                let base = existing_default(workspace).unwrap_or(path).to_owned();
+                (Some(base), workspace.name.clone())
+            } else {
+                (Some(path.to_owned()), None)
+            }
+        } else {
+            (None, session.is_live().then(|| session.name()))
+        };
+
+        let agents: BTreeMap<_, _> = session
+            .agents()
+            .into_iter()
+            .flatten()
+            .map(|(state, count)| (state.value(), *count))
+            .collect();
+
+        SerializedSession {
+            base,
+            name,
+            path,
+            tmux: session.name(),
+            live: session.is_live(),
+            deletable: session.can_delete(),
+            flagged: session.flag(),
+            attention: session.attention_windows().cloned().unwrap_or_default(),
+            agents,
+        }
+    }
+
+    /// Return workspace metadata for `repo`.
+    fn workspace_info(&self, repo: &Path) -> Option<&Workspace> {
+        self.workspaces.get(repo).and_then(Option::as_ref)
     }
 }
 
