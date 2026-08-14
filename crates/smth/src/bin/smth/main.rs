@@ -101,6 +101,17 @@ struct Args {
     #[arg(short = 'f', long, action = ArgAction::SetTrue)]
     filter: bool,
 
+    /// Print structured information about discovered entries.
+    #[arg(
+        long,
+        action = ArgAction::SetTrue,
+        conflicts_with_all = ["filter", "select_1"],
+        long_help = "Print structured JSON information about discovered live sessions and \
+                     repository candidates. The optional query narrows records using the same \
+                     fuzzy matcher as the picker."
+    )]
+    json: bool,
+
     /// Additional repository globs to surface alongside existing tmux sessions.
     #[arg(
         short = 'r',
@@ -125,7 +136,28 @@ enum Command {
     Agent(agent::Args),
 }
 
+/// Non-interactive root operation selected after parsing flat CLI options.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum Action {
+    /// Print fuzzy matches as names.
+    Filter,
+
+    /// Print fuzzy matches as structured records.
+    Json,
+}
+
 impl Args {
+    /// Return the selected non-interactive root action.
+    fn action(&self) -> Option<Action> {
+        if self.filter {
+            Some(Action::Filter)
+        } else if self.json {
+            Some(Action::Json)
+        } else {
+            None
+        }
+    }
+
     /// The base repository for the current smth invocation.
     ///
     /// Controlled by the `--base` and `--no-base` flags, or inferred from the current working
@@ -157,6 +189,7 @@ impl Args {
 #[tokio::main]
 async fn main() -> anyhow::Result<ExitCode> {
     let args = Args::parse();
+    let action = args.action();
 
     if args.long_help {
         help::write_long_help::<Args>()?;
@@ -191,8 +224,14 @@ async fn main() -> anyhow::Result<ExitCode> {
 
     let query = args.query.unwrap_or_default();
     let mut model = Model::new(&globs, current.as_deref(), query).await?;
-    let matches = model.matches();
 
+    if action == Some(Action::Json) {
+        let sessions = model.matches_json();
+        println!("{}", serde_json::to_string_pretty(&sessions)?);
+        return Ok(ExitCode::SUCCESS);
+    }
+
+    let matches = model.matches();
     if args.exit_0 && matches.is_empty() {
         return Ok(ExitCode::SUCCESS);
     }
@@ -204,7 +243,7 @@ async fn main() -> anyhow::Result<ExitCode> {
         return Ok(ExitCode::SUCCESS);
     }
 
-    if args.filter {
+    if action == Some(Action::Filter) {
         for session in &matches {
             println!("{}", session.name());
         }

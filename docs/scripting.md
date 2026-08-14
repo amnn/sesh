@@ -26,3 +26,20 @@ The picker and filtering modes support these startup options:
   no matches.
 - `-f`, `--filter` skips the UI and prints matches for the query from `--query`;
   combine it with `-1` to switch when there is exactly one match.
+- `--json` skips the UI and emits structured records for live sessions and
+  repository candidates. It cannot be combined with `--filter` or `--select-1`.
+  `--query` narrows the output with the picker's fuzzy matcher. `--exit-0` is
+  ignored so that an empty result is always emitted as `[]`.
+
+## Structured inspection
+
+`smth --json` emits a JSON array. Every record includes its resolved tmux name
+and live and deletion state. Repo-backed records include the normalized default
+workspace path to pass to `--base`; plain sessions omit `base`. The `name` field
+contains a named-workspace or plain-session operand and is omitted for a default
+checkout. `path` is omitted when no checkout exists, `flagged` appears only for
+live sessions, and `attention` and `agents` are omitted when empty.
+
+Use the `base` and `name` fields together when constructing a lifecycle
+command. Do not substitute a discovery glob or derive a target from the tmux
+name: collision suffixes and repository metadata are resolved independently.

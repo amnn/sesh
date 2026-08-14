@@ -160,6 +160,14 @@ impl Session {
         }
     }
 
+    /// Return windows with a bell or agent alert in this live session.
+    pub(crate) fn attention_windows(&self) -> Option<&BTreeSet<String>> {
+        match &self.0 {
+            Kind::Live(kind) => Some(&kind.alerts),
+            Kind::New(_) | Kind::Repo(_) => None,
+        }
+    }
+
     /// Return the live tmux alert windows for this session, if any.
     pub(crate) fn has_alerts(&self) -> bool {
         matches!(&self.0, Kind::Live(kind) if !kind.alerts.is_empty())
