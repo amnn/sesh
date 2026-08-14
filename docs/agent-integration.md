@@ -78,8 +78,9 @@ from this repository:
 pi install git:github.com/amnn/smth
 ```
 
-The Pi package is isolated under `extensions/pi-smth`. For local development,
-load that workspace package without installing it:
+The Pi package is isolated under `extensions/pi-smth` and includes both the
+lifecycle extension and an on-demand `smth` session-control skill. For local
+development, load that workspace package without installing it:
 
 ```sh
 pi -e ./extensions/pi-smth
@@ -98,7 +99,16 @@ session-naming extensions.
 Pi does not expose a generic lifecycle event for arbitrary prompts that block
 on user input, so the extension does not infer `waiting` state.
 
+The bundled skill activates when Pi is asked to inspect, create, switch, close,
+delete, flag, or unflag `smth` sessions. It starts with `smth --json`, carries
+the returned `base` and `session` identity into a strict lifecycle command, and
+avoids direct tmux or jj workspace mutations. It distinguishes close from
+delete and requires confirmation before deletion unless the user already made
+an explicit deletion request. See [Scripting][script] for the complete CLI
+contract.
+
 [pkg]: https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/packages.md
+[script]: scripting.md
 
 ### Development
 

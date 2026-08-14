@@ -26,6 +26,35 @@ use smth::cmd::jj;
 use smth::cmd::tmux;
 use smth::config::SmthConfig;
 
+/// Non-interactive root operation selected after parsing flat CLI options.
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum Action {
+    /// Print fuzzy matches as names.
+    Filter,
+
+    /// Print fuzzy matches as structured records.
+    Json,
+
+    /// Set the target live session's manual flag.
+    Flag(Option<String>),
+
+    /// Clear the target live session's manual flag.
+    Unflag(Option<String>),
+
+    /// Ensure the target session exists without switching to it.
+    Create(Option<String>),
+
+    /// Ensure the target session exists and switch to it.
+    Switch(Option<String>),
+
+    /// Close the target live session without deleting its checkout.
+    Close(Option<String>),
+
+    /// Delete the target named workspace session and close it if live.
+    Delete(String),
+}
+
+/// Parsed command-line options for interactive and non-interactive operation.
 #[derive(Debug, clap::Parser)]
 #[command(
     name = "smth",
@@ -218,34 +247,6 @@ struct Args {
 enum Command {
     /// Publish agent lifecycle state on the current tmux pane.
     Agent(agent::Args),
-}
-
-/// Non-interactive root operation selected after parsing flat CLI options.
-#[derive(Clone, Debug, Eq, PartialEq)]
-enum Action {
-    /// Print fuzzy matches as names.
-    Filter,
-
-    /// Print fuzzy matches as structured records.
-    Json,
-
-    /// Set the target live session's manual flag.
-    Flag(Option<String>),
-
-    /// Clear the target live session's manual flag.
-    Unflag(Option<String>),
-
-    /// Ensure the target session exists without switching to it.
-    Create(Option<String>),
-
-    /// Ensure the target session exists and switch to it.
-    Switch(Option<String>),
-
-    /// Close the target live session without deleting its checkout.
-    Close(Option<String>),
-
-    /// Delete the target named workspace session and close it if live.
-    Delete(String),
 }
 
 impl Args {

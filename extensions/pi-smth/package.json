@@ -1,7 +1,7 @@
 {
   "name": "pi-smth",
   "version": "0.1.0",
-  "description": "Pi agent lifecycle integration for the smth tmux session switcher",
+  "description": "Pi lifecycle and session-control integration for the smth tmux session switcher",
   "type": "module",
   "license": "Apache-2.0",
   "author": "Ashok Menon",
@@ -15,12 +15,14 @@
   "keywords": [
     "pi-package",
     "pi-extension",
+    "pi-skill",
     "tmux",
     "coding-agent"
   ],
   "files": [
     "index.ts",
     "src",
+    "skills",
     "README.md"
   ],
   "engines": {
@@ -32,10 +34,13 @@
   "pi": {
     "extensions": [
       "./index.ts"
+    ],
+    "skills": [
+      "./skills"
     ]
   },
   "scripts": {
-    "smoke": "pi --offline --no-extensions -e . --list-models __pi_package_smoke__ && pnpm run smoke:repository",
+    "smoke": "node scripts/smoke.mjs && pi --offline --no-extensions -e . --list-models __pi_package_smoke__ && pnpm run smoke:repository",
     "smoke:repository": "pi --offline --no-extensions -e ../.. --list-models __pi_repository_smoke__",
     "prepublishOnly": "pnpm --workspace-root check"
   },

@@ -5,6 +5,9 @@
   "pi": {
     "extensions": [
       "./extensions/pi-smth/index.ts"
+    ],
+    "skills": [
+      "./extensions/pi-smth/skills"
     ]
   },
   "scripts": {
