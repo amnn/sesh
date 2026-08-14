@@ -52,8 +52,17 @@ fall back to the interactive picker.
 
 - `--flag [SESSION]` marks a matching live session as flagged.
 - `--unflag [SESSION]` clears that state.
+- `-c`, `--create [SESSION]` ensures the target exists without switching the
+  current tmux client and prints its actual tmux name.
 
-Both operations are idempotent. An explicit session operand overrides a named
+Flag operations are idempotent. An explicit session operand overrides a named
 workspace inferred from `--base`; without a repository base, a plain session
 name is required. Repo-backed operations verify both the normalized repository
 family and workspace checkout metadata before changing the tmux option.
+
+Create starts a tmux session for an existing default or named checkout. If a
+named workspace does not exist, create adds it beside the default checkout at
+`--onto` (or `trunk()`), then starts tmux. A plain session starts in the process
+working directory. Newly created tmux sessions run `tmux.setup`; existing live
+sessions are left unchanged. Names are sanitized and disambiguated against both
+tmux sessions and sibling workspaces, so callers should use the printed name.

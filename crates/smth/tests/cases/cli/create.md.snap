@@ -1,0 +1,230 @@
+---
+source: crates/smth/tests/test.rs
+expression: output
+input_file: crates/smth/tests/cases/cli/create.md
+---
+# Create sessions
+
+`--create` should ensure repo-backed and plain sessions exist without switching
+the current tmux client, and report the actual tmux name it selected.
+
+    :bins jj tmux cat sh sed mkdir
+
+> [!NOTE]
+> 'jj', 'tmux', 'cat', 'sh', 'sed', and 'mkdir' are available.
+
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
+    :w smth.toml (written)
+```toml
+[tmux]
+setup = "tmux set-option @smth.test-created yes"
+```
+
+    :t rename-session -t 0 runner (success)
+    :$ jj git init alpha (exit: 0)
+    :$ jj describe -R alpha -m "base commit" (exit: 0)
+    :$ jj new -R alpha (exit: 0)
+    :$ jj describe -R alpha -m "tip commit" (exit: 0)
+    :$ jj workspace add -R alpha --name feature alpha.feature (exit: 0)
+
+A default checkout needs only a tmux session. Its repo metadata and setup script
+should be installed, while an explicit revision is ignored because no workspace
+is being created.
+
+    :$ smth --config smth.toml --base alpha --onto 'invalid(' --create (exit: 0)
+
+```stdout
+alpha
+```
+
+    :t has-session -t '=alpha' (success)
+    :t show-options -qv -t '=alpha:' @smth.test-created (success)
+
+```
+yes
+```
+
+    :$ sh -c 'tmux show-options -qv -t "=alpha:" @smth.repo | sed "s#$PWD#<ROOT>#g"' (exit: 0)
+
+```stdout
+<ROOT>/alpha
+```
+
+An existing named workspace should get a session without another jj operation.
+A colliding plain tmux name forces a suffix, which is stable on an idempotent
+second call because strict repo metadata identifies the live target.
+
+    :t new-session -d -s alpha/feature "cat" (success)
+    :$ smth --config smth.toml --base alpha --create feature (exit: 0)
+
+```stdout
+alpha/feature~1
+```
+
+    :t show-options -qv -t '=alpha/feature:' @smth.repo (success)
+    :$ sh -c 'tmux show-options -qv -t "=alpha/feature~1:" @smth.repo | sed "s#$PWD#<ROOT>#g"' (exit: 0)
+
+```stdout
+<ROOT>/alpha.feature
+```
+
+    :t show-options -qv -t '=alpha/feature~1:' @smth.test-created (success)
+
+```
+yes
+```
+
+    :$ smth --config smth.toml --base alpha.feature --create (exit: 0)
+
+```stdout
+alpha/feature~1
+```
+
+A missing named workspace should be created at the explicit revision before its
+tmux session starts.
+
+    :$ smth --config smth.toml --base alpha --onto @- --create from-base (exit: 0)
+
+```stdout
+alpha/from-base
+```
+
+    :$ jj log -R alpha.from-base --ignore-working-copy --no-pager --no-graph --color never -r @- --template description (exit: 0)
+
+```stdout
+base commit
+```
+
+    :t show-options -qv -t '=alpha/from-base:' @smth.test-created (success)
+
+```
+yes
+```
+
+When a named checkout has no registered default workspace, creation should use
+that checkout as its degraded base just like the TUI.
+
+    :$ jj git init beta (exit: 0)
+    :$ jj workspace add -R beta --name zeta beta.zeta (exit: 0)
+    :$ jj workspace forget -R beta.zeta --ignore-working-copy -- default (exit: 0)
+    :$ smth --config smth.toml --base beta.zeta --create fallback (exit: 0)
+
+```stdout
+beta-zeta/fallback
+```
+
+    :$ sh -c 'tmux show-options -qv -t "=beta-zeta/fallback:" @smth.repo | sed "s#$PWD#<ROOT>#g"' (exit: 0)
+
+```stdout
+<ROOT>/beta.zeta.fallback
+```
+
+Workspace checkout path collisions preserve the TUI's `~N` disambiguation and
+the printed tmux name exposes the suffix.
+
+    :$ mkdir alpha.topic (exit: 0)
+    :$ smth --config smth.toml --base alpha --create topic (exit: 0)
+
+```stdout
+alpha/topic~1
+```
+
+    :$ sh -c 'jj workspace list -R alpha --ignore-working-copy --no-pager --color never --template "name ++ \"\\n\"" | sed -n "/topic/p"' (exit: 0)
+
+```stdout
+"topic~1"
+```
+
+A plain target is created at the process working directory with no repository
+metadata. Matching is verbatim: creating from a name that needs sanitization
+reports the sanitized name, recalling that exact name reuses the session, and
+repeating the original request creates a freshly disambiguated session.
+
+    :$ smth --config smth.toml --no-base --create "scratch one" (exit: 0)
+
+```stdout
+scratch-one
+```
+
+    :t show-options -qv -t '=scratch-one:' @smth.repo (success)
+    :t show-options -qv -t '=scratch-one:' @smth.test-created (success)
+
+```
+yes
+```
+
+    :$ sh -c 'tmux display-message -p -t "=scratch-one:0.0" "#{pane_current_path}" | sed "s#$PWD#<ROOT>#g"' (exit: 0)
+
+```stdout
+<ROOT>
+```
+
+    :$ smth --config smth.toml --no-base --create scratch-one (exit: 0)
+
+```stdout
+scratch-one
+```
+
+    :$ smth --config smth.toml --no-base --create "scratch one" (exit: 0)
+
+```stdout
+scratch-one~1
+```
+
+    :t show-options -qv -t '=scratch-one~1:' @smth.test-created (success)
+
+```
+yes
+```
+
+A repo-backed name that sanitizes to empty is disambiguated against the existing
+default checkout, producing a suffix-only workspace name.
+
+    :$ smth --config smth.toml --base alpha --create "..." (exit: 0)
+
+```stdout
+alpha/~1
+```
+
+    :t show-options -qv -t '=alpha/~1:' @smth.test-created (success)
+
+```
+yes
+```
+
+    :$ sh -c 'tmux show-options -qv -t "=alpha/~1:" @smth.repo | sed "s#$PWD#<ROOT>#g"' (exit: 0)
+
+```stdout
+<ROOT>/alpha.~1
+```
+
+None of these detached creates should switch the invoking client.
+
+    :t display-message -p '#{client_session}' (success)
+
+```
+runner
+```
+
+A plain create without a name is invalid, and create remains mutually exclusive
+with every other root action.
+
+    :$ smth --no-base --create (exit: 1)
+
+```stderr
+Error: a session name is required without a repository base
+```
+
+    :$ smth --no-base --create scratch --flag scratch (exit: 2)
+
+```stderr
+error: the argument '--create [<SESSION>]' cannot be used with '--flag [<SESSION>]'
+
+Usage: smth --no-base --create [<SESSION>]
+
+For more information, try 'help'.
+```
+
+---
+vim: set ft=markdown:

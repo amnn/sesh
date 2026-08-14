@@ -36,7 +36,7 @@ use smth::config::SmthConfig;
 #[command(disable_help_flag = true)]
 #[command(group(
     ArgGroup::new("action")
-        .args(["filter", "json", "flag", "unflag"])
+        .args(["filter", "json", "flag", "unflag", "create"])
         .multiple(false)
 ))]
 struct Args {
@@ -142,6 +142,20 @@ struct Args {
     )]
     unflag: Option<Option<String>>,
 
+    /// Ensure a session exists without switching to it.
+    #[arg(
+        short = 'c',
+        long,
+        value_name = "SESSION",
+        num_args = 0..=1,
+        conflicts_with_all = ["query", "select_1", "exit_0"],
+        long_help = "Ensure a session exists without switching to it. Existing repository \
+                     checkouts receive a tmux session; missing named workspaces are created at \
+                     --onto; plain sessions are created in the process working directory. Prints \
+                     the actual tmux name."
+    )]
+    create: Option<Option<String>>,
+
     /// Additional repository globs to surface alongside existing tmux sessions.
     #[arg(
         short = 'r',
@@ -180,6 +194,9 @@ enum Action {
 
     /// Clear the target live session's manual flag.
     Unflag(Option<String>),
+
+    /// Ensure the target session exists without switching to it.
+    Create(Option<String>),
 }
 
 impl Args {
@@ -194,6 +211,8 @@ impl Args {
             Some(Action::Flag(session.clone()))
         } else if let Some(session) = &self.unflag {
             Some(Action::Unflag(session.clone()))
+        } else if let Some(session) = &self.create {
+            Some(Action::Create(session.clone()))
         } else {
             None
         }
@@ -275,7 +294,7 @@ async fn main() -> anyhow::Result<ExitCode> {
     if let Some((session, flagged)) = match &action {
         Some(Action::Flag(session)) => Some((session.as_deref(), true)),
         Some(Action::Unflag(session)) => Some((session.as_deref(), false)),
-        Some(Action::Filter | Action::Json) | None => None,
+        Some(Action::Filter | Action::Json | Action::Create(_)) | None => None,
     } {
         let session = model
             .session(current.as_deref(), session)
@@ -283,6 +302,15 @@ async fn main() -> anyhow::Result<ExitCode> {
 
         ensure!(session.is_live(), "session is not live");
         session.set_flag(flagged).await?;
+        return Ok(ExitCode::SUCCESS);
+    }
+
+    if let Some(Action::Create(name)) = &action {
+        let revision = args.onto.as_deref().unwrap_or(jj::DEFAULT_BASE_REVSET);
+        let session = model.session_for_request(current.as_deref(), name.as_deref(), revision)?;
+        let name = session.name();
+        session.create(&cwd, &config.tmux.setup).await?;
+        println!("{name}");
         return Ok(ExitCode::SUCCESS);
     }
 

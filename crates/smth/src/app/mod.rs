@@ -247,7 +247,7 @@ impl App {
     fn draw(&mut self, f: &mut ratatui::Frame<'_>, sigil: char) {
         let l = layout::Layout::new(f.area(), self.preview.visible() || self.onto.is_some());
 
-        let new_session = self.model.new_session(self.repo.as_ref());
+        let new_session = self.model.session_for_query(self.repo.as_ref());
         let agent_summary = self.model.agent_summary();
 
         // Poll the picker for its latest state, and build the data model.
