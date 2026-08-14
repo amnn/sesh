@@ -7,10 +7,12 @@ mod agent;
 mod help;
 
 use std::env;
+use std::path::Path;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 use anyhow::Context as _;
+use anyhow::bail;
 use clap::ArgAction;
 use clap::CommandFactory as _;
 use clap::Parser as _;
@@ -48,6 +50,29 @@ struct Args {
                      $XDG_CONFIG_HOME is unset."
     )]
     config: Option<PathBuf>,
+
+    /// Repository or workspace to use as the base context.
+    #[arg(
+        short = 'b',
+        long,
+        value_name = "REPO",
+        conflicts_with = "no_base",
+        long_help = "Repository or workspace to use as the base context. Named workspace paths use \
+                     their default workspace when it is available, matching current-directory \
+                     inference. When omitted, smth infers the base from the current working \
+                     directory."
+    )]
+    base: Option<PathBuf>,
+
+    /// Force an empty repository context.
+    #[arg(
+        short = 'B',
+        long = "no-base",
+        action = ArgAction::SetTrue,
+        long_help = "Force an empty repository context instead of inferring one from the current \
+                     working directory."
+    )]
+    no_base: bool,
 
     /// Seed the initial query.
     #[arg(short = 'q', long, value_name = "STR")]
@@ -89,6 +114,34 @@ enum Command {
     Agent(agent::Args),
 }
 
+impl Args {
+    /// The base repository for the current smth invocation.
+    ///
+    /// Controlled by the `--base` and `--no-base` flags, or inferred from the current working
+    /// directory. If `--base` is supplied, it must be a path inside a jj repo. If `--no-base` is
+    /// supplied, the base is empty even if the current working directory is inside a jj repo.
+    /// Otherwise, a base is set if the current working directory is inside a jj repo.
+    fn base(&self, cwd: &Path) -> anyhow::Result<Option<PathBuf>> {
+        if self.no_base {
+            return Ok(None);
+        }
+
+        let Some(base) = &self.base else {
+            return Ok(jj::repo_root(cwd));
+        };
+
+        let canonical = base
+            .canonicalize()
+            .with_context(|| format!("failed to normalize base '{}'", base.display()))?;
+
+        let Some(root) = jj::repo_root(&canonical) else {
+            bail!("--base '{}' is not inside a jj repo", base.display());
+        };
+
+        Ok(Some(root))
+    }
+}
+
 /// Parse CLI arguments and run the requested command or picker.
 #[tokio::main]
 async fn main() -> anyhow::Result<ExitCode> {
@@ -111,17 +164,17 @@ async fn main() -> anyhow::Result<ExitCode> {
         return Ok(ExitCode::SUCCESS);
     }
 
-    let mut globs = config.repo.globs.clone();
-    globs.extend(args.repos);
-
     jj::ensure()?;
     tmux::ensure()?;
 
     let cwd = env::current_dir().context("failed to resolve current working directory")?;
-    let repo = jj::repo_root(&cwd);
+    let current = args.base(&cwd)?;
+
+    let mut globs = config.repo.globs.clone();
+    globs.extend(args.repos);
 
     let query = args.query.unwrap_or_default();
-    let mut model = Model::new(&globs, repo.as_deref(), query).await?;
+    let mut model = Model::new(&globs, current.as_deref(), query).await?;
     let matches = model.matches();
 
     if args.exit_0 && matches.is_empty() {
@@ -153,6 +206,6 @@ async fn main() -> anyhow::Result<ExitCode> {
         sigil: config.ui.sigil,
     };
 
-    App::new(repo, model).run(&cwd, context).await?;
+    App::new(current, model).run(&cwd, context).await?;
     Ok(ExitCode::SUCCESS)
 }

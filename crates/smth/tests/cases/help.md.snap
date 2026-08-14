@@ -22,6 +22,8 @@ Options:
   -h                   Print brief help
       --help           Print complete help
       --config <PATH>  Path to a custom config file
+  -b, --base <REPO>    Repository or workspace to use as the base context
+  -B, --no-base        Force an empty repository context
   -q, --query <STR>    Seed the initial query
   -1, --select-1       Automatically switch when the initial query has only one match
   -0, --exit-0         Exit without opening the UI if the initial query has no matches
@@ -85,6 +87,15 @@ Options:
       --config <PATH>
           Path to a custom config file. When omitted, smth reads $XDG_CONFIG_HOME/smth/smth.toml, or
           ~/.config/smth/smth.toml when $XDG_CONFIG_HOME is unset.
+
+  -b, --base <REPO>
+          Repository or workspace to use as the base context. Named workspace paths use their
+          default workspace when it is available, matching current-directory inference. When
+          omitted, smth infers the base from the current working directory.
+
+  -B, --no-base
+          Force an empty repository context instead of inferring one from the current working
+          directory.
 
   -q, --query <STR>
           Seed the initial query
