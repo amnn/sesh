@@ -54,6 +54,8 @@ fall back to the interactive picker.
 - `--unflag [SESSION]` clears that state.
 - `-c`, `--create [SESSION]` ensures the target exists without switching the
   current tmux client and prints its actual tmux name.
+- `-s`, `--switch [SESSION]` performs the same ensure operation, then switches
+  the current tmux client.
 
 Flag operations are idempotent. An explicit session operand overrides a named
 workspace inferred from `--base`; without a repository base, a plain session
@@ -66,3 +68,5 @@ named workspace does not exist, create adds it beside the default checkout at
 working directory. Newly created tmux sessions run `tmux.setup`; existing live
 sessions are left unchanged. Names are sanitized and disambiguated against both
 tmux sessions and sibling workspaces, so callers should use the printed name.
+Switching to an existing live session prefers its first window with a bell or
+agent attention, matching interactive picker behavior.

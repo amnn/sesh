@@ -1,0 +1,131 @@
+---
+source: crates/smth/tests/test.rs
+expression: output
+input_file: crates/smth/tests/cases/cli/switch.md
+---
+# Switch sessions
+
+`--switch` should share create semantics, then switch the invoking tmux client
+to the strictly resolved target.
+
+    :bins jj tmux cat sh sed
+
+> [!NOTE]
+> 'jj', 'tmux', 'cat', 'sh', and 'sed' are available.
+
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
+    :t rename-session -t 0 runner (success)
+    :$ jj git init alpha (exit: 0)
+    :$ jj describe -R alpha -m "base commit" (exit: 0)
+    :$ jj workspace add -R alpha --name feature alpha.feature (exit: 0)
+    :$ jj workspace add -R alpha --name other alpha.other (exit: 0)
+
+Create a live feature session with agent attention in its second window. A
+named-workspace base with no operand should infer `feature`, and switching to an
+existing live target should select its first attention window.
+
+    :t new-session -d -s feature-live -c alpha.feature "cat" (success)
+    :t set-option -F -t '=feature-live:' @smth.repo '#{pane_current_path}' (success)
+    :t new-window -d -t feature-live:1 -c alpha.feature "cat" (success)
+    :t set-option -p -t feature-live:1.0 @smth.agent.state waiting (success)
+
+    :t respawn-pane -k -t runner:0.0 'smth --base alpha.feature --switch; tmux wait-for -S switched-feature; cat' (success)
+    :t wait-for switched-feature (success)
+    :t display-message -p '#{client_session}:#{window_index}' (success)
+
+```
+feature-live:1
+```
+
+A default checkout with no live session should get one before the client
+switches.
+
+    :t switch-client -t runner (success)
+    :pane runner:0.0
+    :t respawn-pane -k -t runner:0.0 'smth --base alpha --switch; tmux wait-for -S switched-default; cat' (success)
+    :t wait-for switched-default (success)
+    :t display-message -p '#{client_session}:#{window_index}' (success)
+
+```
+alpha:0
+```
+
+An explicit operand overrides the workspace inferred by a named base. Existing
+checkouts receive tmux sessions without creating new workspaces.
+
+    :t switch-client -t runner (success)
+    :pane runner:0.0
+    :t respawn-pane -k -t runner:0.0 'smth --base alpha.feature --switch other; tmux wait-for -S switched-other; cat' (success)
+    :t wait-for switched-other (success)
+    :t display-message -p '#{client_session}:#{window_index}' (success)
+
+```
+alpha/other:0
+```
+
+A missing named workspace should be created at `--onto`, then switched to.
+
+    :t switch-client -t runner (success)
+    :pane runner:0.0
+    :t respawn-pane -k -t runner:0.0 'smth --base alpha --onto @ --switch fresh; tmux wait-for -S switched-fresh; cat' (success)
+    :t wait-for switched-fresh (success)
+    :t display-message -p '#{client_session}:#{window_index}' (success)
+
+```
+alpha/fresh:0
+```
+
+    :t switch-client -t runner (success)
+    :pane runner:0.0
+    :$ sh -c 'jj workspace list -R alpha --ignore-working-copy --no-pager --color never --template "name ++ \"\\n\"" | sed -n "/fresh/p"' (exit: 0)
+
+```stdout
+fresh
+```
+
+Plain targets should be created in the empty base namespace and switched to in
+the same way.
+
+    :t respawn-pane -k -t runner:0.0 'smth --no-base --switch scratch; tmux wait-for -S switched-scratch; cat' (success)
+    :t wait-for switched-scratch (success)
+    :t display-message -p '#{client_session}:#{window_index}' (success)
+
+```
+scratch:0
+```
+
+    :t switch-client -t runner (success)
+    :pane runner:0.0
+
+A plain switch without a name is invalid, picker controls are rejected, and
+switch is mutually exclusive with create.
+
+    :$ smth --no-base --switch (exit: 1)
+
+```stderr
+Error: a session name is required without a repository base
+```
+
+    :$ smth --no-base --switch scratch --query scratch (exit: 2)
+
+```stderr
+error: the argument '--switch [<SESSION>]' cannot be used with '--query <STR>'
+
+Usage: smth --no-base --switch [<SESSION>]
+
+For more information, try 'help'.
+```
+
+    :$ smth --no-base --switch scratch --create scratch (exit: 2)
+
+```stderr
+error: the argument '--switch [<SESSION>]' cannot be used with '--create [<SESSION>]'
+
+Usage: smth --no-base --switch [<SESSION>]
+
+For more information, try 'help'.
+```
+
+---
+vim: set ft=markdown:

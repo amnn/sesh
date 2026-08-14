@@ -36,7 +36,7 @@ use smth::config::SmthConfig;
 #[command(disable_help_flag = true)]
 #[command(group(
     ArgGroup::new("action")
-        .args(["filter", "json", "flag", "unflag", "create"])
+        .args(["filter", "json", "flag", "unflag", "create", "switch"])
         .multiple(false)
 ))]
 struct Args {
@@ -156,6 +156,19 @@ struct Args {
     )]
     create: Option<Option<String>>,
 
+    /// Ensure a session exists and switch to it.
+    #[arg(
+        short = 's',
+        long = "switch",
+        value_name = "SESSION",
+        num_args = 0..=1,
+        conflicts_with_all = ["query", "select_1", "exit_0"],
+        long_help = "Ensure a session exists and switch the current tmux client to it. Creation \
+                     follows --create semantics, and an existing live target opens its first \
+                     window with a bell or agent attention."
+    )]
+    switch: Option<Option<String>>,
+
     /// Additional repository globs to surface alongside existing tmux sessions.
     #[arg(
         short = 'r',
@@ -197,6 +210,9 @@ enum Action {
 
     /// Ensure the target session exists without switching to it.
     Create(Option<String>),
+
+    /// Ensure the target session exists and switch to it.
+    Switch(Option<String>),
 }
 
 impl Args {
@@ -213,6 +229,8 @@ impl Args {
             Some(Action::Unflag(session.clone()))
         } else if let Some(session) = &self.create {
             Some(Action::Create(session.clone()))
+        } else if let Some(session) = &self.switch {
+            Some(Action::Switch(session.clone()))
         } else {
             None
         }
@@ -294,7 +312,7 @@ async fn main() -> anyhow::Result<ExitCode> {
     if let Some((session, flagged)) = match &action {
         Some(Action::Flag(session)) => Some((session.as_deref(), true)),
         Some(Action::Unflag(session)) => Some((session.as_deref(), false)),
-        Some(Action::Filter | Action::Json | Action::Create(_)) | None => None,
+        Some(Action::Filter | Action::Json | Action::Create(_) | Action::Switch(_)) | None => None,
     } {
         let session = model
             .session(current.as_deref(), session)
@@ -305,12 +323,22 @@ async fn main() -> anyhow::Result<ExitCode> {
         return Ok(ExitCode::SUCCESS);
     }
 
-    if let Some(Action::Create(name)) = &action {
+    if let Some(action @ (Action::Create(_) | Action::Switch(_))) = &action {
+        let name = match action {
+            Action::Create(name) | Action::Switch(name) => name,
+            Action::Filter | Action::Json | Action::Flag(_) | Action::Unflag(_) => unreachable!(),
+        };
         let revision = args.onto.as_deref().unwrap_or(jj::DEFAULT_BASE_REVSET);
         let session = model.session_for_request(current.as_deref(), name.as_deref(), revision)?;
-        let name = session.name();
-        session.create(&cwd, &config.tmux.setup).await?;
-        println!("{name}");
+
+        if matches!(action, Action::Create(_)) {
+            let name = session.name();
+            session.create(&cwd, &config.tmux.setup).await?;
+            println!("{name}");
+        } else {
+            session.switch(&cwd, &config.tmux.setup).await?;
+        }
+
         return Ok(ExitCode::SUCCESS);
     }
 
