@@ -11,6 +11,9 @@ Repository context is selected independently from discovery:
   directory.
 - With neither option, the nearest repository containing the current working
   directory is used when available.
+- `-o`, `--onto REV` sets the revision used as the base of newly created
+  workspaces. It defaults to `trunk()` and requires a repository base when
+  supplied explicitly.
 - `-r`, `--repo GLOB` adds repositories to discovery; it does not select the
   base context.
 

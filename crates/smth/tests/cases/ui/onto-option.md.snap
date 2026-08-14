@@ -1,0 +1,61 @@
+---
+source: crates/smth/tests/test.rs
+expression: output
+input_file: crates/smth/tests/cases/ui/onto-option.md
+---
+# Onto option
+
+An explicit `--onto` revision should seed the interactive repository context
+without opening the revision picker.
+
+    :bins jj cat
+
+> [!NOTE]
+> 'jj', and 'cat' are available.
+
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
+    :t rename-session -t 0 runner (success)
+    :$ jj git init alpha (exit: 0)
+    :$ jj describe -R alpha -m "base commit" (exit: 0)
+
+Launch the picker from outside the repository. The header should display the
+revision supplied on the command line rather than `trunk()`.
+
+    :t new-session -d -s ui "smth --base alpha --onto @" (success)
+    :t resize-window -t ui:0 -x 100 -y 10 (success)
+    :pane ui:0.0
+    :settle -d 2s (settled)
+
+    :snap
+
+```terminal
+session:
+  2/2 | [C-r] repo: ~/alpha, [C-o] onto: @ | [C-x] close, [C-f] flag
+▌⬤ runner                                                                                          ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+```
+
+An explicit revision is invalid when `--no-base` suppresses repository context
+or when no repository can be inferred.
+
+    :$ smth --no-base --onto @ --filter (exit: 1)
+
+```stderr
+Error: --onto requires a base repository
+```
+
+    :$ smth --onto @ --filter (exit: 1)
+
+```stderr
+Error: --onto requires a base repository
+```
+
+---
+vim: set ft=markdown:
