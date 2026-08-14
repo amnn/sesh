@@ -43,3 +43,17 @@ live sessions, and `attention` and `agents` are omitted when empty.
 Use the `base` and `name` fields together when constructing a lifecycle
 command. Do not substitute a discovery glob or derive a target from the tmux
 name: collision suffixes and repository metadata are resolved independently.
+
+## Lifecycle commands
+
+Lifecycle commands are mutually exclusive with each other, `--filter`, and
+`--json`. They also reject `--query`, `--select-1`, and `--exit-0`, and never
+fall back to the interactive picker.
+
+- `--flag [SESSION]` marks a matching live session as flagged.
+- `--unflag [SESSION]` clears that state.
+
+Both operations are idempotent. An explicit session operand overrides a named
+workspace inferred from `--base`; without a repository base, a plain session
+name is required. Repo-backed operations verify both the normalized repository
+family and workspace checkout metadata before changing the tmux option.

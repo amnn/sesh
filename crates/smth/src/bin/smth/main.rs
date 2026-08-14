@@ -15,6 +15,7 @@ use anyhow::Context as _;
 use anyhow::bail;
 use anyhow::ensure;
 use clap::ArgAction;
+use clap::ArgGroup;
 use clap::CommandFactory as _;
 use clap::Parser as _;
 
@@ -33,6 +34,11 @@ use smth::config::SmthConfig;
     styles = help::STYLES
 )]
 #[command(disable_help_flag = true)]
+#[command(group(
+    ArgGroup::new("action")
+        .args(["filter", "json", "flag", "unflag"])
+        .multiple(false)
+))]
 struct Args {
     /// Print brief help.
     #[arg(short = 'h', action = ArgAction::SetTrue)]
@@ -112,6 +118,30 @@ struct Args {
     )]
     json: bool,
 
+    /// Mark a live session as flagged.
+    #[arg(
+        long,
+        value_name = "SESSION",
+        num_args = 0..=1,
+        conflicts_with_all = ["query", "select_1", "exit_0"],
+        long_help = "Mark a live session as flagged. The optional session name overrides a named \
+                     workspace inferred from --base. The target must match the selected repository \
+                     family and workspace identity."
+    )]
+    flag: Option<Option<String>>,
+
+    /// Clear a live session's flag.
+    #[arg(
+        long,
+        value_name = "SESSION",
+        num_args = 0..=1,
+        conflicts_with_all = ["query", "select_1", "exit_0"],
+        long_help = "Clear a live session's flag. The optional session name overrides a named \
+                     workspace inferred from --base. The target must match the selected repository \
+                     family and workspace identity."
+    )]
+    unflag: Option<Option<String>>,
+
     /// Additional repository globs to surface alongside existing tmux sessions.
     #[arg(
         short = 'r',
@@ -137,22 +167,33 @@ enum Command {
 }
 
 /// Non-interactive root operation selected after parsing flat CLI options.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 enum Action {
     /// Print fuzzy matches as names.
     Filter,
 
     /// Print fuzzy matches as structured records.
     Json,
+
+    /// Set the target live session's manual flag.
+    Flag(Option<String>),
+
+    /// Clear the target live session's manual flag.
+    Unflag(Option<String>),
 }
 
 impl Args {
     /// Return the selected non-interactive root action.
+    #[allow(clippy::manual_map)]
     fn action(&self) -> Option<Action> {
         if self.filter {
             Some(Action::Filter)
         } else if self.json {
             Some(Action::Json)
+        } else if let Some(session) = &self.flag {
+            Some(Action::Flag(session.clone()))
+        } else if let Some(session) = &self.unflag {
+            Some(Action::Unflag(session.clone()))
         } else {
             None
         }
@@ -228,6 +269,20 @@ async fn main() -> anyhow::Result<ExitCode> {
     if action == Some(Action::Json) {
         let sessions = model.matches_json();
         println!("{}", serde_json::to_string_pretty(&sessions)?);
+        return Ok(ExitCode::SUCCESS);
+    }
+
+    if let Some((session, flagged)) = match &action {
+        Some(Action::Flag(session)) => Some((session.as_deref(), true)),
+        Some(Action::Unflag(session)) => Some((session.as_deref(), false)),
+        Some(Action::Filter | Action::Json) | None => None,
+    } {
+        let session = model
+            .session(current.as_deref(), session)
+            .context("session not found")?;
+
+        ensure!(session.is_live(), "session is not live");
+        session.set_flag(flagged).await?;
         return Ok(ExitCode::SUCCESS);
     }
 

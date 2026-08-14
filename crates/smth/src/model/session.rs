@@ -138,6 +138,14 @@ impl Session {
         }
     }
 
+    /// Set this live session's persisted manual flag idempotently.
+    pub async fn set_flag(&self, flagged: bool) -> anyhow::Result<()> {
+        match &self.0 {
+            Kind::Live(kind) => kind.set_flag(flagged).await,
+            Kind::New(_) | Kind::Repo(_) => Ok(()),
+        }
+    }
+
     /// Switch the current tmux client to this session, creating the session first if needed.
     pub async fn switch(&self, cwd: &Path, setup: &str) -> anyhow::Result<()> {
         self.create(cwd, setup).await?;
@@ -245,9 +253,14 @@ impl LiveKind {
         self.repo.clone()
     }
 
+    /// Set the persistent tmux user option that stores this session's manual flag.
+    async fn set_flag(&self, flagged: bool) -> anyhow::Result<()> {
+        tmux::set_flag(&self.name, flagged).await
+    }
+
     /// Toggle the persistent tmux user option that stores this session's manual flag.
     async fn toggle_flag(&self) -> anyhow::Result<()> {
-        tmux::set_flag(&self.name, !self.flagged).await
+        self.set_flag(!self.flagged).await
     }
 }
 

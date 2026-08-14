@@ -1,0 +1,170 @@
+---
+source: crates/smth/tests/test.rs
+expression: output
+input_file: crates/smth/tests/cases/cli/flag.md
+---
+# Flag management
+
+Flat lifecycle flags should resolve live sessions by repository family and
+workspace identity rather than by a guessed tmux name.
+
+    :bins jj cat sh sed
+
+> [!NOTE]
+> 'jj', 'cat', 'sh', and 'sed' are available.
+
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
+    :t rename-session -t 0 runner (success)
+    :$ jj git init alpha (exit: 0)
+    :$ jj workspace add -R alpha --name feature alpha.feature (exit: 0)
+    :$ jj workspace add -R alpha --name idle alpha.idle (exit: 0)
+    :$ jj workspace add -R alpha --name other alpha.other (exit: 0)
+
+Create a plain session whose name collides with the natural repo-backed name,
+then attach the real feature workspace to a disambiguated tmux session. Also
+create live targets for the default checkout, another named workspace, and the
+plain-session namespace.
+
+    :t new-session -d -s alpha/feature "cat" (success)
+    :t new-session -d -s alpha/feature~1 -c alpha.feature "cat" (success)
+    :t set-option -F -t '=alpha/feature~1:' @smth.repo '#{pane_current_path}' (success)
+    :t new-session -d -s alpha-live -c alpha "cat" (success)
+    :t set-option -F -t '=alpha-live:' @smth.repo '#{pane_current_path}' (success)
+    :t new-session -d -s alpha/other -c alpha.other "cat" (success)
+    :t set-option -F -t '=alpha/other:' @smth.repo '#{pane_current_path}' (success)
+    :t new-session -d -s scratch "cat" (success)
+
+Flagging `feature` must update only the repo-backed session, not the colliding
+plain session. Repeating the command is idempotent.
+
+    :$ smth --base alpha --flag feature (exit: 0)
+    :t show-options -qv -t '=alpha/feature:' @smth.flag (success)
+    :t show-options -qv -t '=alpha/feature~1:' @smth.flag (success)
+
+```
+1
+```
+
+    :$ smth --base alpha --flag feature (exit: 0)
+    :t show-options -qv -t '=alpha/feature~1:' @smth.flag (success)
+
+```
+1
+```
+
+Unflagging is also idempotent. A named-workspace base supplies the operand when
+it is omitted, while an explicit operand overrides that inferred workspace.
+
+    :$ smth --base alpha.feature --unflag (exit: 0)
+    :t show-options -qv -t '=alpha/feature~1:' @smth.flag (success)
+
+    :$ smth --base alpha.feature --flag other (exit: 0)
+    :t show-options -qv -t '=alpha/other:' @smth.flag (success)
+
+```
+1
+```
+
+Omitting the operand for a default-workspace base targets the default checkout.
+Plain sessions require the empty base namespace and an explicit name.
+
+    :$ smth --base alpha --flag (exit: 0)
+    :t show-options -qv -t '=alpha-live:' @smth.flag (success)
+
+```
+1
+```
+
+    :$ smth --no-base --flag scratch (exit: 0)
+    :t show-options -qv -t '=scratch:' @smth.flag (success)
+
+```
+1
+```
+
+Missing, non-live, and unspecified targets should fail instead of opening the
+picker or modifying a similarly named session.
+
+    :$ sh -c 'set -o pipefail; smth --base alpha --flag missing 2>&1 | sed "s#$PWD#<ROOT>#g"' (exit: 1)
+
+```stdout
+Error: session not found
+```
+
+    :$ sh -c 'set -o pipefail; smth --base alpha --repo "alpha*" --flag idle 2>&1 | sed "s#$PWD#<ROOT>#g"' (exit: 1)
+
+```stdout
+Error: session is not live
+```
+
+    :$ smth --no-base --flag (exit: 1)
+
+```stderr
+Error: session not found
+```
+
+Lifecycle mode rejects picker controls and every other non-interactive action.
+
+    :$ smth --no-base --flag scratch --query scratch (exit: 2)
+
+```stderr
+error: the argument '--flag [<SESSION>]' cannot be used with '--query <STR>'
+
+Usage: smth --no-base --flag [<SESSION>]
+
+For more information, try 'help'.
+```
+
+    :$ smth --no-base --unflag scratch --select-1 (exit: 2)
+
+```stderr
+error: the argument '--unflag [<SESSION>]' cannot be used with '--select-1'
+
+Usage: smth --no-base --unflag [<SESSION>]
+
+For more information, try 'help'.
+```
+
+    :$ smth --no-base --flag scratch --exit-0 (exit: 2)
+
+```stderr
+error: the argument '--flag [<SESSION>]' cannot be used with '--exit-0'
+
+Usage: smth --no-base --flag [<SESSION>]
+
+For more information, try 'help'.
+```
+
+    :$ smth --no-base --flag scratch --filter (exit: 2)
+
+```stderr
+error: the argument '--flag [<SESSION>]' cannot be used with '--filter'
+
+Usage: smth --no-base --flag [<SESSION>]
+
+For more information, try 'help'.
+```
+
+    :$ smth --no-base --flag scratch --json (exit: 2)
+
+```stderr
+error: the argument '--flag [<SESSION>]' cannot be used with '--json'
+
+Usage: smth --no-base --flag [<SESSION>]
+
+For more information, try 'help'.
+```
+
+    :$ smth --no-base --flag scratch --unflag scratch (exit: 2)
+
+```stderr
+error: the argument '--flag [<SESSION>]' cannot be used with '--unflag [<SESSION>]'
+
+Usage: smth --no-base --flag [<SESSION>]
+
+For more information, try 'help'.
+```
+
+---
+vim: set ft=markdown:

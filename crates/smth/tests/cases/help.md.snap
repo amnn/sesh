@@ -19,19 +19,21 @@ Commands:
   help   Print this message or the help of the given subcommand(s)
 
 Options:
-  -h                   Print brief help
-      --help           Print complete help
-      --config <PATH>  Path to a custom config file
-  -b, --base <REPO>    Repository or workspace to use as the base context
-  -B, --no-base        Force an empty repository context
-  -o, --onto <REV>     Revision used as the base for newly created workspaces
-  -q, --query <STR>    Seed the initial query
-  -1, --select-1       Automatically switch when the initial query has only one match
-  -0, --exit-0         Exit without opening the UI if the initial query has no matches
-  -f, --filter         Filter non-interactively using the initial query
-      --json           Print structured information about discovered entries
-  -r, --repo <GLOB>    Additional repository globs to surface alongside existing tmux sessions
-  -V, --version        Print version
+  -h                        Print brief help
+      --help                Print complete help
+      --config <PATH>       Path to a custom config file
+  -b, --base <REPO>         Repository or workspace to use as the base context
+  -B, --no-base             Force an empty repository context
+  -o, --onto <REV>          Revision used as the base for newly created workspaces
+  -q, --query <STR>         Seed the initial query
+  -1, --select-1            Automatically switch when the initial query has only one match
+  -0, --exit-0              Exit without opening the UI if the initial query has no matches
+  -f, --filter              Filter non-interactively using the initial query
+      --json                Print structured information about discovered entries
+      --flag [<SESSION>]    Mark a live session as flagged
+      --unflag [<SESSION>]  Clear a live session's flag
+  -r, --repo <GLOB>         Additional repository globs to surface alongside existing tmux sessions
+  -V, --version             Print version
 ```
 
 The agent command help should describe the exit action and every lifecycle state.
@@ -118,6 +120,16 @@ Options:
       --json
           Print structured JSON information about discovered live sessions and repository
           candidates. The optional query narrows records using the same fuzzy matcher as the picker.
+
+      --flag [<SESSION>]
+          Mark a live session as flagged. The optional session name overrides a named workspace
+          inferred from --base. The target must match the selected repository family and workspace
+          identity.
+
+      --unflag [<SESSION>]
+          Clear a live session's flag. The optional session name overrides a named workspace
+          inferred from --base. The target must match the selected repository family and workspace
+          identity.
 
   -r, --repo <GLOB>
           Additional repository globs to surface alongside existing tmux sessions. Pass once per
