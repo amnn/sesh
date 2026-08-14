@@ -13,6 +13,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 use std::path::PathBuf;
 
+use anyhow::Context as _;
 use futures::stream::FuturesUnordered;
 use futures::stream::StreamExt as _;
 use nucleo::Snapshot;
@@ -94,6 +95,19 @@ impl Model {
         Ok(model)
     }
 
+    /// Return all matched sessions after the matcher has finished processing pending updates.
+    pub fn matches(&mut self) -> Vec<Session> {
+        loop {
+            let (status, snapshot, _) = self.picker.refresh();
+            if !status.running {
+                return snapshot
+                    .matched_items(..)
+                    .map(|item| item.data.clone())
+                    .collect();
+            }
+        }
+    }
+
     /// Return serialized records for all sessions matched by the seeded query.
     pub fn matches_json(&mut self) -> Vec<SerializedSession> {
         let sessions = self.matches();
@@ -111,17 +125,36 @@ impl Model {
         }
     }
 
-    /// Return all matched sessions after the matcher has finished processing pending updates.
-    pub fn matches(&mut self) -> Vec<Session> {
-        loop {
-            let (status, snapshot, _) = self.picker.refresh();
-            if !status.running {
-                return snapshot
-                    .matched_items(..)
-                    .map(|item| item.data.clone())
-                    .collect();
-            }
+    /// Return the existing or prospective session represented by an explicit request.
+    pub fn session_for_request(
+        &self,
+        base: Option<&Path>,
+        name: Option<&str>,
+        onto: &str,
+    ) -> anyhow::Result<Session> {
+        // If a session already exists for this base and name, return it.
+        if let Some(session) = self.session(base, name) {
+            return Ok(session.clone());
         }
+
+        let Some(base) = base else {
+            let name = name.context("a session name is required without a repository base")?;
+            return Ok(self.new_session(name, Base::Cwd(None)));
+        };
+
+        let name = name.or_else(|| self.workspace_name(base));
+        let base = self.repo_context(base.to_owned()).path().to_owned();
+
+        let Some(name) = name else {
+            return Ok(self.repo_session(None, base.clone(), base, false));
+        };
+
+        if let Some(checkout) = self.workspace_path(&base, name) {
+            return Ok(self.repo_session(Some(name), base, checkout.to_owned(), true));
+        }
+
+        let repo = Repo::new(base).with_revision(onto.to_owned());
+        Ok(self.new_session(name, Base::Repo(repo)))
     }
 
     /// Return lifecycle state counts for agents across all discovered sessions.
@@ -212,19 +245,18 @@ impl Model {
                 continue;
             }
 
-            let mut session = if let Some(Some(workspace)) = self.workspaces.get(&repo) {
-                RepoKind::new(
+            let session = if let Some(Some(workspace)) = self.workspaces.get(&repo) {
+                self.repo_session(
                     workspace.name.as_deref(),
                     existing_default(workspace).unwrap_or(&repo).to_owned(),
                     repo.to_owned(),
                     workspace.name.is_some(),
                 )
             } else {
-                RepoKind::new(None, repo.to_owned(), repo.to_owned(), false)
+                self.repo_session(None, repo.to_owned(), repo.to_owned(), false)
             };
 
-            session.disambiguate(&self.seen_tmux_names);
-            self.sessions.push(session.into());
+            self.sessions.push(session);
         }
 
         // Attach information about workspaces seen, to help disambiguate future new workspaces
@@ -254,8 +286,8 @@ impl Model {
         self.recently_attached
     }
 
-    /// Construct the dynamic "new session" candidate for the current query and repo context.
-    pub(crate) fn new_session(&self, repo: Option<&Repo>) -> Option<Session> {
+    /// Return the prospective session represented by the current query and repository context.
+    pub(crate) fn session_for_query(&self, repo: Option<&Repo>) -> Option<Session> {
         let query = self.picker.query();
         if query.is_empty() {
             return None;
@@ -267,15 +299,7 @@ impl Model {
             Some(repo) => Base::Cwd(Some(repo.path().to_owned())),
         };
 
-        let empty = BTreeSet::new();
-        let siblings = match &base {
-            Base::Repo(base) => self.seen_workspaces.get(base.path()).unwrap_or(&empty),
-            Base::Cwd(_) => &empty,
-        };
-
-        let mut session = NewKind::new(query, base);
-        session.disambiguate(&self.seen_tmux_names, siblings);
-        Some(session.into())
+        Some(self.new_session(query, base))
     }
 
     /// Remove the trailing character from the active query string.
@@ -318,6 +342,32 @@ impl Model {
     /// Return the exact jj workspace name for `repo`, if it is a named workspace.
     pub(crate) fn workspace_name(&self, repo: &Path) -> Option<&str> {
         self.workspace_info(repo).and_then(|w| w.name.as_deref())
+    }
+
+    /// Construct a prospective session from a name and base.
+    fn new_session(&self, name: &str, base: Base) -> Session {
+        let empty = BTreeSet::new();
+        let siblings = match &base {
+            Base::Repo(base) => self.seen_workspaces.get(base.path()).unwrap_or(&empty),
+            Base::Cwd(_) => &empty,
+        };
+
+        let mut session = NewKind::new(name, base);
+        session.disambiguate(&self.seen_tmux_names, siblings);
+        session.into()
+    }
+
+    /// Construct a session for an existing repository checkout.
+    fn repo_session(
+        &self,
+        workspace: Option<&str>,
+        default: PathBuf,
+        path: PathBuf,
+        can_delete: bool,
+    ) -> Session {
+        let mut session = RepoKind::new(workspace, default, path, can_delete);
+        session.disambiguate(&self.seen_tmux_names);
+        session.into()
     }
 
     /// Convert one picker session into its stable serialized schema.
@@ -378,6 +428,16 @@ impl Model {
 
             workspace.name.as_deref() == name
                 && existing_default(workspace).unwrap_or(&repo) == base
+        })
+    }
+
+    /// Return the checkout path for a named workspace in a repository family.
+    fn workspace_path(&self, base: &Path, name: &str) -> Option<&Path> {
+        self.workspaces.iter().find_map(|(path, workspace)| {
+            let workspace = workspace.as_ref()?;
+            (workspace.name.as_deref() == Some(name)
+                && existing_default(workspace).unwrap_or(path) == base)
+                .then_some(path.as_path())
         })
     }
 

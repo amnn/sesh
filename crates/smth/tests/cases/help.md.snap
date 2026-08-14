@@ -32,6 +32,7 @@ Options:
       --json                Print structured information about discovered entries
       --flag [<SESSION>]    Mark a live session as flagged
       --unflag [<SESSION>]  Clear a live session's flag
+  -c, --create [<SESSION>]  Ensure a session exists without switching to it
   -r, --repo <GLOB>         Additional repository globs to surface alongside existing tmux sessions
   -V, --version             Print version
 ```
@@ -130,6 +131,11 @@ Options:
           Clear a live session's flag. The optional session name overrides a named workspace
           inferred from --base. The target must match the selected repository family and workspace
           identity.
+
+  -c, --create [<SESSION>]
+          Ensure a session exists without switching to it. Existing repository checkouts receive a
+          tmux session; missing named workspaces are created at --onto; plain sessions are created
+          in the process working directory. Prints the actual tmux name.
 
   -r, --repo <GLOB>
           Additional repository globs to surface alongside existing tmux sessions. Pass once per
