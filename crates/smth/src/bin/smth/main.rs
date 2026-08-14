@@ -13,6 +13,7 @@ use std::process::ExitCode;
 
 use anyhow::Context as _;
 use anyhow::bail;
+use anyhow::ensure;
 use clap::ArgAction;
 use clap::CommandFactory as _;
 use clap::Parser as _;
@@ -73,6 +74,16 @@ struct Args {
                      working directory."
     )]
     no_base: bool,
+
+    /// Revision used as the base for newly created workspaces.
+    #[arg(
+        short = 'o',
+        long,
+        value_name = "REV",
+        long_help = "Revision used as the base for newly created workspaces. Defaults to trunk(). \
+                     An explicit revision requires a repository base."
+    )]
+    onto: Option<String>,
 
     /// Seed the initial query.
     #[arg(short = 'q', long, value_name = "STR")]
@@ -170,6 +181,11 @@ async fn main() -> anyhow::Result<ExitCode> {
     let cwd = env::current_dir().context("failed to resolve current working directory")?;
     let current = args.base(&cwd)?;
 
+    ensure!(
+        args.onto.is_none() || current.is_some(),
+        "--onto requires a base repository",
+    );
+
     let mut globs = config.repo.globs.clone();
     globs.extend(args.repos);
 
@@ -206,6 +222,8 @@ async fn main() -> anyhow::Result<ExitCode> {
         sigil: config.ui.sigil,
     };
 
-    App::new(current, model).run(&cwd, context).await?;
+    App::new(current, args.onto, model)
+        .run(&cwd, context)
+        .await?;
     Ok(ExitCode::SUCCESS)
 }

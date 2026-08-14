@@ -97,13 +97,20 @@ enum Action {
 impl App {
     /// Create a new application.
     ///
-    /// `repo` is the initial base repository. `model` contains the underlying data to drive the
-    /// interface.
-    pub fn new(repo: Option<PathBuf>, model: Model) -> Self {
+    /// `repo` is the initial base repository, `revision` optionally overrides its workspace base
+    /// revision, and `model` contains the underlying data to drive the interface.
+    pub fn new(repo: Option<PathBuf>, revision: Option<String>, model: Model) -> Self {
         let select = model.recently_attached().map(|i| i + 1);
         let mut preview = preview::State::new();
         preview.feed(model.sessions());
-        let repo = repo.map(|repo| model.repo_context(repo));
+        let repo = repo.map(|repo| {
+            let repo = model.repo_context(repo);
+            if let Some(revision) = revision {
+                repo.with_revision(revision)
+            } else {
+                repo
+            }
+        });
 
         Self {
             bg: None,
