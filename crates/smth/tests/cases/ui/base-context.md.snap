@@ -1,0 +1,121 @@
+---
+source: crates/smth/tests/test.rs
+expression: output
+input_file: crates/smth/tests/cases/ui/base-context.md
+---
+# Base context
+
+Explicit base options should seed the same repository context that is normally
+inferred from the current working directory. Named workspaces retain their
+identity while the picker uses the default workspace as its repository family.
+
+    :bins jj cat
+
+> [!NOTE]
+> 'jj', and 'cat' are available.
+
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
+    :t rename-session -t 0 runner (success)
+    :$ jj git init alpha (exit: 0)
+    :$ jj workspace add -R alpha --name feature alpha.feature (exit: 0)
+
+Launch the picker outside either checkout with the named workspace as its base.
+The header should show the normalized default workspace and the usual default
+revision.
+
+    :t new-session -d -s ui "smth --base alpha.feature" (success)
+    :t resize-window -t ui:0 -x 100 -y 10 (success)
+    :pane ui:0.0
+    :settle -d 2s (settled)
+
+    :snap
+
+```terminal
+session:
+  2/2 | [C-r] repo: ~/alpha, [C-o] onto: trunk() | [C-x] close, [C-f] flag
+▌⬤ runner                                                                                          ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+```
+
+`--no-base` should suppress current-directory inference even when the picker is
+started inside a repository.
+
+    :t switch-client -t runner (success)
+    :pane runner:0.0
+    :t kill-session -t ui (success)
+    :t new-session -d -s ui-none "cd alpha && smth --no-base" (success)
+    :t resize-window -t ui-none:0 -x 100 -y 10 (success)
+    :pane ui-none:0.0
+    :settle -d 2s (settled)
+
+    :snap
+
+```terminal
+session:
+  2/2 | [C-r] repo: none | [C-x] close, [C-f] flag
+▌⬤ runner                                                                                          ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+```
+
+The two base selectors are mutually exclusive, and an explicit path outside a
+jj repository is rejected instead of silently falling back to the current
+working directory.
+
+    :$ smth --base alpha --no-base --filter (exit: 2)
+
+```stderr
+error: the argument '--base <REPO>' cannot be used with '--no-base'
+
+Usage: smth --base <REPO> --filter
+
+For more information, try 'help'.
+```
+
+    :$ smth --base . --filter (exit: 1)
+
+```stderr
+Error: --base '.' is not inside a jj repo
+```
+
+A named workspace whose default registration disappears should retain the
+named checkout as its base, matching current-directory inference.
+
+    :t switch-client -t runner (success)
+    :pane runner:0.0
+    :t kill-session -t ui-none (success)
+    :$ jj workspace forget -R alpha.feature --ignore-working-copy -- default (exit: 0)
+    :t new-session -d -s ui-fallback "smth --base alpha.feature; cat" (success)
+    :t resize-window -t ui-fallback:0 -x 100 -y 10 (success)
+    :pane ui-fallback:0.0
+    :settle -d 2s (settled)
+
+    :snap
+
+```terminal
+session:
+  2/2 | [C-r] repo: ~/alpha.feature, [C-o] onto: trunk() | [C-x] close, [C-f] flag
+▌⬤ runner                                                                                          ┃
+────────────────────────────────────────────────────────────────────────────────────────────────────
+
+
+
+
+
+
+```
+
+---
+vim: set ft=markdown:
