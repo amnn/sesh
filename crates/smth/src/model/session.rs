@@ -5,6 +5,7 @@
 
 use std::collections::BTreeMap;
 use std::collections::BTreeSet;
+use std::io::ErrorKind;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -35,15 +36,15 @@ pub(crate) enum Base {
     Cwd(Option<PathBuf>),
 }
 
-/// A live tmux session; repo metadata is display-only.
+/// A live tmux session with optional verified jj workspace identity.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub(crate) struct LiveKind {
     name: String,
     repo: Option<PathBuf>,
+    workspace: Option<String>,
     agents: BTreeMap<AgentState, usize>,
     alerts: BTreeSet<String>,
     flagged: bool,
-    can_delete: bool,
 }
 
 /// A new session, optionally backed by a jj workspace to create from a repository base.
@@ -67,13 +68,14 @@ pub(crate) struct Repo {
 }
 
 /// Session for a repository or workspace checkout that already exists.
+///
+/// The exact jj workspace name is preserved; sanitization applies only to the derived tmux name.
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub(crate) struct RepoKind {
     workspace: Option<String>,
     default: PathBuf,
     path: PathBuf,
     suffix: Option<String>,
-    can_delete: bool,
 }
 
 /// Backing kind for a picker session.
@@ -87,11 +89,7 @@ enum Kind {
 impl Session {
     /// Return whether this entry can be deleted.
     pub fn can_delete(&self) -> bool {
-        match &self.0 {
-            Kind::Live(kind) => kind.can_delete,
-            Kind::New(_) => false,
-            Kind::Repo(kind) => kind.can_delete,
-        }
+        self.workspace().is_some()
     }
 
     /// Close this session without deleting any attached workspace.
@@ -105,6 +103,28 @@ impl Session {
     /// Create this session if needed without switching the current tmux client.
     pub async fn create(&self, cwd: &Path, setup: &str) -> anyhow::Result<()> {
         self.ensure_tmux(cwd, setup).await
+    }
+
+    /// Delete this session's named jj workspace and close it if live.
+    ///
+    /// A session without a verified named workspace is a no-op. Errors may be returned after the
+    /// workspace has been forgotten if checkout removal or session closure fails.
+    pub async fn delete(&self) -> anyhow::Result<()> {
+        let Some((repo, workspace)) = self.workspace() else {
+            return Ok(());
+        };
+
+        jj::forget_workspace(repo, workspace).await?;
+        match tokio::fs::remove_dir_all(repo).await {
+            Ok(()) => {}
+            Err(err) if err.kind() == ErrorKind::NotFound => {}
+            Err(err) => {
+                return Err(err)
+                    .with_context(|| format!("failed to remove repository '{}'", repo.display()));
+            }
+        }
+
+        self.close().await
     }
 
     /// Return this session's manual flag state, if this entry can be flagged.
@@ -212,31 +232,39 @@ impl Session {
             session
         }
     }
+
+    /// Return the checkout and exact jj workspace name deleted by this session.
+    fn workspace(&self) -> Option<(&Path, &str)> {
+        match &self.0 {
+            Kind::Live(kind) => Some((kind.repo.as_deref()?, kind.workspace.as_deref()?)),
+            Kind::New(_) => None,
+            Kind::Repo(kind) => Some((&kind.path, kind.workspace.as_deref()?)),
+        }
+    }
 }
 
 impl LiveKind {
     /// Construct a potential session from information extracted from `tmux`.
     ///
-    /// `name` is a tmux session name, `repo` is an optional path to a jj repository attached as a
-    /// user-option on the tmux session, `agents` contains lifecycle state counts published by agent
-    /// harnesses, `alerts` is a set of windows in the session that have a bell or agent alert,
-    /// `flagged` indicates whether the user has manually flagged the session, and `can_delete`
-    /// indicates whether deletion can remove a named jj workspace.
+    /// `name` is a tmux session name, `repo` is an optional checkout attached as a user-option on
+    /// the tmux session, `workspace` is its exact named jj workspace when verified, `agents`
+    /// contains lifecycle state counts published by agent harnesses, `alerts` is a set of windows
+    /// with a bell or agent alert, and `flagged` indicates whether the session was manually flagged.
     pub(crate) fn new(
         name: String,
         repo: Option<PathBuf>,
+        workspace: Option<String>,
         agents: BTreeMap<AgentState, usize>,
         alerts: BTreeSet<String>,
         flagged: bool,
-        can_delete: bool,
     ) -> Self {
         Self {
             name,
             repo,
+            workspace,
             agents,
             alerts,
             flagged,
-            can_delete,
         }
     }
 
@@ -399,18 +427,12 @@ impl Repo {
 
 impl RepoKind {
     /// Construct a potential session from an existing repository or workspace checkout.
-    pub(crate) fn new(
-        workspace: Option<&str>,
-        default: PathBuf,
-        path: PathBuf,
-        can_delete: bool,
-    ) -> Self {
+    pub(crate) fn new(workspace: Option<&str>, default: PathBuf, path: PathBuf) -> Self {
         Self {
-            workspace: workspace.map(sanitize),
+            workspace: workspace.map(str::to_owned),
             default,
             path,
             suffix: None,
-            can_delete,
         }
     }
 
@@ -436,7 +458,7 @@ impl RepoKind {
     fn name(&self) -> String {
         workspace_session_name(
             Some(&self.default),
-            self.workspace.as_deref(),
+            self.workspace.as_deref().map(sanitize).as_deref(),
             self.suffix.as_deref(),
         )
     }
@@ -551,6 +573,21 @@ mod tests {
 
         assert_eq!(session.name(), "repo/feature");
         assert_eq!(session.repo(), Some(temp.path().join("repo.feature")));
+    }
+
+    #[test]
+    fn repo_sessions_preserve_exact_workspace_names() {
+        let temp = tempdir().unwrap();
+        let default = temp.path().join("repo");
+        let workspace = temp.path().join("repo.feature-one");
+        let session: Session =
+            RepoKind::new(Some("feature.one"), default, workspace.clone()).into();
+
+        assert_eq!(
+            session.workspace(),
+            Some((workspace.as_path(), "feature.one"))
+        );
+        assert_eq!(session.name(), "repo/feature-one");
     }
 
     #[test]

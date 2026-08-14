@@ -37,7 +37,7 @@ use smth::config::SmthConfig;
 #[command(group(
     ArgGroup::new("action")
         .args([
-            "filter", "json", "flag", "unflag", "create", "switch", "close",
+            "filter", "json", "flag", "unflag", "create", "switch", "close", "delete",
         ])
         .multiple(false)
 ))]
@@ -184,6 +184,18 @@ struct Args {
     )]
     close: Option<Option<String>>,
 
+    /// Delete a named workspace session and close it if live.
+    #[arg(
+        short = 'd',
+        long,
+        value_name = "SESSION",
+        conflicts_with_all = ["query", "select_1", "exit_0"],
+        long_help = "Delete a matching named-workspace session from the selected repository \
+                     family. The workspace is forgotten from jj, its checkout is removed, and the \
+                     tmux session is closed when live, without an interactive confirmation prompt."
+    )]
+    delete: Option<String>,
+
     /// Additional repository globs to surface alongside existing tmux sessions.
     #[arg(
         short = 'r',
@@ -231,6 +243,9 @@ enum Action {
 
     /// Close the target live session without deleting its checkout.
     Close(Option<String>),
+
+    /// Delete the target named workspace session and close it if live.
+    Delete(String),
 }
 
 impl Args {
@@ -251,6 +266,8 @@ impl Args {
             Some(Action::Switch(session.clone()))
         } else if let Some(session) = &self.close {
             Some(Action::Close(session.clone()))
+        } else if let Some(session) = &self.delete {
+            Some(Action::Delete(session.clone()))
         } else {
             None
         }
@@ -337,7 +354,8 @@ async fn main() -> anyhow::Result<ExitCode> {
             | Action::Json
             | Action::Create(_)
             | Action::Switch(_)
-            | Action::Close(_),
+            | Action::Close(_)
+            | Action::Delete(_),
         )
         | None => None,
     } {
@@ -360,6 +378,16 @@ async fn main() -> anyhow::Result<ExitCode> {
         return Ok(ExitCode::SUCCESS);
     }
 
+    if let Some(Action::Delete(name)) = &action {
+        let session = model
+            .session(current.as_deref(), Some(name))
+            .context("session not found")?;
+
+        ensure!(session.can_delete(), "session cannot be deleted");
+        session.delete().await?;
+        return Ok(ExitCode::SUCCESS);
+    }
+
     if let Some(action @ (Action::Create(_) | Action::Switch(_))) = &action {
         let name = match action {
             Action::Create(name) | Action::Switch(name) => name,
@@ -367,7 +395,8 @@ async fn main() -> anyhow::Result<ExitCode> {
             | Action::Json
             | Action::Flag(_)
             | Action::Unflag(_)
-            | Action::Close(_) => unreachable!(),
+            | Action::Close(_)
+            | Action::Delete(_) => unreachable!(),
         };
         let revision = args.onto.as_deref().unwrap_or(jj::DEFAULT_BASE_REVSET);
         let session = model.session_for_request(current.as_deref(), name.as_deref(), revision)?;

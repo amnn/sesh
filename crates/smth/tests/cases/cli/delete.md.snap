@@ -1,0 +1,114 @@
+---
+source: crates/smth/tests/test.rs
+expression: output
+input_file: crates/smth/tests/cases/cli/delete.md
+---
+# Delete workspaces
+
+`--delete` resolves a discovered named-workspace session, forgets and removes
+its checkout, then closes it when live.
+
+    :bins jj tmux cat test
+
+> [!NOTE]
+> 'jj', 'tmux', 'cat', and 'test' are available.
+
+    :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
+
+    :t rename-session -t 0 runner (success)
+    :$ jj git init alpha (exit: 0)
+    :$ jj workspace add -R alpha --name feature alpha.feature (exit: 0)
+    :$ jj workspace add -R alpha --name other alpha.other (exit: 0)
+
+Create a plain collision and a disambiguated repo-backed feature session. Strict
+metadata should ensure deletion closes only the latter.
+
+    :t new-session -d -s alpha/feature "cat" (success)
+    :t new-session -d -s alpha/feature~1 -c alpha.feature "cat" (success)
+    :t set-option -F -t '=alpha/feature~1:' @smth.repo '#{pane_current_path}' (success)
+    :t new-session -d -s scratch "cat" (success)
+
+    :$ smth --base alpha --delete feature (exit: 0)
+    :t has-session -t '=alpha/feature~1' (failure)
+
+```
+can't find session: alpha/feature~1
+```
+
+    :t has-session -t '=alpha/feature' (success)
+    :$ test ! -e alpha.feature (exit: 0)
+
+A discovered workspace without a live tmux session should still be forgotten
+and removed through the same session operation.
+
+    :$ smth --base alpha --repo "alpha*" --delete other (exit: 0)
+    :$ test ! -e alpha.other (exit: 0)
+
+Only the default workspace should remain registered.
+
+    :$ jj workspace list -R alpha --ignore-working-copy --no-pager --color never --template 'name ++ "\n"' (exit: 0)
+
+```stdout
+default
+```
+
+Missing sessions and the default checkout are not deletable.
+
+    :$ smth --base alpha --delete missing (exit: 1)
+
+```stderr
+Error: session not found
+```
+
+    :$ smth --base alpha --repo "alpha*" --delete default (exit: 1)
+
+```stderr
+Error: session not found
+```
+
+    :$ test -d alpha (exit: 0)
+
+Delete rejects the plain-session namespace and never closes a same-named plain
+session on an invalid request.
+
+    :$ smth --no-base --delete scratch (exit: 1)
+
+```stderr
+Error: session cannot be deleted
+```
+
+    :t has-session -t '=scratch' (success)
+
+The operand is mandatory, picker controls are rejected, and delete is mutually
+exclusive with every other lifecycle action.
+
+    :$ smth --base alpha --delete (exit: 2)
+
+```stderr
+error: a value is required for '--delete <SESSION>' but none was supplied
+
+For more information, try 'help'.
+```
+
+    :$ smth --base alpha --delete missing --query missing (exit: 2)
+
+```stderr
+error: the argument '--delete <SESSION>' cannot be used with '--query <STR>'
+
+Usage: smth --base <REPO> --delete <SESSION>
+
+For more information, try 'help'.
+```
+
+    :$ smth --base alpha --delete missing --close missing (exit: 2)
+
+```stderr
+error: the argument '--delete <SESSION>' cannot be used with '--close [<SESSION>]'
+
+Usage: smth --base <REPO> --delete <SESSION>
+
+For more information, try 'help'.
+```
+
+---
+vim: set ft=markdown:

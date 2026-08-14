@@ -58,6 +58,8 @@ fall back to the interactive picker.
   the current tmux client.
 - `-x`, `--close [SESSION]` kills a matching live tmux session without removing
   its checkout or workspace registration.
+- `-d`, `--delete SESSION` forgets and removes a matching discovered named
+  workspace session, then closes it when live.
 
 Flag operations are idempotent. An explicit session operand overrides a named
 workspace inferred from `--base`; without a repository base, a plain session
@@ -72,3 +74,9 @@ sessions are left unchanged. Names are sanitized and disambiguated against both
 tmux sessions and sibling workspaces, so callers should use the printed name.
 Switching to an existing live session prefers its first window with a bell or
 agent attention, matching interactive picker behavior.
+
+Delete requires both a repository base and an explicit named workspace session.
+It rejects plain sessions and the default workspace. Use `--repo` to surface a
+non-live checkout that is not otherwise discovered. The command itself is the
+confirmation: it forgets the workspace from jj, removes the checkout, and only
+then closes the session when live.

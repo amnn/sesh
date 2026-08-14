@@ -35,6 +35,7 @@ Options:
   -c, --create [<SESSION>]  Ensure a session exists without switching to it
   -s, --switch [<SESSION>]  Ensure a session exists and switch to it
   -x, --close [<SESSION>]   Close a live session without deleting its checkout
+  -d, --delete <SESSION>    Delete a named workspace session and close it if live
   -r, --repo <GLOB>         Additional repository globs to surface alongside existing tmux sessions
   -V, --version             Print version
 ```
@@ -148,6 +149,11 @@ Options:
           Close a matching live tmux session without forgetting or removing any attached workspace.
           Repository-backed targets are verified against their normalized family and checkout
           metadata.
+
+  -d, --delete <SESSION>
+          Delete a matching named-workspace session from the selected repository family. The
+          workspace is forgotten from jj, its checkout is removed, and the tmux session is closed
+          when live, without an interactive confirmation prompt.
 
   -r, --repo <GLOB>
           Additional repository globs to surface alongside existing tmux sessions. Pass once per
