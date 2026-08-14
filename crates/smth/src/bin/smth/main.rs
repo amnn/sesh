@@ -36,7 +36,9 @@ use smth::config::SmthConfig;
 #[command(disable_help_flag = true)]
 #[command(group(
     ArgGroup::new("action")
-        .args(["filter", "json", "flag", "unflag", "create", "switch"])
+        .args([
+            "filter", "json", "flag", "unflag", "create", "switch", "close",
+        ])
         .multiple(false)
 ))]
 struct Args {
@@ -169,6 +171,19 @@ struct Args {
     )]
     switch: Option<Option<String>>,
 
+    /// Close a live session without deleting its checkout.
+    #[arg(
+        short = 'x',
+        long,
+        value_name = "SESSION",
+        num_args = 0..=1,
+        conflicts_with_all = ["query", "select_1", "exit_0"],
+        long_help = "Close a matching live tmux session without forgetting or removing any \
+                     attached workspace. Repository-backed targets are verified against their \
+                     normalized family and checkout metadata."
+    )]
+    close: Option<Option<String>>,
+
     /// Additional repository globs to surface alongside existing tmux sessions.
     #[arg(
         short = 'r',
@@ -213,6 +228,9 @@ enum Action {
 
     /// Ensure the target session exists and switch to it.
     Switch(Option<String>),
+
+    /// Close the target live session without deleting its checkout.
+    Close(Option<String>),
 }
 
 impl Args {
@@ -231,6 +249,8 @@ impl Args {
             Some(Action::Create(session.clone()))
         } else if let Some(session) = &self.switch {
             Some(Action::Switch(session.clone()))
+        } else if let Some(session) = &self.close {
+            Some(Action::Close(session.clone()))
         } else {
             None
         }
@@ -312,7 +332,14 @@ async fn main() -> anyhow::Result<ExitCode> {
     if let Some((session, flagged)) = match &action {
         Some(Action::Flag(session)) => Some((session.as_deref(), true)),
         Some(Action::Unflag(session)) => Some((session.as_deref(), false)),
-        Some(Action::Filter | Action::Json | Action::Create(_) | Action::Switch(_)) | None => None,
+        Some(
+            Action::Filter
+            | Action::Json
+            | Action::Create(_)
+            | Action::Switch(_)
+            | Action::Close(_),
+        )
+        | None => None,
     } {
         let session = model
             .session(current.as_deref(), session)
@@ -323,10 +350,24 @@ async fn main() -> anyhow::Result<ExitCode> {
         return Ok(ExitCode::SUCCESS);
     }
 
+    if let Some(Action::Close(name)) = &action {
+        let session = model
+            .session(current.as_deref(), name.as_deref())
+            .context("session not found")?;
+
+        ensure!(session.is_live(), "session is not live");
+        session.close().await?;
+        return Ok(ExitCode::SUCCESS);
+    }
+
     if let Some(action @ (Action::Create(_) | Action::Switch(_))) = &action {
         let name = match action {
             Action::Create(name) | Action::Switch(name) => name,
-            Action::Filter | Action::Json | Action::Flag(_) | Action::Unflag(_) => unreachable!(),
+            Action::Filter
+            | Action::Json
+            | Action::Flag(_)
+            | Action::Unflag(_)
+            | Action::Close(_) => unreachable!(),
         };
         let revision = args.onto.as_deref().unwrap_or(jj::DEFAULT_BASE_REVSET);
         let session = model.session_for_request(current.as_deref(), name.as_deref(), revision)?;

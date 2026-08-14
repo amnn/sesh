@@ -34,6 +34,7 @@ Options:
       --unflag [<SESSION>]  Clear a live session's flag
   -c, --create [<SESSION>]  Ensure a session exists without switching to it
   -s, --switch [<SESSION>]  Ensure a session exists and switch to it
+  -x, --close [<SESSION>]   Close a live session without deleting its checkout
   -r, --repo <GLOB>         Additional repository globs to surface alongside existing tmux sessions
   -V, --version             Print version
 ```
@@ -142,6 +143,11 @@ Options:
           Ensure a session exists and switch the current tmux client to it. Creation follows
           --create semantics, and an existing live target opens its first window with a bell or
           agent attention.
+
+  -x, --close [<SESSION>]
+          Close a matching live tmux session without forgetting or removing any attached workspace.
+          Repository-backed targets are verified against their normalized family and checkout
+          metadata.
 
   -r, --repo <GLOB>
           Additional repository globs to surface alongside existing tmux sessions. Pass once per
