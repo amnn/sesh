@@ -13,12 +13,10 @@ mod sessions;
 mod span;
 
 use std::io;
-use std::io::ErrorKind;
 use std::path::Path;
 use std::path::PathBuf;
 use std::time::Duration;
 
-use anyhow::Context as _;
 use crossterm::event;
 use crossterm::event::Event;
 use crossterm::event::KeyCode;
@@ -39,7 +37,6 @@ use crate::app::header::Header;
 use crate::app::sessions::Sessions;
 use crate::app::sessions::preview;
 use crate::app::sessions::preview::Preview;
-use crate::cmd::jj;
 use crate::model::Model;
 use crate::model::session::Repo;
 use crate::model::session::Session;
@@ -165,11 +162,6 @@ impl App {
 
                 Some(Action::Delete(session)) => {
                     let repo = session.repo();
-                    let workspace = repo
-                        .as_deref()
-                        .and_then(|repo| self.model.workspace_name(repo))
-                        .map(str::to_owned);
-
                     if let (Some(repo), Some(current)) = (repo.as_deref(), self.repo.as_ref())
                         && current.path() == repo
                     {
@@ -179,8 +171,7 @@ impl App {
                     self.bg = Some(activity::State::new(
                         Span::raw("deleting").light_red(),
                         async move {
-                            delete(repo, workspace).await?;
-                            session.close().await?;
+                            session.delete().await?;
                             Ok(false)
                         },
                     ));
@@ -470,27 +461,5 @@ impl App {
     fn set_current_repo(&mut self) {
         let repo = self.sessions.selected().and_then(Session::repo);
         self.repo = repo.map(|repo| self.model.repo_context(repo));
-    }
-}
-
-/// Delete `repo`, first forgetting its named jj `workspace` when supplied.
-///
-/// A missing repository is a no-op. Returns an error if forgetting the workspace or removing the
-/// checkout fails.
-async fn delete(repo: Option<PathBuf>, workspace: Option<String>) -> anyhow::Result<()> {
-    let Some(repo) = repo else {
-        return Ok(());
-    };
-
-    if let Some(name) = workspace {
-        jj::forget_workspace(&repo, &name).await?;
-    }
-
-    match tokio::fs::remove_dir_all(&repo).await {
-        Ok(()) => Ok(()),
-        Err(err) if err.kind() == ErrorKind::NotFound => Ok(()),
-        Err(err) => {
-            Err(err).with_context(|| format!("failed to remove repository '{}'", repo.display()))
-        }
     }
 }

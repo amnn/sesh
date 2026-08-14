@@ -146,11 +146,11 @@ impl Model {
         let base = self.repo_context(base.to_owned()).path().to_owned();
 
         let Some(name) = name else {
-            return Ok(self.repo_session(None, base.clone(), base, false));
+            return Ok(self.repo_session(None, base.clone(), base));
         };
 
         if let Some(checkout) = self.workspace_path(&base, name) {
-            return Ok(self.repo_session(Some(name), base, checkout.to_owned(), true));
+            return Ok(self.repo_session(Some(name), base, checkout.to_owned()));
         }
 
         let repo = Repo::new(base).with_revision(onto.to_owned());
@@ -221,19 +221,19 @@ impl Model {
         }
 
         for (name, info) in tmux_sessions {
-            let can_delete = info
+            let workspace = info
                 .repo
                 .as_ref()
                 .and_then(|repo| self.workspace_name(repo))
-                .is_some();
+                .map(str::to_owned);
 
             let session = LiveKind::new(
                 name,
                 info.repo,
+                workspace,
                 info.agents,
                 info.alerts,
                 info.flagged,
-                can_delete,
             );
             self.sessions.push(session.into());
         }
@@ -250,10 +250,9 @@ impl Model {
                     workspace.name.as_deref(),
                     existing_default(workspace).unwrap_or(&repo).to_owned(),
                     repo.to_owned(),
-                    workspace.name.is_some(),
                 )
             } else {
-                self.repo_session(None, repo.to_owned(), repo.to_owned(), false)
+                self.repo_session(None, repo.to_owned(), repo.to_owned())
             };
 
             self.sessions.push(session);
@@ -358,14 +357,8 @@ impl Model {
     }
 
     /// Construct a session for an existing repository checkout.
-    fn repo_session(
-        &self,
-        workspace: Option<&str>,
-        default: PathBuf,
-        path: PathBuf,
-        can_delete: bool,
-    ) -> Session {
-        let mut session = RepoKind::new(workspace, default, path, can_delete);
+    fn repo_session(&self, workspace: Option<&str>, default: PathBuf, path: PathBuf) -> Session {
+        let mut session = RepoKind::new(workspace, default, path);
         session.disambiguate(&self.seen_tmux_names);
         session.into()
     }
@@ -492,8 +485,7 @@ mod tests {
     use super::*;
 
     fn model_with_workspace(workspace: &Path, default: PathBuf) -> Model {
-        let session =
-            RepoKind::new(Some("feature"), default.clone(), workspace.to_owned(), true).into();
+        let session = RepoKind::new(Some("feature"), default.clone(), workspace.to_owned()).into();
 
         let mut workspaces = BTreeMap::from([(
             workspace.to_owned(),
@@ -569,17 +561,17 @@ mod tests {
         let repo = LiveKind::new(
             "scratch".to_owned(),
             Some(workspace),
+            Some("feature".to_owned()),
             BTreeMap::new(),
             BTreeSet::new(),
-            false,
             false,
         );
         let plain = LiveKind::new(
             "scratch".to_owned(),
             None,
+            None,
             BTreeMap::new(),
             BTreeSet::new(),
-            false,
             false,
         );
         model.sessions = vec![repo.into(), plain.into()];
