@@ -56,6 +56,8 @@ fall back to the interactive picker.
   current tmux client and prints its actual tmux name.
 - `-s`, `--switch [SESSION]` performs the same ensure operation, then switches
   the current tmux client.
+- `-x`, `--close [SESSION]` kills a matching live tmux session without removing
+  its checkout or workspace registration.
 
 Flag operations are idempotent. An explicit session operand overrides a named
 workspace inferred from `--base`; without a repository base, a plain session
