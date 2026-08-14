@@ -33,6 +33,7 @@ Options:
       --flag [<SESSION>]    Mark a live session as flagged
       --unflag [<SESSION>]  Clear a live session's flag
   -c, --create [<SESSION>]  Ensure a session exists without switching to it
+  -s, --switch [<SESSION>]  Ensure a session exists and switch to it
   -r, --repo <GLOB>         Additional repository globs to surface alongside existing tmux sessions
   -V, --version             Print version
 ```
@@ -136,6 +137,11 @@ Options:
           Ensure a session exists without switching to it. Existing repository checkouts receive a
           tmux session; missing named workspaces are created at --onto; plain sessions are created
           in the process working directory. Prints the actual tmux name.
+
+  -s, --switch [<SESSION>]
+          Ensure a session exists and switch the current tmux client to it. Creation follows
+          --create semantics, and an existing live target opens its first window with a bell or
+          agent attention.
 
   -r, --repo <GLOB>
           Additional repository globs to surface alongside existing tmux sessions. Pass once per
