@@ -3,7 +3,7 @@
 Flat lifecycle flags should resolve live sessions by repository family and
 workspace identity rather than by a guessed tmux name.
 
-    :bins jj cat sh sed
+    :bins jj cat
 
     :copy tests/fixtures/jjconfig.toml .jjconfig.toml
 
@@ -58,9 +58,9 @@ Plain sessions require the empty base namespace and an explicit name.
 Missing, non-live, and unspecified targets should fail instead of opening the
 picker or modifying a similarly named session.
 
-    :$ sh -c 'set -o pipefail; smth --base alpha --flag missing 2>&1 | sed "s#$PWD#<ROOT>#g"'
+    :$ smth --base alpha --flag missing
 
-    :$ sh -c 'set -o pipefail; smth --base alpha --repo "alpha*" --flag idle 2>&1 | sed "s#$PWD#<ROOT>#g"'
+    :$ smth --base alpha --repo "alpha*" --flag idle
 
     :$ smth --no-base --flag
 

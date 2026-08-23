@@ -57,13 +57,13 @@ Missing sessions and the default checkout are not deletable.
     :$ smth --base alpha --delete missing (exit: 1)
 
 ```stderr
-Error: session not found
+error: session not found
 ```
 
     :$ smth --base alpha --repo "alpha*" --delete default (exit: 1)
 
 ```stderr
-Error: session not found
+error: session not found
 ```
 
     :$ test -d alpha (exit: 0)
@@ -74,7 +74,7 @@ session on an invalid request.
     :$ smth --no-base --delete scratch (exit: 1)
 
 ```stderr
-Error: session cannot be deleted
+error: session cannot be deleted
 ```
 
     :t has-session -t '=scratch' (success)

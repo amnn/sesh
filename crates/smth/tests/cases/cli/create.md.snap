@@ -213,7 +213,7 @@ with every other root action.
     :$ smth --no-base --create (exit: 1)
 
 ```stderr
-Error: a session name is required without a repository base
+error: a session name is required without a repository base
 ```
 
     :$ smth --no-base --create scratch --flag scratch (exit: 2)

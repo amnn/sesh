@@ -104,7 +104,7 @@ switch is mutually exclusive with create.
     :$ smth --no-base --switch (exit: 1)
 
 ```stderr
-Error: a session name is required without a repository base
+error: a session name is required without a repository base
 ```
 
     :$ smth --no-base --switch scratch --query scratch (exit: 2)

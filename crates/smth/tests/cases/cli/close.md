@@ -59,7 +59,7 @@ session and the plain collision without consulting repository metadata.
 Closing a registered workspace with no live session fails safely, as does an
 unspecified plain target.
 
-    :$ sh -c 'set -o pipefail; smth --base alpha --repo "alpha*" --close feature 2>&1 | sed "s#$PWD#<ROOT>#g"'
+    :$ smth --base alpha --repo "alpha*" --close feature
 
     :$ smth --no-base --close
 
