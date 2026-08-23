@@ -1,9 +1,9 @@
 # Long-running operation spinner
 
 Creating a session in the background should keep the picker responsive and show
-animated, operation-specific progress at the bottom until it finishes.
+delayed, animated, operation-specific progress in the header until it finishes.
 
-    :bins jj tmux cat
+    :bins jj tmux cat sleep
 
     :t rename-session -t 0 runner
 
@@ -30,18 +30,21 @@ blocking point.
 
     :k zeta C-n
     :$ sh -c 'until test -f spinner-ready; do :; done'
+    :$ sleep 0.6
 
-The query should be cleared when creation is dispatched, while the bottom row of
-the session list is overdrawn with a spinner and animated `creating...` label.
-Normalize both animations for the snapshot.
+The query should be cleared when creation is dispatched. Once the display delay
+has elapsed, the header's left side should be overdrawn with a spinner and dark
+green, animated `creating...` label, while the remaining repo context stays
+visible. Each dot frame should overwrite only its visible dots and one trailing
+padding cell. Normalize both animations for the snapshot.
 
-    :snap -d 2s "/[⠋⠙⠹⠸⠼⠴⠦⠧]/⠋" "/creating([.\x{a0}]{3})/."
+    :snap -d 2s "/[⠋⠙⠹⠸⠼⠴⠦⠧]/⠋" "/creating(.{4})/."
 
 Query editing and navigation should remain available, while another create
 request should be ignored until the active operation completes.
 
     :k omega C-n
-    :snap -d 2s "/[⠋⠙⠹⠸⠼⠴⠦⠧]/⠋" "/creating([.\x{a0}]{3})/."
+    :snap -d 2s "/[⠋⠙⠹⠸⠼⠴⠦⠧]/⠋" "/creating(.{4})/."
 
 Release the setup script and synchronize on its completion before inspecting the
 picker again.

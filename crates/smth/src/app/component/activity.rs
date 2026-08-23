@@ -19,8 +19,8 @@ use crate::app::component::loader;
 use crate::app::component::spinner;
 use crate::app::component::spinner::Spinner;
 
-/// Expanding and contracting dots padded to a stable terminal width with non-breaking spaces.
-const FRAMES: &[&str] = &[".\u{00a0}\u{00a0}", "..\u{00a0}", "...", "..\u{00a0}"];
+/// Expanding and contracting dots with one trailing padding cell for the header overdraw.
+const FRAMES: &[&str] = &[". ", ".. ", "... ", ".. "];
 const FRAME_DURATION: Duration = Duration::from_millis(250);
 const PREFIX_WIDTH: u16 = 2;
 
@@ -77,16 +77,13 @@ impl<V> StatefulWidget for Activity<V> {
 
     fn render(self, area: Rect, buf: &mut Buffer, state: &mut Self::State) {
         state.loader.poll();
-        if !state.is_loading() {
-            return;
-        }
 
         let area = area.intersection(buf.area);
-        if area.is_empty() {
+        let is_loading = state.is_loading();
+        let now = Instant::now();
+        if !Spinner::new(is_loading).render_at(now, area, buf, &mut state.spinner) {
             return;
         }
-
-        Spinner::new(true).render(area, buf, &mut state.spinner);
 
         let offset = area.width.min(PREFIX_WIDTH);
         if offset == PREFIX_WIDTH {
@@ -95,10 +92,27 @@ impl<V> StatefulWidget for Activity<V> {
 
         let label = Rect::new(area.x + offset, area.y, area.width - offset, area.height);
         let ellipsis = Span::styled(
-            state.spinner.frame(Instant::now(), FRAME_DURATION, FRAMES),
+            state.spinner.frame(now, FRAME_DURATION, FRAMES),
             state.label.style,
         );
         let text = Line::from(vec![state.label.clone(), ellipsis]);
         text.render(label, buf);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dot_frames_only_cover_dots_and_one_padding_cell() {
+        for frame in FRAMES {
+            let dots = frame
+                .strip_suffix(' ')
+                .expect("frame should end with one padding cell");
+            assert!(!dots.is_empty());
+            assert!(dots.chars().all(|ch| ch == '.'));
+            assert_eq!(frame.chars().count(), dots.chars().count() + 1);
+        }
     }
 }
