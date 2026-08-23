@@ -169,7 +169,7 @@ impl App {
                     }
 
                     self.bg = Some(activity::State::new(
-                        Span::raw("deleting").light_red(),
+                        Span::raw("deleting").reset().light_red(),
                         async move {
                             session.delete().await?;
                             Ok(false)
@@ -184,20 +184,26 @@ impl App {
                     let cwd = cwd.to_owned();
                     let setup = ctx.setup.to_owned();
 
-                    self.bg = Some(activity::State::new(Span::raw("creating"), async move {
-                        session.create(&cwd, &setup).await?;
-                        Ok(false)
-                    }));
+                    self.bg = Some(activity::State::new(
+                        Span::raw("creating").reset().green(),
+                        async move {
+                            session.create(&cwd, &setup).await?;
+                            Ok(false)
+                        },
+                    ));
                 }
 
                 Some(Action::Switch(session)) => {
                     let cwd = cwd.to_owned();
                     let setup = ctx.setup.to_owned();
 
-                    self.bg = Some(activity::State::new(Span::raw("switching"), async move {
-                        session.switch(&cwd, &setup).await?;
-                        Ok(true)
-                    }));
+                    self.bg = Some(activity::State::new(
+                        Span::raw("switching").reset().yellow(),
+                        async move {
+                            session.switch(&cwd, &setup).await?;
+                            Ok(true)
+                        },
+                    ));
                 }
 
                 Some(Action::ToggleFlag(session)) => {
@@ -272,11 +278,6 @@ impl App {
         // preview yet.
         self.preview.feed(self.sessions.selected());
 
-        // (2.b) Render activity progress over the bottom row of the session list.
-        if let (Some(activity), Some(area)) = (&mut self.bg, l.sessions.rows().next_back()) {
-            f.render_stateful_widget(activity::Activity::new(), area, activity);
-        }
-
         let header = Header::new(
             agent_summary,
             self.sessions.is_deleting(),
@@ -289,6 +290,12 @@ impl App {
         // (3) Render the header, which depends on the currently selected session (so must happen
         // after session list rendering).
         header.draw(f, l.header);
+
+        // (3.a) Render delayed activity progress over the left side of the header row.
+        if let Some(activity) = &mut self.bg {
+            let area = l.loading.union(l.header);
+            f.render_stateful_widget(activity::Activity::new(), area, activity);
+        }
 
         let Some(l_preview) = l.preview else {
             return;
