@@ -87,7 +87,7 @@ For more information, try 'help'.
     :$ smth --base . --filter (exit: 1)
 
 ```stderr
-Error: --base '.' is not inside a jj repo
+error: --base '.' is not inside a jj repo
 ```
 
 A named workspace whose default registration disappears should retain the

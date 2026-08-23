@@ -48,13 +48,13 @@ or when no repository can be inferred.
     :$ smth --no-base --onto @ --filter (exit: 1)
 
 ```stderr
-Error: --onto requires a base repository
+error: --onto requires a base repository
 ```
 
     :$ smth --onto @ --filter (exit: 1)
 
 ```stderr
-Error: --onto requires a base repository
+error: --onto requires a base repository
 ```
 
 ---

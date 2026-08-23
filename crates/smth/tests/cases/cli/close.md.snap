@@ -91,16 +91,16 @@ can't find session: alpha/feature
 Closing a registered workspace with no live session fails safely, as does an
 unspecified plain target.
 
-    :$ sh -c 'set -o pipefail; smth --base alpha --repo "alpha*" --close feature 2>&1 | sed "s#$PWD#<ROOT>#g"' (exit: 1)
+    :$ smth --base alpha --repo "alpha*" --close feature (exit: 1)
 
-```stdout
-Error: session is not live
+```stderr
+error: session is not live
 ```
 
     :$ smth --no-base --close (exit: 1)
 
 ```stderr
-Error: session not found
+error: session not found
 ```
 
 Close rejects picker controls and every other lifecycle action.

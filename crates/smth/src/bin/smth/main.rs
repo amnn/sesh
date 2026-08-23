@@ -300,9 +300,22 @@ impl Args {
     }
 }
 
-/// Parse CLI arguments and run the requested command or picker.
+/// Parse CLI arguments, reporting application errors in the same style as clap.
 #[tokio::main]
-async fn main() -> anyhow::Result<ExitCode> {
+async fn main() -> ExitCode {
+    match run().await {
+        Ok(code) => code,
+        Err(err) => {
+            eprintln!("error: {err:#}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+/// Run the requested command or picker.
+///
+/// Returns the requested process exit code and propagates setup, validation, and action failures.
+async fn run() -> anyhow::Result<ExitCode> {
     let args = Args::parse();
     let action = args.action();
 
@@ -340,110 +353,106 @@ async fn main() -> anyhow::Result<ExitCode> {
     let query = args.query.unwrap_or_default();
     let mut model = Model::new(&globs, current.as_deref(), query).await?;
 
-    if action == Some(Action::Json) {
-        let sessions = model.matches_json();
-        println!("{}", serde_json::to_string_pretty(&sessions)?);
-        return Ok(ExitCode::SUCCESS);
-    }
+    match &action {
+        Some(Action::Json) => {
+            let sessions = model.matches_json();
+            println!("{}", serde_json::to_string_pretty(&sessions)?);
+            Ok(ExitCode::SUCCESS)
+        }
 
-    if let Some((session, flagged)) = match &action {
-        Some(Action::Flag(session)) => Some((session.as_deref(), true)),
-        Some(Action::Unflag(session)) => Some((session.as_deref(), false)),
-        Some(
-            Action::Filter
-            | Action::Json
-            | Action::Create(_)
-            | Action::Switch(_)
-            | Action::Close(_)
-            | Action::Delete(_),
-        )
-        | None => None,
-    } {
-        let session = model
-            .session(current.as_deref(), session)
-            .context("session not found")?;
+        Some(Action::Flag(name)) => {
+            let session = model
+                .session(current.as_deref(), name.as_deref())
+                .context("session not found")?;
 
-        ensure!(session.is_live(), "session is not live");
-        session.set_flag(flagged).await?;
-        return Ok(ExitCode::SUCCESS);
-    }
+            ensure!(session.is_live(), "session is not live");
+            session.set_flag(true).await?;
+            Ok(ExitCode::SUCCESS)
+        }
 
-    if let Some(Action::Close(name)) = &action {
-        let session = model
-            .session(current.as_deref(), name.as_deref())
-            .context("session not found")?;
+        Some(Action::Unflag(name)) => {
+            let session = model
+                .session(current.as_deref(), name.as_deref())
+                .context("session not found")?;
 
-        ensure!(session.is_live(), "session is not live");
-        session.close().await?;
-        return Ok(ExitCode::SUCCESS);
-    }
+            ensure!(session.is_live(), "session is not live");
+            session.set_flag(false).await?;
+            Ok(ExitCode::SUCCESS)
+        }
 
-    if let Some(Action::Delete(name)) = &action {
-        let session = model
-            .session(current.as_deref(), Some(name))
-            .context("session not found")?;
-
-        ensure!(session.can_delete(), "session cannot be deleted");
-        session.delete().await?;
-        return Ok(ExitCode::SUCCESS);
-    }
-
-    if let Some(action @ (Action::Create(_) | Action::Switch(_))) = &action {
-        let name = match action {
-            Action::Create(name) | Action::Switch(name) => name,
-            Action::Filter
-            | Action::Json
-            | Action::Flag(_)
-            | Action::Unflag(_)
-            | Action::Close(_)
-            | Action::Delete(_) => unreachable!(),
-        };
-        let revision = args.onto.as_deref().unwrap_or(jj::DEFAULT_BASE_REVSET);
-        let session = model.session_for_request(current.as_deref(), name.as_deref(), revision)?;
-
-        if matches!(action, Action::Create(_)) {
+        Some(Action::Create(name)) => {
+            let onto = args.onto.as_deref().unwrap_or(jj::DEFAULT_BASE_REVSET);
+            let session = model.session_for_request(current.as_deref(), name.as_deref(), onto)?;
             let name = session.name();
+
             session.create(&cwd, &config.tmux.setup).await?;
             println!("{name}");
-        } else {
+            Ok(ExitCode::SUCCESS)
+        }
+
+        Some(Action::Switch(name)) => {
+            let onto = args.onto.as_deref().unwrap_or(jj::DEFAULT_BASE_REVSET);
+            let session = model.session_for_request(current.as_deref(), name.as_deref(), onto)?;
+
             session.switch(&cwd, &config.tmux.setup).await?;
+            Ok(ExitCode::SUCCESS)
         }
 
-        return Ok(ExitCode::SUCCESS);
-    }
+        Some(Action::Close(name)) => {
+            let session = model
+                .session(current.as_deref(), name.as_deref())
+                .context("session not found")?;
 
-    let matches = model.matches();
-    if args.exit_0 && matches.is_empty() {
-        return Ok(ExitCode::SUCCESS);
-    }
-
-    if args.select_1
-        && let [session] = &matches[..]
-    {
-        session.switch(&cwd, &config.tmux.setup).await?;
-        return Ok(ExitCode::SUCCESS);
-    }
-
-    if action == Some(Action::Filter) {
-        for session in &matches {
-            println!("{}", session.name());
+            ensure!(session.is_live(), "session is not live");
+            session.close().await?;
+            Ok(ExitCode::SUCCESS)
         }
 
-        return Ok(if matches.is_empty() {
-            ExitCode::FAILURE
-        } else {
-            ExitCode::SUCCESS
-        });
+        Some(Action::Delete(name)) => {
+            let session = model
+                .session(current.as_deref(), Some(name))
+                .context("session not found")?;
+
+            ensure!(session.can_delete(), "session cannot be deleted");
+            session.delete().await?;
+            Ok(ExitCode::SUCCESS)
+        }
+
+        selected @ (Some(Action::Filter) | None) => {
+            let matches = model.matches();
+            if args.exit_0 && matches.is_empty() {
+                return Ok(ExitCode::SUCCESS);
+            }
+
+            if args.select_1
+                && let [session] = &matches[..]
+            {
+                session.switch(&cwd, &config.tmux.setup).await?;
+                return Ok(ExitCode::SUCCESS);
+            }
+
+            if selected.is_some() {
+                for session in &matches {
+                    println!("{}", session.name());
+                }
+
+                return Ok(if matches.is_empty() {
+                    ExitCode::FAILURE
+                } else {
+                    ExitCode::SUCCESS
+                });
+            }
+
+            let context = Context {
+                globs: &globs,
+                setup: &config.tmux.setup,
+                sigil: config.ui.sigil,
+            };
+
+            App::new(current, args.onto, model)
+                .run(&cwd, context)
+                .await?;
+            Ok(ExitCode::SUCCESS)
+        }
     }
-
-    let context = Context {
-        globs: &globs,
-        setup: &config.tmux.setup,
-        sigil: config.ui.sigil,
-    };
-
-    App::new(current, args.onto, model)
-        .run(&cwd, context)
-        .await?;
-    Ok(ExitCode::SUCCESS)
 }

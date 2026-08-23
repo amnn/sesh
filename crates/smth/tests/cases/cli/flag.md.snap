@@ -8,10 +8,10 @@ input_file: crates/smth/tests/cases/cli/flag.md
 Flat lifecycle flags should resolve live sessions by repository family and
 workspace identity rather than by a guessed tmux name.
 
-    :bins jj cat sh sed
+    :bins jj cat
 
 > [!NOTE]
-> 'jj', 'cat', 'sh', and 'sed' are available.
+> 'jj', and 'cat' are available.
 
     :copy tests/fixtures/jjconfig.toml .jjconfig.toml (copied)
 
@@ -86,22 +86,22 @@ Plain sessions require the empty base namespace and an explicit name.
 Missing, non-live, and unspecified targets should fail instead of opening the
 picker or modifying a similarly named session.
 
-    :$ sh -c 'set -o pipefail; smth --base alpha --flag missing 2>&1 | sed "s#$PWD#<ROOT>#g"' (exit: 1)
+    :$ smth --base alpha --flag missing (exit: 1)
 
-```stdout
-Error: session not found
+```stderr
+error: session not found
 ```
 
-    :$ sh -c 'set -o pipefail; smth --base alpha --repo "alpha*" --flag idle 2>&1 | sed "s#$PWD#<ROOT>#g"' (exit: 1)
+    :$ smth --base alpha --repo "alpha*" --flag idle (exit: 1)
 
-```stdout
-Error: session is not live
+```stderr
+error: session is not live
 ```
 
     :$ smth --no-base --flag (exit: 1)
 
 ```stderr
-Error: session not found
+error: session not found
 ```
 
 Lifecycle mode rejects picker controls and every other non-interactive action.
