@@ -7,10 +7,12 @@
 
 ## Session and Repo Lifecycle
 
+- [ ] New Repo
 - [ ] Rename session
 
 ## UI
 
+- [ ] Change Ordering (alpha, recency, up/down)
 - [ ] Preview actual pane content
 
 # Appendix: Legend
