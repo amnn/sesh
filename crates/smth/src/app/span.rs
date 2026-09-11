@@ -84,7 +84,6 @@ mod tests {
     use std::path::MAIN_SEPARATOR_STR;
     use std::path::PathBuf;
 
-    use ratatui::style::Stylize as _;
     use ratatui::text::Line;
 
     use crate::app::highlight::Highlight;
